@@ -4,6 +4,7 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+- Added a GitHub Release workflow that publishes release notes, deployable Linux amd64 packages, and SHA256 checksums for version tags.
 - Standardized repository metadata, GitHub templates, CI, dependency updates, and security policy.
 - Added a health check endpoint for deployments: `GET /api/healthz`.
 - Improved Docker and Docker Compose health check configuration.

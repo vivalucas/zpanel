@@ -83,6 +83,13 @@ vivalucas/zpanel:latest
 
 默认端口：`6521`
 
+### Release
+
+版本 tag 会创建 GitHub Release，包含发布说明、Linux amd64 部署包和 `SHA256SUMS` 校验文件。多数用户仍然建议优先使用 Docker 镜像部署：
+
+- `ghcr.io/vivalucas/zpanel:<version>`
+- `vivalucas/zpanel:<version>`
+
 健康检查接口：
 
 ```text

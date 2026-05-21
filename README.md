@@ -106,6 +106,13 @@ Default persistent directories:
 ./data
 ```
 
+### Releases
+
+Version tags create GitHub Releases with release notes, Linux amd64 deployment packages, and `SHA256SUMS`. The Docker image is still the recommended deployment artifact for most users:
+
+- `ghcr.io/vivalucas/zpanel:<version>`
+- `vivalucas/zpanel:<version>`
+
 Health check endpoint:
 
 ```text

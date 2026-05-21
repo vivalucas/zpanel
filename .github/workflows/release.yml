@@ -1,0 +1,187 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v1.0.0
+        required: true
+        type: string
+      prerelease:
+        description: Mark this release as a prerelease
+        required: false
+        default: false
+        type: boolean
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PRERELEASE_INPUT: ${{ inputs.prerelease || 'false' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          app_version="$(cut -d '|' -f 2 ./service/assets/version)"
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag_name="${GITHUB_REF_NAME}"
+          else
+            tag_name="${{ inputs.tag }}"
+          fi
+
+          if [[ ! "${tag_name}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must look like v1.0.0 or v1.0.0-beta.1."
+            exit 1
+          fi
+
+          tag_version="${tag_name#v}"
+          if [ "${tag_version}" != "${app_version}" ]; then
+            echo "Tag version ${tag_version} does not match service/assets/version ${app_version}."
+            exit 1
+          fi
+
+          {
+            echo "APP_VERSION=${app_version}"
+            echo "TAG_NAME=${tag_name}"
+            echo "IMAGE_GHCR=ghcr.io/${{ github.repository_owner }}/zpanel:${app_version}"
+            echo "IMAGE_DOCKERHUB=docker.io/vivalucas/zpanel:${app_version}"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Build frontend
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run type-check
+          pnpm run build
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: service/go.mod
+          cache-dependency-path: service/go.sum
+
+      - name: Test backend
+        working-directory: service
+        run: |
+          test -z "$(gofmt -l .)"
+          go test ./...
+
+      - name: Build release binary
+        working-directory: service
+        run: |
+          mkdir -p ../release-work
+          CGO_CFLAGS="-D_LARGEFILE64_SOURCE" go build -o ../release-work/zpanel \
+            --ldflags="-X zpanel/global.RUNCODE=release" main.go
+
+      - name: Package release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          package_dir="release-work/zpanel-${APP_VERSION}"
+          mkdir -p "${package_dir}/conf" "${package_dir}/web"
+
+          cp release-work/zpanel "${package_dir}/zpanel"
+          cp -R dist/. "${package_dir}/web/"
+          cp service/assets/conf.example.ini "${package_dir}/conf/conf.example.ini"
+          cp docker-compose.yml "${package_dir}/docker-compose.yml"
+          cp README.md README.zh-CN.md CHANGELOG.md LICENSE SECURITY.md "${package_dir}/"
+
+          cat > "${package_dir}/RELEASE.md" <<EOF
+          # ZPanel ${APP_VERSION}
+
+          ## Container images
+
+          - ${IMAGE_GHCR}
+          - ${IMAGE_DOCKERHUB}
+
+          ## Local binary package
+
+          This package contains the ZPanel server binary, built frontend assets, example configuration, and Docker Compose file.
+
+          The Docker image is the recommended deployment method for most users.
+          EOF
+
+          tar -czf "zpanel-${APP_VERSION}-linux-amd64.tar.gz" -C release-work "zpanel-${APP_VERSION}"
+          (cd release-work && zip -qr "../zpanel-${APP_VERSION}-linux-amd64.zip" "zpanel-${APP_VERSION}")
+          sha256sum "zpanel-${APP_VERSION}-linux-amd64.tar.gz" "zpanel-${APP_VERSION}-linux-amd64.zip" > SHA256SUMS
+
+      - name: Write release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > release-notes.md <<EOF
+          ## ZPanel ${APP_VERSION}
+
+          ZPanel is published as a Docker-first self-hosted application. This release includes container image references, a deployable Linux amd64 package, and checksum files.
+
+          ### Container Images
+
+          - \`${IMAGE_GHCR}\`
+          - \`${IMAGE_DOCKERHUB}\`
+
+          ### Assets
+
+          - \`zpanel-${APP_VERSION}-linux-amd64.tar.gz\`
+          - \`zpanel-${APP_VERSION}-linux-amd64.zip\`
+          - \`SHA256SUMS\`
+
+          ### Notes
+
+          The packaged binary is built on Ubuntu for Linux amd64. Docker Compose remains the recommended deployment path.
+          EOF
+
+      - name: Create or update GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          prerelease_flag=""
+          if [ "${PRERELEASE_INPUT}" = "true" ]; then
+            prerelease_flag="--prerelease"
+          fi
+
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            gh release edit "${TAG_NAME}" \
+              --title "ZPanel ${APP_VERSION}" \
+              --notes-file release-notes.md \
+              ${prerelease_flag}
+          else
+            gh release create "${TAG_NAME}" \
+              --target "${GITHUB_SHA}" \
+              --title "ZPanel ${APP_VERSION}" \
+              --notes-file release-notes.md \
+              ${prerelease_flag}
+          fi
+
+          gh release upload "${TAG_NAME}" \
+            "zpanel-${APP_VERSION}-linux-amd64.tar.gz" \
+            "zpanel-${APP_VERSION}-linux-amd64.zip" \
+            SHA256SUMS \
+            --clobber

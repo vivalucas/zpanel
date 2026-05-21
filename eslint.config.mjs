@@ -1,0 +1,40 @@
+import antfu from '@antfu/eslint-config'
+
+export default antfu({
+  lessOpinionated: true,
+  stylistic: false,
+  vue: true,
+  typescript: true,
+  ignores: [
+    'dist/**',
+    'node_modules/**',
+    'project-log/**/*.md',
+  ],
+}, {
+  rules: {
+    'antfu/top-level-function': 'off',
+    'e18e/prefer-date-now': 'off',
+    'import/consistent-type-specifier-style': 'off',
+    'import/newline-after-import': 'off',
+    'jsdoc/check-param-names': 'off',
+    'jsdoc/check-types': 'off',
+    'jsonc/sort-keys': 'off',
+    'markdown/heading-increment': 'off',
+    'markdown/no-space-in-emphasis': 'off',
+    'node/prefer-global/process': 'off',
+    'no-console': 'warn',
+    'perfectionist/sort-imports': 'off',
+    'perfectionist/sort-exports': 'off',
+    'perfectionist/sort-named-exports': 'off',
+    'perfectionist/sort-named-imports': 'off',
+    'pnpm/yaml-enforce-settings': 'off',
+    'ts/method-signature-style': 'off',
+    'ts/no-duplicate-enum-values': 'off',
+    'unicorn/prefer-node-protocol': 'off',
+    'unicorn/prefer-number-properties': 'off',
+    'unused-imports/no-unused-vars': 'warn',
+    'vue/no-unused-refs': 'warn',
+    'yaml/plain-scalar': 'off',
+    'yaml/sort-keys': 'off',
+  },
+})

@@ -1,0 +1,12 @@
+packages:
+  - '.'
+
+onlyBuiltDependencies:
+  - esbuild
+  - vue-demi
+
+minimumReleaseAgeExclude:
+  - '@types/node@25.9.1'
+  - '@vue/language-core@3.3.1'
+  - postcss@8.5.15
+  - vue-tsc@3.3.1

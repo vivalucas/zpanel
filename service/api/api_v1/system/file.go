@@ -3,14 +3,12 @@ package system
 import (
 	"fmt"
 	"os"
-	"path"
 	"strings"
-	"time"
 	"zpanel/api/api_v1/common/apiData/commonApiStructs"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/api/api_v1/common/base"
 	"zpanel/global"
-	"zpanel/lib/cmn"
+	"zpanel/lib/storage"
 	"zpanel/models"
 
 	"github.com/gin-gonic/gin"
@@ -20,53 +18,50 @@ import (
 
 type FileApi struct{}
 
+var allowedImageExts = []string{".png", ".jpg", ".gif", ".jpeg", ".webp", ".svg", ".ico"}
+
 func (a *FileApi) UploadImg(c *gin.Context) {
 	userInfo, _ := base.GetCurrentUserInfo(c)
-	configUpload := global.Config.GetValueString("base", "source_path")
 	f, err := c.FormFile("imgfile")
 	if err != nil {
 		apiReturn.ErrorByCode(c, 1300)
 		return
-	} else {
-		fileExt := strings.ToLower(path.Ext(f.Filename))
-		agreeExts := []string{
-			".png",
-			".jpg",
-			".gif",
-			".jpeg",
-			".webp",
-			".svg",
-			".ico",
-		}
+	}
 
-		if !cmn.InArray(agreeExts, fileExt) {
+	stored, err := storage.StoreUpload(f, userInfo.ID, models.FilePurposeAttachment, models.FileVisibilityPublic, allowedImageExts)
+	if err != nil {
+		if strings.Contains(err.Error(), "unsupported") {
 			apiReturn.ErrorByCode(c, 1301)
 			return
 		}
-		fileName := cmn.Md5(fmt.Sprintf("%s%s", f.Filename, time.Now().String()))
-		fildDir := fmt.Sprintf("%s/%d/%d/%d/", configUpload, time.Now().Year(), time.Now().Month(), time.Now().Day())
-		isExist, _ := cmn.PathExists(fildDir)
-		if !isExist {
-			if mkErr := os.MkdirAll(fildDir, 0755); mkErr != nil {
-				apiReturn.ErrorDatabase(c, mkErr.Error())
-				return
-			}
-		}
-		filepath := fmt.Sprintf("%s%s%s", fildDir, fileName, fileExt)
-		c.SaveUploadedFile(f, filepath)
-
-		// 像数据库添加记录
-		mFile := models.File{}
-		mFile.AddFile(userInfo.ID, f.Filename, fileExt, filepath)
-		apiReturn.SuccessData(c, gin.H{
-			"imageUrl": filepath[1:],
-		})
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
 	}
+	file, err := (&models.File{}).AddFile(models.AddFileInput{
+		OwnerID:      userInfo.ID,
+		ObjectKey:    stored.ObjectKey,
+		RelativePath: stored.RelativePath,
+		OriginalName: f.Filename,
+		MimeType:     stored.MimeType,
+		Ext:          stored.Ext,
+		Size:         stored.Size,
+		SHA256:       stored.SHA256,
+		Visibility:   models.FileVisibilityPublic,
+		Purpose:      models.FilePurposeAttachment,
+	})
+	if err != nil {
+		_ = os.Remove(stored.AbsolutePath)
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	apiReturn.SuccessData(c, gin.H{
+		"fileId":   file.ID,
+		"imageUrl": storage.PublicPath(file.RelativePath),
+	})
 }
 
 func (a *FileApi) UploadFiles(c *gin.Context) {
 	userInfo, _ := base.GetCurrentUserInfo(c)
-	configUpload := global.Config.GetValueString("base", "source_path")
 
 	form, err := c.MultipartForm()
 	if err != nil {
@@ -77,25 +72,28 @@ func (a *FileApi) UploadFiles(c *gin.Context) {
 	errFiles := []string{}
 	succMap := map[string]string{}
 	for _, f := range files {
-		fileExt := strings.ToLower(path.Ext(f.Filename))
-		fileName := cmn.Md5(fmt.Sprintf("%s%s", f.Filename, time.Now().String()))
-		fildDir := fmt.Sprintf("%s/%d/%d/%d/", configUpload, time.Now().Year(), time.Now().Month(), time.Now().Day())
-		isExist, _ := cmn.PathExists(fildDir)
-		if !isExist {
-			if mkErr := os.MkdirAll(fildDir, 0755); mkErr != nil {
-				apiReturn.ErrorDatabase(c, mkErr.Error())
-				return
-			}
-		}
-		filepath := fmt.Sprintf("%s%s%s", fildDir, fileName, fileExt)
-		if c.SaveUploadedFile(f, filepath) != nil {
+		stored, storeErr := storage.StoreUpload(f, userInfo.ID, models.FilePurposeAttachment, models.FileVisibilityPublic, nil)
+		if storeErr != nil {
 			errFiles = append(errFiles, f.Filename)
 		} else {
-			// 成功
-			// 像数据库添加记录
-			mFile := models.File{}
-			mFile.AddFile(userInfo.ID, f.Filename, fileExt, filepath)
-			succMap[f.Filename] = filepath[1:]
+			file, addErr := (&models.File{}).AddFile(models.AddFileInput{
+				OwnerID:      userInfo.ID,
+				ObjectKey:    stored.ObjectKey,
+				RelativePath: stored.RelativePath,
+				OriginalName: f.Filename,
+				MimeType:     stored.MimeType,
+				Ext:          stored.Ext,
+				Size:         stored.Size,
+				SHA256:       stored.SHA256,
+				Visibility:   models.FileVisibilityPublic,
+				Purpose:      models.FilePurposeAttachment,
+			})
+			if addErr != nil {
+				_ = os.Remove(stored.AbsolutePath)
+				errFiles = append(errFiles, f.Filename)
+				continue
+			}
+			succMap[f.Filename] = storage.PublicPath(file.RelativePath)
 		}
 	}
 
@@ -109,21 +107,14 @@ func (a *FileApi) GetList(c *gin.Context) {
 	list := []models.File{}
 	userInfo, _ := base.GetCurrentUserInfo(c)
 	var count int64
-	if err := global.Db.Order("created_at desc").Find(&list, "user_id=?", userInfo.ID).Count(&count).Error; err != nil {
+	if err := global.Db.Order("created_at desc").Find(&list, "owner_id=? AND status=?", userInfo.ID, models.FileStatusActive).Count(&count).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
 
 	data := []map[string]interface{}{}
 	for _, v := range list {
-		data = append(data, map[string]interface{}{
-			"src":        v.Src[1:],
-			"fileName":   v.FileName,
-			"id":         v.ID,
-			"createTime": v.CreatedAt,
-			"updateTime": v.UpdatedAt,
-			"path":       v.Src,
-		})
+		data = append(data, fileResponse(v))
 	}
 	apiReturn.SuccessListData(c, data, count)
 }
@@ -131,22 +122,14 @@ func (a *FileApi) GetList(c *gin.Context) {
 func (a *FileApi) GetPublicList(c *gin.Context) {
 	list := []models.File{}
 	var count int64
-	if err := global.Db.Order("created_at desc").Find(&list).Count(&count).Error; err != nil {
+	if err := global.Db.Order("created_at desc").Find(&list, "visibility=? AND status=?", models.FileVisibilityPublic, models.FileStatusActive).Count(&count).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
 
 	data := []map[string]interface{}{}
 	for _, v := range list {
-		data = append(data, map[string]interface{}{
-			"src":        v.Src[1:],
-			"fileName":   v.FileName,
-			"id":         v.ID,
-			"userId":     v.UserId,
-			"createTime": v.CreatedAt,
-			"updateTime": v.UpdatedAt,
-			"path":       v.Src,
-		})
+		data = append(data, fileResponse(v))
 	}
 	apiReturn.SuccessListData(c, data, count)
 }
@@ -162,15 +145,30 @@ func (a *FileApi) Deletes(c *gin.Context) {
 	txErr := global.Db.Transaction(func(tx *gorm.DB) error {
 		files := []models.File{}
 
-		if err := tx.Order("created_at desc").Find(&files, "user_id=? AND id in ?", userInfo.ID, req.Ids).Error; err != nil {
+		if err := tx.Order("created_at desc").Find(&files, "owner_id=? AND id in ? AND status=?", userInfo.ID, req.Ids, models.FileStatusActive).Error; err != nil {
 			return err
 		}
 
 		for _, v := range files {
-			os.Remove(v.Src) // best-effort cleanup
+			var refCount int64
+			if err := tx.Model(&models.FileReference{}).Where("file_id=?", v.ID).Count(&refCount).Error; err != nil {
+				return err
+			}
+			if refCount > 0 {
+				return fmt.Errorf("file %d is still referenced", v.ID)
+			}
+			if err := os.Remove(storage.AbsolutePath(v.RelativePath)); err != nil && !os.IsNotExist(err) {
+				if updateErr := tx.Model(&models.File{}).Where("id=?", v.ID).Update("status", models.FileStatusDeleteFailed).Error; updateErr != nil {
+					return updateErr
+				}
+				continue
+			}
+			if err := tx.Model(&models.File{}).Where("id=?", v.ID).Update("status", models.FileStatusDeleted).Error; err != nil {
+				return err
+			}
 		}
 
-		if err := tx.Order("created_at desc").Delete(&files, "user_id=? AND id in ?", userInfo.ID, req.Ids).Error; err != nil {
+		if err := tx.Delete(&models.File{}, "owner_id=? AND id in ? AND status=?", userInfo.ID, req.Ids, models.FileStatusDeleted).Error; err != nil {
 			return err
 		}
 
@@ -188,4 +186,28 @@ func (a *FileApi) Deletes(c *gin.Context) {
 
 func (a *FileApi) DeletesBatch(c *gin.Context) {
 	a.Deletes(c)
+}
+
+func fileResponse(v models.File) map[string]interface{} {
+	src := storage.PublicPath(v.RelativePath)
+	return map[string]interface{}{
+		"src":          src,
+		"fileName":     v.OriginalName,
+		"originalName": v.OriginalName,
+		"id":           v.ID,
+		"userId":       v.OwnerID,
+		"ownerId":      v.OwnerID,
+		"createTime":   v.CreatedAt,
+		"updateTime":   v.UpdatedAt,
+		"path":         v.RelativePath,
+		"relativePath": v.RelativePath,
+		"objectKey":    v.ObjectKey,
+		"mimeType":     v.MimeType,
+		"ext":          v.Ext,
+		"size":         v.Size,
+		"sha256":       v.SHA256,
+		"visibility":   v.Visibility,
+		"purpose":      v.Purpose,
+		"status":       v.Status,
+	}
 }

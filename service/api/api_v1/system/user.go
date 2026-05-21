@@ -1,6 +1,7 @@
 package system
 
 import (
+	"time"
 	"zpanel/api/api_v1/common/apiData/systemApiStructs"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/api/api_v1/common/base"
@@ -80,7 +81,7 @@ func (a *UserApi) UpdateInfo(c *gin.Context) {
 		"name":       params.Name,
 	})
 	// 删除缓存
-	global.UserToken.Delete(userInfo.Token)
+	global.UserToken.Delete(c.GetHeader("token"))
 	if err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
@@ -120,14 +121,14 @@ func (a *UserApi) UpdatePasssword(c *gin.Context) {
 	}
 	res := global.Db.Model(&models.User{}).Where("id", userInfo.ID).Updates(map[string]interface{}{
 		"password": cmn.PasswordEncryption(params.NewPassword),
-		"token":    "",
 	})
 	if res.Error != nil {
 		apiReturn.ErrorDatabase(c, res.Error.Error())
 		return
 	}
-	// 删除token
-	global.UserToken.Delete(userInfo.Token)
+	now := time.Now()
+	_ = global.Db.Model(&models.Session{}).Where("user_id=? AND revoked_at IS NULL", userInfo.ID).Update("revoked_at", now).Error
+	global.UserToken.Delete(c.GetHeader("token"))
 	apiReturn.Success(c)
 }
 

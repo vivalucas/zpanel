@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/api/api_v1/common/base"
 	"zpanel/global"
@@ -43,12 +44,13 @@ func (a UsersApi) Create(c *gin.Context) {
 	}
 
 	mUser := models.User{
-		Username:  strings.TrimSpace(param.Username),
-		Password:  cmn.PasswordEncryption(param.Password),
-		Name:      param.Name,
-		HeadImage: param.HeadImage,
-		Status:    1,
-		Role:      param.Role,
+		Username:     strings.TrimSpace(param.Username),
+		Password:     cmn.PasswordEncryption(param.Password),
+		PasswordAlgo: "bcrypt",
+		Name:         param.Name,
+		HeadImage:    param.HeadImage,
+		Status:       1,
+		Role:         param.Role,
 		// Mail:      param.Username, 不再保存邮箱账号字段
 	}
 
@@ -157,12 +159,14 @@ func (a UsersApi) Update(c *gin.Context) {
 		return
 	}
 
-	allowField := []string{"Username", "Name", "Mail", "Token", "Role"}
+	allowField := []string{"Username", "Name", "Mail", "Role"}
 
 	// 密码不为默认“-”空，修改密码
 	if param.Password != "-" {
 		param.Password = cmn.PasswordEncryption(param.Password)
 		allowField = append(allowField, "Password")
+		param.PasswordAlgo = "bcrypt"
+		allowField = append(allowField, "PasswordAlgo")
 	}
 
 	mUser := models.User{}
@@ -180,12 +184,14 @@ func (a UsersApi) Update(c *gin.Context) {
 		userInfo = user
 	}
 
-	param.Token = "" // 修改资料就重置token
 	if err := global.Db.Select(allowField).Where("id=?", param.ID).Updates(&param).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
-	// global.Logger.Debug("修改资料清空token", userInfo.Token)
+	if param.Password != "-" {
+		now := time.Now()
+		_ = global.Db.Model(&models.Session{}).Where("user_id=? AND revoked_at IS NULL", param.ID).Update("revoked_at", now).Error
+	}
 	global.UserToken.Delete(userInfo.Token) // 更新用户信息
 	// 返回token等基本信息
 	apiReturn.SuccessData(c, param)

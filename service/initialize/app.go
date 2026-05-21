@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 	"zpanel/global"
-	"zpanel/initialize/cUserToken"
 	"zpanel/initialize/config"
 	"zpanel/initialize/database"
 	"zpanel/initialize/lang"
@@ -16,6 +15,7 @@ import (
 	"zpanel/initialize/systemSettingCache"
 	"zpanel/initialize/userToken"
 	"zpanel/lib/cmn"
+	"zpanel/lib/storage"
 	"zpanel/models"
 	"zpanel/structs"
 
@@ -33,6 +33,16 @@ func InitApp() error {
 	Logo()
 	gin.SetMode(global.RUNCODE) // GIN 运行模式
 
+	// 配置初始化
+	{
+		if appConfig, err := config.ConfigInit(); err != nil {
+			log.Println("Configuration initialization error", err)
+			return err
+		} else {
+			global.Config = appConfig
+		}
+	}
+
 	// 日志
 	if logger, err := runlog.InitRunlog(global.RUNCODE, "running.log"); err != nil {
 		log.Panicln("Log initialization error", err)
@@ -43,14 +53,9 @@ func InitApp() error {
 	// 命令行运行
 	CommandRun()
 
-	// 配置初始化
-	{
-		if config, err := config.ConfigInit(); err != nil {
-			global.Logger.Errorln("Configuration initialization error", err)
-			return err
-		} else {
-			global.Config = config
-		}
+	if err := storage.EnsureRuntimeDirs(); err != nil {
+		global.Logger.Errorln("Runtime storage initialization error", err)
+		return err
 	}
 
 	// 多语言初始化
@@ -81,7 +86,6 @@ func InitApp() error {
 
 	// 初始化用户token
 	global.UserToken = userToken.InitUserToken()
-	global.CUserToken = cUserToken.InitCUserToken()
 
 	// 其他的初始化
 	global.VerifyCodeCachePool = other.InitVerifyCodeCachePool()
@@ -164,14 +168,15 @@ func CommandRun() {
 		newPassword := "12345678"
 
 		updateInfo := models.User{
-			Password: cmn.PasswordEncryption(newPassword),
-			Token:    "",
+			Password:     cmn.PasswordEncryption(newPassword),
+			PasswordAlgo: "bcrypt",
 		}
 		// 重置第一个管理员的密码
-		if err := global.Db.Select("Password", "Token").Where("id=?", userInfo.ID).Updates(&updateInfo).Error; err != nil {
+		if err := global.Db.Select("Password", "PasswordAlgo").Where("id=?", userInfo.ID).Updates(&updateInfo).Error; err != nil {
 			fmt.Println("ERROR", err.Error())
 			os.Exit(0) // 务必退出
 		}
+		_ = global.Db.Model(&models.Session{}).Where("user_id=?", userInfo.ID).Update("revoked_at", time.Now()).Error
 
 		fmt.Println("The password has been successfully reset. Here is the account information")
 		fmt.Println("Username ", userInfo.Username)

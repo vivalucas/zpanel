@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"time"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/global"
 	"zpanel/models"
@@ -14,45 +15,35 @@ func LoginInterceptor(c *gin.Context) {
 	// c.Next()
 
 	// 获得token
-	cToken := c.GetHeader("token")
+	rawToken := c.GetHeader("token")
 
 	// 没有token信息视为未登录
-	if cToken == "" {
+	if rawToken == "" {
 		apiReturn.ErrorByCode(c, 1000)
 		c.Abort() // 终止执行后续的操作，一般配合return使用
 		return
 	}
 
-	token := ""
-	{
-		var ok bool
-		token, ok = global.CUserToken.Get(cToken)
-		// 可能已经安全退出或者很久没有使用已过期
-		if !ok || token == "" {
-			apiReturn.ErrorByCode(c, 1001)
-			c.Abort() // 终止执行后续的操作，一般配合return使用
-			return
-		}
-	}
-
 	// 直接返回缓存的用户信息
-	if userInfo, success := global.UserToken.Get(token); success {
+	if userInfo, success := global.UserToken.Get(rawToken); success {
 		c.Set("userInfo", userInfo)
 		return
 	}
 
-	global.Logger.Debug("准备查询数据库的用户资料", token)
+	global.Logger.Debug("准备查询数据库的用户资料")
 
-	mUser := models.User{}
 	// 去库中查询是否存在该用户；否则返回错误
-	if info, err := mUser.GetUserInfoByToken(token); err != nil || info.Token == "" || info.ID == 0 {
+	if session, err := models.GetActiveSessionByToken(global.Db, rawToken); err != nil || session.User.ID == 0 {
 		apiReturn.ErrorCode(c, 1001, global.Lang.Get("login.err_token_expire"), nil)
 		c.Abort()
 		return
 	} else {
 		// 通过 设置当前用户信息
-		global.UserToken.SetDefault(info.Token, info)
-		global.CUserToken.SetDefault(cToken, token)
+		info := session.User
+		info.Token = rawToken
+		now := time.Now()
+		_ = global.Db.Model(&models.Session{}).Where("id=?", session.ID).Update("last_seen_at", now).Error
+		global.UserToken.SetDefault(rawToken, info)
 		c.Set("userInfo", info)
 	}
 
@@ -62,17 +53,18 @@ func LoginInterceptor(c *gin.Context) {
 func LoginInterceptorDev(c *gin.Context) {
 
 	// 获得token
-	token := c.GetHeader("token")
-	mUser := models.User{}
+	rawToken := c.GetHeader("token")
 
 	// 去库中查询是否存在该用户；否则返回错误
-	if info, err := mUser.GetUserInfoByToken(token); err != nil || info.ID == 0 {
+	if session, err := models.GetActiveSessionByToken(global.Db, rawToken); err != nil || session.User.ID == 0 {
 		apiReturn.ErrorCode(c, 1001, global.Lang.Get("login.err_token_expire"), nil)
 		c.Abort()
 		return
 	} else {
 		// 通过
 		// 设置当前用户信息
+		info := session.User
+		info.Token = rawToken
 		c.Set("userInfo", info)
 	}
 }

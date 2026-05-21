@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"time"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/api/api_v1/common/base"
 	"zpanel/global"
@@ -15,39 +16,27 @@ import (
 func PublicModeInterceptor(c *gin.Context) {
 
 	// 获得token
-	cToken := c.GetHeader("token")
-	token := ""
+	rawToken := c.GetHeader("token")
 
 	// 没有token信息视为未登录
-	if cToken != "" {
-		var ok bool
-		token, ok = global.CUserToken.Get(cToken)
-		if ok && token != "" {
-			// 直接返回缓存的用户信息
-			if userInfo, success := global.UserToken.Get(token); success {
-				global.Logger.Debug("缓存的用户TOKEN:", token)
-				c.Set("userInfo", userInfo)
-				return
-			} else {
-				global.Logger.Debug("数据库查询TOKEN:", token)
-				mUser := models.User{}
-				// 去库中查询是否存在该用户
-				if info, err := mUser.GetUserInfoByToken(token); err == nil && info.Token != "" && info.ID != 0 {
-					global.Logger.Debug("数据库查询用户:", info.ID)
-					// 通过 设置当前用户信息
-					global.UserToken.SetDefault(info.Token, info)
-					global.CUserToken.SetDefault(cToken, token)
-					c.Set("userInfo", info)
-					return
-				} else {
-					global.Logger.Debug("数据库查询用户失败", token)
-				}
-			}
+	if rawToken != "" {
+		if userInfo, success := global.UserToken.Get(rawToken); success {
+			c.Set("userInfo", userInfo)
+			return
+		}
+		if session, err := models.GetActiveSessionByToken(global.Db, rawToken); err == nil && session.User.ID != 0 {
+			info := session.User
+			info.Token = rawToken
+			now := time.Now()
+			_ = global.Db.Model(&models.Session{}).Where("id=?", session.ID).Update("last_seen_at", now).Error
+			global.UserToken.SetDefault(rawToken, info)
+			c.Set("userInfo", info)
+			return
 		} else {
-			global.Logger.Debug("token为空或者不OK")
+			global.Logger.Debug("数据库查询用户失败")
 		}
 	} else {
-		global.Logger.Debug("cToken不存在")
+		global.Logger.Debug("token不存在")
 	}
 
 	// 获取公开账号的信息
@@ -59,13 +48,12 @@ func PublicModeInterceptor(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		global.Logger.Debug("访客用户TOKEN:", token)
 		global.Logger.Debug("访客用户ID:", userInfo.ID)
 		c.Set("userInfo", userInfo)
 		c.Set(base.GIN_GET_VISIT_MODE, base.VISIT_MODE_PUBLIC)
 		return
 	} else {
-		global.Logger.Debug("访客用户不存在:", userId, " ", token)
+		global.Logger.Debug("访客用户不存在:", userId)
 		apiReturn.ErrorCode(c, 1001, global.Lang.Get("login.err_token_expire"), nil)
 		c.Abort()
 		return

@@ -27,7 +27,6 @@ var (
 	Lang *language.LangStructObj
 
 	UserToken           cache.Cacher[models.User]
-	CUserToken          cache.Cacher[string] // 用户token
 	Logger              *zap.SugaredLogger
 	LoggerLevel         = zap.NewAtomicLevel() // 支持通过http以及配置文件动态修改日志级别
 	VerifyCodeCachePool cache.Cacher[string]

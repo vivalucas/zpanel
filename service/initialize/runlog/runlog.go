@@ -4,13 +4,14 @@ import (
 	"os"
 	"zpanel/global"
 	"zpanel/lib/cmn"
+	"zpanel/lib/storage"
 
 	"go.uber.org/zap"
 )
 
 func InitRunlog(runmode string, filePath string) (*zap.SugaredLogger, error) {
 
-	runtimePath := "./runtime/runlog"
+	runtimePath := storage.LogsPath()
 	if err := os.MkdirAll(runtimePath, 0755); err != nil {
 		return nil, err
 	}

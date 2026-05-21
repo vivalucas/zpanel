@@ -2,19 +2,15 @@ package panel
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
-	"os"
-	"path"
 	"strings"
-	"time"
 	"zpanel/api/api_v1/common/apiData/commonApiStructs"
 	"zpanel/api/api_v1/common/apiData/panelApiStructs"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/api/api_v1/common/base"
 	"zpanel/global"
-	"zpanel/lib/cmn"
 	"zpanel/lib/siteFavicon"
+	"zpanel/lib/storage"
 	"zpanel/models"
 
 	"github.com/gin-gonic/gin"
@@ -242,31 +238,34 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 	}
 	global.Logger.Debug("fullUrl:", fullUrl)
 
-	// 生成保存目录
-	configUpload := global.Config.GetValueString("base", "source_path")
-	savePath := fmt.Sprintf("%s/%d/%d/%d/", configUpload, time.Now().Year(), time.Now().Month(), time.Now().Day())
-	isExist, _ := cmn.PathExists(savePath)
-	if !isExist {
-		os.MkdirAll(savePath, os.ModePerm)
-	}
-
-	// 下载
-	var imgInfo *os.File
-	{
-		var err error
-		if imgInfo, err = siteFavicon.DownloadImage(fullUrl, savePath, 1024*1024); err != nil {
-			apiReturn.Error(c, "acquisition failed: download"+err.Error())
-			return
-		}
+	stored, err := storage.DownloadRemoteFile(fullUrl, userInfo.ID, models.FilePurposeIcon, models.FileVisibilityPublic, 1024*1024, allowedFaviconExts())
+	if err != nil {
+		apiReturn.Error(c, "acquisition failed: download"+err.Error())
+		return
 	}
 
 	// 保存到数据库
-	ext := path.Ext(fullUrl)
-	mFile := models.File{}
-	if _, err := mFile.AddFile(userInfo.ID, parsedURL.Host, ext, imgInfo.Name()); err != nil {
+	file, err := (&models.File{}).AddFile(models.AddFileInput{
+		OwnerID:      userInfo.ID,
+		ObjectKey:    stored.ObjectKey,
+		RelativePath: stored.RelativePath,
+		SourceURL:    fullUrl,
+		OriginalName: parsedURL.Host,
+		MimeType:     stored.MimeType,
+		Ext:          stored.Ext,
+		Size:         stored.Size,
+		SHA256:       stored.SHA256,
+		Visibility:   models.FileVisibilityPublic,
+		Purpose:      models.FilePurposeIcon,
+	})
+	if err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
-	resp.IconUrl = imgInfo.Name()[1:]
+	resp.IconUrl = storage.PublicPath(file.RelativePath)
 	apiReturn.SuccessData(c, resp)
+}
+
+func allowedFaviconExts() []string {
+	return []string{".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"}
 }

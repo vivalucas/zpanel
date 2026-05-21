@@ -45,7 +45,7 @@ func (e *Emailer) Send(mailTo []string, send_name, title, body string) error {
 func (m *Emailer) SendMail(mailTo string, title, content string) error {
 	fromUrl := "127.0.0.1"
 	appName := global.Lang.Get("common.app_name")
-	mUser := models.User{Mail: mailTo}
+	mUser := models.User{Mail: &mailTo}
 	userInfo := mUser.GetUserInfoByMail()
 
 	nickName := ""

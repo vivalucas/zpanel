@@ -5,6 +5,7 @@ import (
 
 	"zpanel/api/api_v1/middleware"
 	"zpanel/global"
+	"zpanel/lib/storage"
 	// "zpanel/router/admin"
 	"zpanel/router/openness"
 	"zpanel/router/panel"
@@ -40,14 +41,8 @@ func NewRouter() *gin.Engine {
 		router.StaticFile("/favicon.svg", webPath+"/favicon.svg")
 	}
 
-	// 上传的文件
-	sourcePath := "./uploads"
-	if global.Config != nil {
-		if configuredSourcePath := global.Config.GetValueString("base", "source_path"); configuredSourcePath != "" {
-			sourcePath = configuredSourcePath
-		}
-	}
-	router.Static(sourcePath[1:], sourcePath)
+	// 上传的文件。URL 固定为 /uploads，物理目录由 storage.uploads_path 控制。
+	router.Static("/uploads", storage.UploadsPath())
 
 	return router
 }

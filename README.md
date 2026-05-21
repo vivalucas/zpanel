@@ -103,8 +103,7 @@ Default persistent directories:
 
 ```text
 ./conf
-./uploads
-./database
+./data
 ```
 
 Health check endpoint:

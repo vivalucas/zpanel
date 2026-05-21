@@ -4,9 +4,7 @@ services:
     container_name: zpanel
     volumes:
       - ./conf:/app/conf
-      - ./uploads:/app/uploads
-      - ./database:/app/database
-    # - ./runtime:/app/runtime
+      - ./data:/app/data
     ports:
       - 6521:6521
     healthcheck:

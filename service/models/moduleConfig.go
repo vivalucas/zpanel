@@ -8,10 +8,11 @@ import (
 
 type ModuleConfig struct {
 	BaseModel
-	UserId    uint                   `gorm:"index" json:"userId"`
-	Name      string                 `gorm:"type:varchar(255)" json:"name"`
-	ValueJson string                 `gorm:"type:text" json:"-"`
-	Value     map[string]interface{} `gorm:"-" json:"value"`
+	UserId        uint                   `gorm:"index" json:"userId"`
+	Name          string                 `gorm:"type:varchar(255)" json:"name"`
+	SchemaVersion int                    `gorm:"not null;default:1" json:"schemaVersion"`
+	ValueJson     string                 `gorm:"type:text" json:"-"`
+	Value         map[string]interface{} `gorm:"-" json:"value"`
 }
 
 func (m *ModuleConfig) GetConfigByUserIdAndName(db *gorm.DB, userId uint, name string) (map[string]interface{}, error) {

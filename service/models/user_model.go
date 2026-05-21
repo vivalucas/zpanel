@@ -7,15 +7,17 @@ import (
 // 用户表
 type User struct {
 	BaseModel
-	Username     string `gorm:"index:;index:idx_username_password,priority:1;type:varchar(50)" json:"username" validate:"required"` // 账号
-	Password     string `gorm:"index:idx_username_password;type:varchar(60)" json:"password" validate:"required"`                   // 密码
-	Name         string `gorm:"type:varchar(20)" json:"name"`                                                                       // 名称
-	HeadImage    string `gorm:"type:varchar(200)" json:"headImage"`                                                                 // 头像地址
-	Status       int    `gorm:"type:tinyint(1)" json:"status"`                                                                      // 状态 1.启用 2.停用 3.未激活
-	Role         int    `gorm:"type:int(11)" json:"role"`                                                                           // 角色 1.管理员 2.普通用户
-	Mail         string `gorm:"type:varchar(50)" json:"mail"`                                                                       // 邮箱
-	ReferralCode string `gorm:"type:varchar(10)" json:"referralCode"`                                                               // 推荐码
-	Token        string `gorm:"type:varchar(32)" json:"token"`
+	Username     string  `gorm:"type:varchar(64);uniqueIndex;not null" json:"username" validate:"required"` // 账号
+	Password     string  `gorm:"column:password_hash;type:varchar(255);not null" json:"password" validate:"required"`
+	PasswordAlgo string  `gorm:"type:varchar(32);not null;default:bcrypt" json:"passwordAlgo"`
+	Name         string  `gorm:"type:varchar(64);not null" json:"name"`                  // 名称
+	HeadImage    string  `gorm:"type:varchar(2048)" json:"headImage"`                    // 头像地址
+	Status       int     `gorm:"type:tinyint(1);index;not null;default:1" json:"status"` // 状态 1.启用 2.停用 3.未激活
+	Role         int     `gorm:"type:int(11);index;not null;default:2" json:"role"`      // 角色 1.管理员 2.普通用户
+	Mail         *string `gorm:"type:varchar(255);uniqueIndex" json:"mail"`              // 邮箱
+	AvatarFileID *uint   `gorm:"index" json:"avatarFileId"`                              // 头像文件
+	Token        string  `gorm:"-" json:"token,omitempty"`
+	ReferralCode string  `gorm:"-" json:"referralCode,omitempty"`
 
 	UserId uint `gorm:"-"  json:"userId"`
 }
@@ -43,6 +45,9 @@ func (m *User) GetUserInfoByUsername(username string) (User, error) {
 
 // 根据邮箱查询用户
 func (m *User) GetUserInfoByMail() *User {
+	if m.Mail == nil || *m.Mail == "" {
+		return nil
+	}
 	mUser := User{}
 	if Db.Where("mail=?", m.Mail).First(&mUser).Error != nil {
 		return nil
@@ -52,9 +57,13 @@ func (m *User) GetUserInfoByMail() *User {
 
 // 根据token查询用户
 func (m *User) GetUserInfoByToken(userToken string) (User, error) {
-	mUser := User{}
-	err := Db.Where("token=?", userToken).First(&mUser).Error
-	return mUser, err
+	session, err := GetActiveSessionByToken(Db, userToken)
+	if err != nil {
+		return User{}, err
+	}
+	user := session.User
+	user.Token = userToken
+	return user, nil
 }
 
 // 更新用户基于id
@@ -80,12 +89,16 @@ func (m *User) UpdateUserInfoByUserId(user_id uint, updateInfo map[string]interf
 	}
 
 	if v, ok := updateInfo["mail"]; ok {
-		hasUser := User{}
-		count := Db.Where("mail=?", updateInfo["mail"]).First(&hasUser).RowsAffected
-		if count != 0 && hasUser.ID != user_id {
-			return errors.New("the mail already exists")
+		if mail, ok := normalizeMail(v); ok {
+			hasUser := User{}
+			count := Db.Where("mail=?", mail).First(&hasUser).RowsAffected
+			if count != 0 && hasUser.ID != user_id {
+				return errors.New("the mail already exists")
+			}
+			data["mail"] = &mail
+		} else {
+			data["mail"] = nil
 		}
-		data["mail"] = v
 	}
 	if v, ok := updateInfo["username"]; ok {
 		hasUser := User{}
@@ -94,9 +107,6 @@ func (m *User) UpdateUserInfoByUserId(user_id uint, updateInfo map[string]interf
 			return errors.New("the username already exists")
 		}
 		data["username"] = v
-	}
-	if v, ok := updateInfo["token"]; ok {
-		data["token"] = v
 	}
 	if v, ok := updateInfo["password"]; ok {
 		data["password"] = v
@@ -116,12 +126,14 @@ func (m *User) CreateOne() (User, error) {
 // 验证是否有重复的用户名或者邮箱
 func (m *User) CheckMailAndUsername(mail, username string) error {
 	hasUser := User{}
-	count := Db.Where("mail=?", mail).First(&hasUser).RowsAffected
-	if count != 0 {
-		return errors.New("该邮箱已被注册")
+	if mail != "" {
+		count := Db.Where("mail=?", mail).First(&hasUser).RowsAffected
+		if count != 0 {
+			return errors.New("该邮箱已被注册")
+		}
 	}
 
-	count = Db.Where("username=?", username).First(&hasUser).RowsAffected
+	count := Db.Where("username=?", username).First(&hasUser).RowsAffected
 	if count != 0 {
 		return errors.New("该用户名已被注册")
 	}
@@ -131,11 +143,28 @@ func (m *User) CheckMailAndUsername(mail, username string) error {
 // 验证是否有重复的用户名或者邮箱
 func (m *User) CheckMailExist(mail string) (User, error) {
 	hasUser := User{}
+	if mail == "" {
+		return hasUser, nil
+	}
 	count := Db.Where("mail=?", mail).First(&hasUser).RowsAffected
 	if count != 0 {
 		return hasUser, errors.New("该邮箱已被注册")
 	}
 	return hasUser, nil
+}
+
+func normalizeMail(value interface{}) (string, bool) {
+	switch v := value.(type) {
+	case string:
+		return v, v != ""
+	case *string:
+		if v == nil || *v == "" {
+			return "", false
+		}
+		return *v, true
+	default:
+		return "", false
+	}
 }
 
 // 验证是否有重复的用户名或者邮箱

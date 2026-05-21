@@ -46,6 +46,11 @@ service/lang
 service/database
 service/web
 service/uploads
+service/data
+data/
+uploads/
+database/
+runtime/
 service/plugins
 
 # Local project knowledge base

@@ -117,10 +117,12 @@ func CreateDatabase(driver string, db *gorm.DB) error {
 	// 创建数据表
 	err := db.AutoMigrate(
 		&models.User{},
+		&models.Session{},
 		&models.SystemSetting{},
 		&models.ItemIcon{},
 		&models.UserConfig{},
 		&models.File{},
+		&models.FileReference{},
 		&models.ItemIconGroup{},
 		&models.ModuleConfig{},
 	)
@@ -136,12 +138,13 @@ func NotFoundAndCreateUser(db *gorm.DB) error {
 			return err
 		}
 		username := "admin@zpanel.local"
-		fUser.Mail = username
+		fUser.Mail = &username
 		fUser.Username = username
 		fUser.Name = username
 		fUser.Status = 1
 		fUser.Role = 1
 		fUser.Password = cmn.PasswordEncryption("12345678")
+		fUser.PasswordAlgo = "bcrypt"
 
 		if errCreate := db.Create(&fUser).Error; errCreate != nil {
 			return errCreate

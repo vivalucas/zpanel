@@ -8,9 +8,12 @@ import (
 
 // 系统设置
 type SystemSetting struct {
-	ID          uint   `gorm:"primaryKey"`
-	ConfigName  string `gorm:"type:varchar(50)"`
-	ConfigValue string `gorm:"type:text"`
+	ID            uint   `gorm:"primaryKey"`
+	ConfigName    string `gorm:"type:varchar(128);uniqueIndex;not null"`
+	ConfigValue   string `gorm:"type:text"`
+	ValueType     string `gorm:"type:varchar(32);not null;default:json"`
+	SchemaVersion int    `gorm:"not null;default:1"`
+	IsPublic      bool   `gorm:"not null;default:false"`
 }
 
 func (m *SystemSetting) Get(configName string) (result string, err error) {
@@ -54,7 +57,7 @@ func (m *SystemSetting) Set(configName string, configValue interface{}) error {
 
 	if db.RowsAffected == 0 {
 		// 添加
-		if err := Db.Model(m).Create(&SystemSetting{ConfigName: configName, ConfigValue: value}).Error; err != nil {
+		if err := Db.Model(m).Create(&SystemSetting{ConfigName: configName, ConfigValue: value, ValueType: "json", SchemaVersion: 1}).Error; err != nil {
 			return err
 		}
 

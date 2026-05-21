@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"strconv"
 	"strings"
+	"time"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/api/api_v1/common/base"
 	"zpanel/global"
@@ -13,7 +14,6 @@ import (
 	"zpanel/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -60,7 +60,6 @@ func (l LoginApi) Login(c *gin.Context) {
 		err  error
 		info models.User
 	)
-	bToken := ""
 	param.Username = strings.TrimSpace(param.Username)
 	if info, err = mUser.GetUserInfoByUsername(param.Username); err != nil {
 		// 未找到记录 账号或密码错误
@@ -85,34 +84,19 @@ func (l LoginApi) Login(c *gin.Context) {
 		return
 	}
 
-	bToken = info.Token
-	if info.Token == "" {
-		// 生成token
-		buildTokenOver := false
-		for !buildTokenOver {
-			bToken = cmn.BuildRandCode(32, cmn.RAND_CODE_MODE2)
-			if _, err := mUser.GetUserInfoByToken(bToken); err != nil {
-				// 保存token
-				mUser.UpdateUserInfoByUserId(info.ID, map[string]interface{}{
-					"token": bToken,
-				})
-				buildTokenOver = true
-			}
-		}
-		info.Token = bToken
+	session, rawToken := models.NewSession(info.ID, c.ClientIP(), c.Request.UserAgent())
+	if err := global.Db.Create(&session).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
 	}
 	info.Password = ""
 	info.ReferralCode = ""
+	info.Token = rawToken
 
-	// global.UserToken.SetDefault(bToken, info)
-	cToken := uuid.NewString() + "-" + cmn.Md5(cmn.Md5("userId"+strconv.Itoa(int(info.ID))))
-	global.CUserToken.SetDefault(cToken, bToken)
-	global.Logger.Debug("token:", cToken, "|", bToken)
-	global.Logger.Debug(global.CUserToken.Get(cToken))
+	global.UserToken.SetDefault(rawToken, info)
 
 	// 设置当前用户信息
 	c.Set("userInfo", info)
-	info.Token = cToken // 重要 采用cToken,隐藏真实token
 	apiReturn.SuccessData(c, info)
 }
 
@@ -142,8 +126,13 @@ func (l LoginApi) CaptchaImage(c *gin.Context) {
 
 // 安全退出
 func (l *LoginApi) Logout(c *gin.Context) {
-	// userInfo, _ := base.GetCurrentUserInfo(c)
-	cToken := c.GetHeader("token")
-	global.CUserToken.Delete(cToken)
+	rawToken := c.GetHeader("token")
+	if rawToken != "" {
+		now := time.Now()
+		_ = global.Db.Model(&models.Session{}).
+			Where("token_hash = ? AND revoked_at IS NULL", models.HashToken(rawToken)).
+			Update("revoked_at", now).Error
+		global.UserToken.Delete(rawToken)
+	}
 	apiReturn.Success(c)
 }

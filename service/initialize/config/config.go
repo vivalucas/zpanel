@@ -10,12 +10,21 @@ import (
 func getDefaultConfig() map[string]map[string]string {
 	return map[string]map[string]string{
 		"base": {
-			"http_port":        "9090",
-			"source_path":      "./files",      // 存放文件的路径
-			"source_temp_path": "./files/temp", // 存放文件的缓存路径
+			"http_port":      "6521",
+			"database_drive": "sqlite",
+			"cache_drive":    "memory",
+			"queue_drive":    "memory",
+		},
+		"storage": {
+			"data_path":    "./data",
+			"uploads_path": "./data/uploads",
+			"temp_path":    "./data/runtime/temp",
+			"cache_path":   "./data/runtime/cache",
+			"logs_path":    "./data/runtime/logs",
+			"backups_path": "./data/backups",
 		},
 		"sqlite": {
-			"file_path": "./database.db",
+			"file_path": "./data/database/zpanel.db",
 		},
 	}
 
@@ -37,12 +46,16 @@ func ConfigInit() (*iniConfig.IniConfig, error) {
 			return nil, err
 		}
 
-		global.Logger.Infoln("配置文件已经自动生成'conf/conf.ini',将再次读取配置")
+		if global.Logger != nil {
+			global.Logger.Infoln("配置文件已经自动生成'conf/conf.ini',将再次读取配置")
+		}
 		// 创建成功再次读取文件
 		if configAgain, errAgain, _ := Conf(getDefaultConfig()); errAgain != nil {
 			return nil, errAgain
 		} else {
-			global.Logger.Infoln("尝试读取配置文件'conf/conf.ini',二次读取配置文件成功")
+			if global.Logger != nil {
+				global.Logger.Infoln("尝试读取配置文件'conf/conf.ini',二次读取配置文件成功")
+			}
 			return configAgain, nil
 		}
 	} else {

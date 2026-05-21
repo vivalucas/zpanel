@@ -26,7 +26,7 @@ cd service
 go run main.go
 ```
 
-The frontend dev server listens on `http://127.0.0.1:1002` and proxies API requests to `http://127.0.0.1:3002`.
+The frontend dev server listens on `http://127.0.0.1:1002` and proxies API requests to `http://127.0.0.1:6521`.
 
 ## Quality Checks
 

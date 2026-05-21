@@ -31,11 +31,7 @@ buildFrontend() {
 }
 
 buildBackEndAssets() {
-  cd $REPO/service
-#   export PATH=$PATH:/root/go/bin
-  go install -a -v github.com/go-bindata/go-bindata/...@latest
-  go install -a -v github.com/elazarl/go-bindata-assetfs/...@latest
-  go-bindata-assetfs -o=assets/bindata.go -pkg=assets assets/...
+  echo "Backend assets are embedded by service/assets/assets.go"
 }
 
 # buildBinary() {

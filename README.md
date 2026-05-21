@@ -90,13 +90,13 @@ docker compose up -d
 Default image:
 
 ```text
-ghcr.io/vivalucas/zpanel:latest
+vivalucas/zpanel:latest
 ```
 
 Default port:
 
 ```text
-3002
+6521
 ```
 
 Default persistent directories:
@@ -170,7 +170,7 @@ cd service
 go run main.go
 ```
 
-By default, the frontend dev server listens on `http://127.0.0.1:1002` and proxies API requests to the backend at `http://127.0.0.1:3002/`.
+By default, the frontend dev server listens on `http://127.0.0.1:1002` and proxies API requests to the backend at `http://127.0.0.1:6521/`.
 
 ---
 

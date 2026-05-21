@@ -78,10 +78,10 @@ docker compose up -d
 默认镜像：
 
 ```text
-ghcr.io/vivalucas/zpanel:latest
+vivalucas/zpanel:latest
 ```
 
-默认端口：`3002`
+默认端口：`6521`
 
 健康检查接口：
 
@@ -133,7 +133,7 @@ cd service
 go run main.go
 ```
 
-默认情况下，前端开发服务器运行在 `http://127.0.0.1:1002`，并将 API 请求代理到 `http://127.0.0.1:3002`。
+默认情况下，前端开发服务器运行在 `http://127.0.0.1:1002`，并将 API 请求代理到 `http://127.0.0.1:6521`。
 
 ## 质量检查
 

@@ -1,11 +1,11 @@
 package system
 
 import (
+	"time"
 	"zpanel/api/api_v1/common/apiData/systemApiStructs"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/global"
 	"zpanel/lib/monitor"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"

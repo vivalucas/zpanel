@@ -1,9 +1,9 @@
 package other
 
 import (
+	"time"
 	"zpanel/global"
 	"zpanel/lib/cache"
-	"time"
 )
 
 func InitVerifyCodeCachePool() cache.Cacher[string] {

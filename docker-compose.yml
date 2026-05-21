@@ -1,6 +1,6 @@
 services:
   zpanel:
-    image: 'ghcr.io/vivalucas/zpanel:latest'
+    image: 'vivalucas/zpanel:latest'
     container_name: zpanel
     volumes:
       - ./conf:/app/conf
@@ -8,9 +8,9 @@ services:
       - ./database:/app/database
     # - ./runtime:/app/runtime
     ports:
-      - 3002:3002
+      - 6521:6521
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3002/api/healthz']
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:6521/api/healthz']
       interval: 30s
       timeout: 5s
       retries: 3

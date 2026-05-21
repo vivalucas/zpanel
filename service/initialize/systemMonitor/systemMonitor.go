@@ -1,10 +1,10 @@
 package systemMonitor
 
 import (
+	"time"
 	"zpanel/global"
 	"zpanel/lib/cache"
 	"zpanel/lib/monitor"
-	"time"
 )
 
 func Start(cacher cache.Cacher[global.ModelSystemMonitor], interval time.Duration) {

@@ -216,19 +216,13 @@ func AssetsTakeFileToPath(assetsPath, targetPath string) error {
 func PasswordEncryption(password string) string {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		// bcrypt 失败时回退到 MD5（不应发生）
-		return Md5(password)
+		panic("bcrypt failed: " + err.Error())
 	}
 	return string(hash)
 }
 
-// 验证密码（兼容 bcrypt 和旧 MD5 哈希）
+// 验证密码
 func VerifyPassword(password, hashedPassword string) bool {
-	// bcrypt 哈希以 $2a$ 或 $2b$ 开头，长度为 60
-	if len(hashedPassword) == 60 && (strings.HasPrefix(hashedPassword, "$2a$") || strings.HasPrefix(hashedPassword, "$2b$")) {
-		err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-		return err == nil
-	}
-	// 回退：旧 MD5 哈希
-	return Md5(password) == hashedPassword
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	return err == nil
 }

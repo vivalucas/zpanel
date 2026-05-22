@@ -193,7 +193,9 @@ func (a UsersApi) Update(c *gin.Context) {
 		_ = global.Db.Model(&models.Session{}).Where("user_id=? AND revoked_at IS NULL", param.ID).Update("revoked_at", now).Error
 	}
 	global.UserToken.Delete(userInfo.Token) // 更新用户信息
-	// 返回token等基本信息
+	// 返回token等基本信息（清除密码字段）
+	param.Password = ""
+	param.PasswordAlgo = ""
 	apiReturn.SuccessData(c, param)
 }
 
@@ -211,6 +213,16 @@ func (a UsersApi) GetList(c *gin.Context) {
 		apiReturn.ErrorParamFomat(c, err.Error())
 		c.Abort()
 		return
+	}
+
+	if param.Limit <= 0 {
+		param.Limit = 10
+	}
+	if param.Limit > 100 {
+		param.Limit = 100
+	}
+	if param.Page <= 0 {
+		param.Page = 1
 	}
 
 	var (

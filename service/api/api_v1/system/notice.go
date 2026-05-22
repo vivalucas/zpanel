@@ -24,5 +24,5 @@ func (a *NoticeApi) GetListByDisplayType(c *gin.Context) {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
-	apiReturn.SuccessListData(c, noticeList, 0)
+	apiReturn.SuccessListData(c, noticeList, int64(len(noticeList)))
 }

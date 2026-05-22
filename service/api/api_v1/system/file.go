@@ -107,7 +107,7 @@ func (a *FileApi) GetList(c *gin.Context) {
 	list := []models.File{}
 	userInfo, _ := base.GetCurrentUserInfo(c)
 	var count int64
-	if err := global.Db.Order("created_at desc").Find(&list, "owner_id=? AND status=?", userInfo.ID, models.FileStatusActive).Count(&count).Error; err != nil {
+	if err := global.Db.Order("created_at desc").Limit(500).Find(&list, "owner_id=? AND status=?", userInfo.ID, models.FileStatusActive).Count(&count).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}

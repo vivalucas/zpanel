@@ -155,7 +155,11 @@ func CommandRun() {
 		// 重置密码
 
 		// 配置初始化
-		config, _ := config.ConfigInit()
+		config, err := config.ConfigInit()
+		if err != nil {
+			fmt.Println("ERROR", "Failed to load config:", err.Error())
+			os.Exit(1)
+		}
 		global.Config = config
 
 		DatabaseConnect()
@@ -185,7 +189,6 @@ func CommandRun() {
 	} else {
 		return
 	}
-	os.Exit(0) // 务必退出
 }
 
 func Logo() {

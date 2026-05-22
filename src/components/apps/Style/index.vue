@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { UploadFileInfo } from 'naive-ui'
 import { NButton, NCard, NColorPicker, NGrid, NGridItem, NInput, NInputGroup, NInputNumber, NPopconfirm, NSelect, NSlider, NSwitch, NUpload, NUploadDragger, useMessage } from 'naive-ui'
 import { useAuthStore, usePanelState } from '@/store'
@@ -25,6 +25,7 @@ const siteSetting = ref<System.SiteSetting>({
 })
 
 const isSaveing = ref(false)
+let saveTimer: ReturnType<typeof setTimeout> | null = null
 
 const iconTypeOptions = [
   {
@@ -48,11 +49,19 @@ const maxWidthUnitOption = [
   },
 ]
 
+onBeforeUnmount(() => {
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+})
+
 watch(panelState.panelConfig, () => {
   if (!isSaveing.value) {
     isSaveing.value = true
 
-    setTimeout(() => {
+    saveTimer = setTimeout(() => {
+      saveTimer = null
       panelState.recordState()// 本地记录
       isSaveing.value = false
       uploadCloud()
@@ -67,8 +76,14 @@ function handleUploadBackgroundFinish({
   file: UploadFileInfo
   event?: ProgressEvent
 }) {
-  const res = JSON.parse((event?.target as XMLHttpRequest).response)
-  panelState.panelConfig.backgroundImageSrc = res.data.imageUrl
+  try {
+    const res = JSON.parse((event?.target as XMLHttpRequest).response)
+    if (res.data?.imageUrl)
+      panelState.panelConfig.backgroundImageSrc = res.data.imageUrl
+  }
+  catch {
+    // ignore parse errors
+  }
   return file
 }
 

@@ -2,20 +2,22 @@ package global
 
 import (
 	"strconv"
+	"sync"
 	"zpanel/lib/cache"
 )
 
 type RateLimiter struct {
 	Minute cache.Cacher[int]
 	Hour   cache.Cacher[int]
+	mu     sync.Mutex
 }
 
 func (r *RateLimiter) MinuteAddOnce(userId uint) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	key := "user_" + strconv.Itoa(int(userId))
 	times := r.MinuteGet(userId) + 1
-	// fmt.Println("fen册数", times)
 	r.Minute.SetKeepExpiration(key, times)
-	// r.Minute.SetDefault(key, times)
 }
 
 func (r *RateLimiter) MinuteGet(userId uint) int {
@@ -27,11 +29,11 @@ func (r *RateLimiter) MinuteGet(userId uint) int {
 }
 
 func (r *RateLimiter) HourAddOnce(userId uint) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	key := "user_" + strconv.Itoa(int(userId))
 	times := r.HourGet(userId) + 1
-	// fmt.Println("hour册数", times)
 	r.Hour.SetKeepExpiration(key, times)
-	// r.Hour.SetDefault(key, times)
 }
 
 func (r *RateLimiter) HourGet(userId uint) int {

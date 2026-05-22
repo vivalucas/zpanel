@@ -107,10 +107,17 @@ export async function updateLocalUserInfo() {
     visitMode: VisitMode
   }
 
-  const { data } = await getAuthInfo<Req>()
-  userStore.updateUserInfo({ headImage: data.user.headImage, name: data.user.name })
-  authStore.setUserInfo(data.user)
-  authStore.setVisitMode(data.visitMode)
+  try {
+    const { data } = await getAuthInfo<Req>()
+    if (data.user) {
+      userStore.updateUserInfo({ headImage: data.user.headImage, name: data.user.name })
+      authStore.setUserInfo(data.user)
+    }
+    authStore.setVisitMode(data.visitMode)
+  }
+  catch {
+    // ignore: network error or token expired
+  }
 }
 
 export async function getNotice(displayType: number | number[]) {

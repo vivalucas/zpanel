@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { deDE, enUS, frFR, itIT, jaJP, koKR, ptBR, ruRU, zhCN, zhTW } from 'naive-ui'
 import { useAppStore } from '@/store'
 import { setLocale } from '@/locales'
@@ -21,9 +21,16 @@ const naiveLocaleMap: Record<string, typeof zhCN> = {
 export function useLanguage() {
   const appStore = useAppStore()
 
+  watch(
+    () => appStore.language,
+    (locale) => {
+      setLocale(locale as SupportedLocale)
+    },
+    { immediate: true },
+  )
+
   const language = computed(() => {
     const locale = appStore.language as SupportedLocale
-    setLocale(locale)
     return naiveLocaleMap[locale] ?? zhCN
   })
 

@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -63,7 +64,7 @@ func GetOneFaviconURLAndUpload(urlStr string) (string, bool) {
 func getFaviconURL(url string) ([]string, error) {
 	var icons []string
 	icons = make([]string, 0)
-	client := &http.Client{}
+	client := &http.Client{Timeout: 15 * time.Second}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return icons, err

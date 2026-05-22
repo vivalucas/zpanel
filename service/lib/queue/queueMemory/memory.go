@@ -53,36 +53,42 @@ func (k *Pool) Delete(value interface{}) error {
 	return nil
 }
 
+// 取出值（调用方需持锁或在单次锁内调用）
+func (k *Pool) getByIndexLocked(index int64, v interface{}) error {
+	if int64(len(k.Values)) > index {
+		json.Unmarshal(k.Values[index], v)
+		return nil
+	}
+	return errors.New("index non-existent")
+}
+
 // 取出值
 func (k *Pool) GetByIndex(index int64, v interface{}) error {
 	k.Lock.RLock()
 	defer k.Lock.RUnlock()
-	if int64(len(k.Values)) >= index {
-		json.Unmarshal(k.Values[index], v)
-		return nil
-	} else {
-		return errors.New("index non-existent")
-	}
+	return k.getByIndexLocked(index, v)
 }
 
-// 左-取出并删除
+// 左-取出并删除（原子操作）
 func (k *Pool) LPop(v interface{}) error {
-	if err := k.GetByIndex(0, v); err != nil {
+	k.Lock.Lock()
+	defer k.Lock.Unlock()
+	if err := k.getByIndexLocked(0, v); err != nil {
 		return err
-	} else {
-		k.removeIndex(0)
 	}
+	k.Values = k.Values[1:]
 	return nil
 }
 
-// 右-取出并删除
+// 右-取出并删除（原子操作）
 func (k *Pool) RPop(v interface{}) error {
-	index := int64(len(k.Values) - 1)
-	if err := k.GetByIndex(index, v); err != nil {
+	k.Lock.Lock()
+	defer k.Lock.Unlock()
+	last := int64(len(k.Values) - 1)
+	if err := k.getByIndexLocked(last, v); err != nil {
 		return err
-	} else {
-		k.removeIndex(index)
 	}
+	k.Values = k.Values[:last]
 	return nil
 }
 

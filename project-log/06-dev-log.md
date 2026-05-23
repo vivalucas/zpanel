@@ -1,0 +1,259 @@
+# 开发日志
+
+<!-- 填写说明：每轮开发追加一条记录。不要删除旧记录。详见 README 中的格式说明。 -->
+
+---
+
+## 2026-05-21（基础数据与运行时存储重构）
+
+**触发原因**：用户明确表示当前没有历史用户包袱，希望基础结构一步做到位，优先修正上传目录、数据存储、字段设计、会话 token、安全边界等长期骨架问题。
+
+**修改内容**：
+1. 新增 `service/lib/storage`，统一 `data/`、`data/uploads`、`data/runtime/*`、`data/backups` 等运行时目录。
+2. Docker Compose 挂载从 `./uploads` + `./database` 改为 `./data:/app/data`。
+3. SQLite 默认路径改为 `./data/database/zpanel.db`，上传默认路径改为 `./data/uploads`。
+4. 上传文件不再按日期目录保存，改为 object key + owner/purpose/visibility 目录。
+5. `File` 模型重构为对象资源表，增加 `object_key`、`relative_path`、`mime_type`、`size`、`sha256`、`visibility`、`purpose`、`status` 等字段。
+6. 新增 `FileReference` 模型，为资源引用关系和安全删除打基础。
+7. 登录 token 不再写入用户表，新增 `Session` 模型，数据库只保存 token hash、过期时间、撤销时间、IP 和 UA。
+8. `User` 模型增加唯一用户名 / 邮箱、`password_hash`、`password_algo`、`avatar_file_id` 等长期字段。
+9. `SystemSetting`、`UserConfig`、`ModuleConfig`、`ItemIcon` 增补 schema version、结构化图标和文件引用相关字段。
+10. 文件上传、公共图库、favicon 下载、文件删除逻辑接入新的 storage 和 file 模型。
+11. 初始化顺序调整为先读取配置，再按 `storage.logs_path` 初始化日志。
+12. 删除仍被引用的文件时直接拒绝，避免资源在 UI 中消失但业务仍在引用。
+
+**验证结果**：
+- `cd service && go test ./...` 通过。
+- `corepack pnpm run type-check` 通过。
+- `corepack pnpm run build-only` 通过；仍有既有 chunk 体积提示和 `/custom/index.js` 非 module 提示。
+
+**后续仍需处理**：
+- 前端仍有部分业务状态保存 URL 字符串，后续应逐步改为保存 `file_id`。
+- JSON blob 尚未完全移除，当前先增加 schema version 和结构化字段，为下一轮 API / UI 重构铺底。
+- 需要补齐文件管理 UI 中可见性、用途、引用状态展示。
+
+---
+
+## 2026-05-21（独立仓库与 1.0.0 发布整理）
+
+**触发原因**：用户在另一台电脑上删除原 GitHub fork 仓库并重新创建同名仓库，希望 ZPanel 从“fork 后项目”整理为更像独立开源项目的状态。由于 `project-log/` 不随 GitHub 同步，需要根据用户笔记、当前新 clone 和旧副本重新补全文档。
+
+**修改内容**：
+1. GitHub 仓库重新创建为独立仓库，并以精简历史重新推送；当前 GitHub 不再显示 fork 标识、Sync fork 或旧历史。
+2. 清理项目文件：删除 `.vscode`、旧 `config/`、旧 `doc/images/`、测试页、旧说明文件等无人引用或不适合公开项目的内容。
+3. `UPDATELOG.md` 改为标准 `CHANGELOG.md`；`add-frontend-version.js` 移入 `scripts/`。
+4. Go 文件命名规范化：例如 `A_ENTER.go`、大小写混乱文件名、`userCondig.go` 等已改为更标准命名；`ApiPpenness` 拼写修复为 `ApiOpenness`。
+5. 新增 `/api/healthz` 健康检查接口，并增加 `service/router/router_test.go` 测试。
+6. 新增 GitHub Actions CI、Dependabot、PR 模板、Issue 模板、`CONTRIBUTING.md`、`SECURITY.md`。
+7. 优化 `.gitignore`、`.dockerignore`、`.gitattributes` 和 Husky 配置。
+8. Dockerfile 优化依赖缓存，并为 Dockerfile / docker-compose 增加健康检查。
+9. 修复没有 `.env` 时 `pnpm run build` 失败的问题；调整 build 脚本顺序，避免版本写入和构建并行竞态。
+10. README 与多语言文档重写为更适合用户、SEO 和独立开源项目的表达，减少过度提原项目、PRO、付费对比等表述。
+11. 版本统一为 `1.0.0`：`service/assets/version = 1|1.0.0`，`package.json` 同步为 `1.0.0`。
+12. 默认端口从 `3002` 统一改为 `6521`，同步 Dockerfile、docker-compose、配置模板、README、开发代理配置等位置。
+13. 容器发布接入 Docker Hub 与 GHCR，同时推送 `vivalucas/zpanel:1.0.0`、`vivalucas/zpanel:latest`、`ghcr.io/vivalucas/zpanel:1.0.0`、`ghcr.io/vivalucas/zpanel:latest`。
+14. 修复 Alpine + sqlite3 CGO 构建问题：Dockerfile 增加 `CGO_CFLAGS="-D_LARGEFILE64_SOURCE"`，重新提交并移动 `v1.0.0` tag 后容器发布成功。
+
+**当前 Git 状态**：
+- `e734a49 chore: initialize zpanel project`
+- `90177e5 chore: prepare 1.0.0 release`
+- `1e80e0d fix: build docker image with sqlite on alpine`
+- 当前 `HEAD` 为 `1e80e0d`，`origin/master` 已同步。
+
+**验证结果**：
+- GitHub Actions `ci / Frontend` 通过。
+- GitHub Actions `ci / Backend` 通过。
+- Docker Hub / GHCR 容器发布成功。
+- 当前本地已 `git pull --ff-only origin master` 到最新版。
+
+**后续仍需处理**：
+- 当前 project-log 是从旧副本恢复并按笔记重建，后续每次重要改动仍需本地同步维护。
+- 本地 Docker 管理实机验证仍待补。
+- 非中英产品文案真实翻译版仍待补。
+- README 中个别“本地 Go 验证待补”表述需要后续和 CI 状态继续统一。
+
+---
+
+## 2026-05-21（代码质量治理第一轮）
+
+**触发原因**：用户希望 ZPanel 成为标准化的 Vue / Go / TypeScript 项目，并要求在更新相关文档后开始代码质量治理。
+
+**当前实测状态**：
+1. 前端 `npx pnpm@11.1.3 run type-check` 通过。
+2. 前端 `npx pnpm@11.1.3 run lint` 通过，但仍有 37 个 warning，主要是 `console`、未使用变量和少量 Vue 命名风格。
+3. 前端 `npx pnpm@11.1.3 run build-only` 通过，但存在 chunk 过大提示。
+4. Go 环境已可用，当前为 `go1.26.3 darwin/arm64`。
+5. 后端 `cd service && go test ./...` 初始失败，阻塞点包括错误位置生成的 `service/bindata.go` 缺少 `package` 声明，以及 `LoginRateLimit.go` 存在未使用 import。
+6. 排除 `node_modules` 后，当前项目仍没有前后端测试文件。
+
+**修改内容**：
+1. 删除错误位置生成的本地忽略文件 `service/bindata.go`，避免 Go 根包编译失败；保留正确位置的 `service/assets/bindata.go`。
+2. `service/api/api_v1/middleware/LoginRateLimit.go` — 删除未使用 import，并 gofmt。
+3. `add-frontend-version.js` — 移除已不存在的 `moment` 依赖，改用标准 `Date` 生成 `VITE_APP_VERSION`。
+4. 多个 Vue 组件 — 移除调试 `console.log`，把未使用的 `catch (error)` 改为 `catch`，删除未使用参数或改为 `_` 前缀。
+5. `src/components/deskModule/SystemMonitor/Edit/index.vue`、`src/views/home/index.vue` — 修正 Vue 事件 / v-model 参数命名风格。
+6. `src/components/apps/DockerManager/index.vue`、`src/typings/system.d.ts` — 为 Docker stats 补充类型，减少 `any`。
+7. `src/utils/jsonImportExport/index.ts` — 删除 throw 后不可达的 `return null`。
+
+**验证结果**：
+- `npx pnpm@11.1.3 run type-check` 通过。
+- `npx pnpm@11.1.3 run lint` 通过，0 warning。
+- `npx pnpm@11.1.3 run build` 通过；仍有 Vite chunk 过大提示。
+- `cd service && go test ./...` 通过；当前所有包仍显示 `[no test files]`。
+- `git diff --check` 通过。
+
+**后续仍需处理**：
+- Go bcrypt 迁移后的登录 / 修改密码回归测试。
+- 后端全局状态解耦和测试注入能力。
+- 前端 bundle 拆分、动态 import 和真实多语言翻译。
+- Docker 管理实机验证。
+
+---
+
+## 2026-05-20（多语言 README 与产品本地化框架）
+
+**触发原因**：用户希望 ZPanel 的 README 语言数量和 DashCat 对齐，同时项目本身也支持这些语言；随后确认需要把“真正翻译版”这件事明确记录下来，避免把 locale 框架完成误认为所有语言翻译完成。
+
+**修改内容**：
+1. `README.md` 与 `README.*.md` — 增加 11 种语言入口和对应 README 版本，语言包括简体中文、English、日本語、한국어、Deutsch、Français、Español、Português do Brasil、Italiano、繁體中文、Русский。
+2. `src/locales/index.ts`、`src/store/modules/app/helper.ts`、`src/utils/defaultData/index.ts` — 注册产品侧同样的 11 种语言，并接入语言选择和浏览器语言识别。
+3. `src/locales/zh-CN.json`、`src/locales/en-US.json` — 整理现有中文 / 英文文案，补齐登录验证码、Docker 管理、站点设置、公共图库、搜索引擎、异常页、校验提示等新增文案 key。
+4. `src/locales/de-DE.json`、`src/locales/es-ES.json`、`src/locales/fr-FR.json`、`src/locales/it-IT.json`、`src/locales/ja-JP.json`、`src/locales/ko-KR.json`、`src/locales/pt-BR.json`、`src/locales/ru-RU.json`、`src/locales/zh-TW.json` — 补齐 locale 文件，确保 key 完整。
+5. 多个前端组件 — 把用户可见的硬编码中文 / 英文收敛到 locale 文件，覆盖 Docker 管理、用户信息、样式设置、搜索框、文件管理、登录页、异常页、调试导入导出等界面。
+6. `project-log/` — 明确记录当前非中英产品文案只是可运行基线，还不是母语级真实翻译版。
+
+**重要说明**：
+
+当前已经完成的是产品本地化框架、语言选项、locale key 对齐和中英文文案优化。日语、韩语、德语、法语、西班牙语、巴西葡萄牙语、意大利语、俄语目前使用英文基线文案，繁体中文目前使用简体中文基线文案。这样做是为了保证切换语言时不会缺 key 或页面崩坏，但它不等于真正翻译完成。
+
+真正翻译版需要后续单独完成：每种语言都需要母语级产品文案翻译、术语统一、按钮长度检查和界面实测；繁体中文还需要做繁体化、地区用语和标点习惯校对。
+
+**遇到的问题**：
+- 原项目已有中英文翻译，但新增 PRO 功能和部分旧界面仍存在硬编码文案。
+- 非中英语言一次性补齐真实翻译成本较高，且需要界面长度和语境校验。
+- README 翻译和产品 UI 翻译是两类工作，不能混为同一个完成状态。
+
+**解决方式**：
+- 先建立完整 locale 文件集合，并用脚本检查 11 种语言 key 完全一致。
+- 中英文先做真实可用文案；其他语言先使用基线文案占位，后续按语言逐个真实翻译。
+- 在 project-log 中把“真实翻译版待办”列为明确后续任务。
+
+**验证方式**：
+- `pnpm run type-check`
+- `pnpm run lint`
+- locale key parity 脚本
+- `git diff --check`
+
+**验证结果**：
+- TypeScript 类型检查通过。
+- ESLint 通过，保留 3 个既有 Vue 命名风格 warning。
+- 11 个 locale JSON 文件 key 完全一致，缺失 0、额外 0。
+- `git diff --check` 通过。
+
+---
+
+## 2026-05-20（PRO 功能开源化第一版）
+
+**触发原因**：用户提供上游 PRO / 标准版功能对比表，并要求在 ZPanel 当前版本中实现这些原本属于 PRO 的功能。
+
+**修改内容**：
+1. `service/api/api_v1/system/about.go`、`service/lib/cmn/systemSetting/systemSetting.go`、`src/components/apps/Style/index.vue` — 新增站点标题、站点图标、登录页文字、自定义 CSS / JS 和登录验证码开关。
+2. `service/api/api_v1/system/login.go`、`service/router/system/login.go`、`src/views/login/index.vue` — 接通登录验证码图片生成和登录校验。
+3. `src/components/deskModule/SearchBox/index.vue` — 支持无限自定义搜索引擎、删除和持久化。
+4. `src/components/apps/UserInfo/index.vue`、`src/views/login/index.vue` — 增加多账号快速切换，本地保存已登录账号 token。
+5. `service/api/api_v1/system/file.go`、`src/components/apps/UploadFileManager/index.vue` — 增加公共图库列表视图。
+6. `src/components/apps/ImportExport/index.vue`、`src/utils/jsonImportExport/index.ts` — 导入导出扩展到图标配置和样式配置。
+7. `service/api/api_v1/system/docker.go`、`src/components/apps/DockerManager/index.vue` — 新增管理员 Docker 容器管理页面，支持列表、资源快照、启动 / 停止 / 重启和日志。
+8. `src/App.vue` — 启动时应用站点标题、favicon、自定义 CSS / JS。
+
+**遇到的问题**：
+- 当前环境没有 `go` / `gofmt`，无法进行 Go 编译和格式化验证。
+- 当前环境没有 Docker CLI，无法验证 Docker 管理接口对真实容器的操作。
+- 前端预览没有后端 API，因此登录页会出现公开配置请求失败的网络提示。
+
+**解决方式**：
+- 使用现有 GORM `system_setting` 表承载站点设置和登录验证码开关，避免第一版引入数据库迁移。
+- Docker 管理接口限定为管理员访问，并将部署权限要求记录到 project-log。
+- 对前端做类型检查、lint、生产构建和浏览器登录页渲染验证。
+
+**验证方式**：
+- `pnpm run type-check`
+- `pnpm run lint`
+- `pnpm run build-only`
+- 本地 Vite 预览 + 浏览器打开登录页，确认页面标题和登录按钮正常渲染。
+- `git diff --check`
+
+**验证结果**：
+- TypeScript 类型检查通过。
+- ESLint 通过，保留 3 个既有 Vue 命名风格 warning。
+- Vite 生产构建通过。
+- 登录页可正常渲染。
+- 后端 Go 编译未运行，原因是当前 shell 未找到 Go。
+- Docker 实机验证未运行，原因是当前 shell 未找到 Docker。
+
+**本地产物清理**：
+- 已停止本地 Vite 预览进程。
+- `dist/` 是本轮构建产物，已清理。
+
+---
+
+## 2026-05-20（fork 初始化与 project-log 建立）
+
+**触发原因**：项目 fork 自 Sun-Panel，用户希望基于 MIT 协议建立独立维护分支。上游开源版本长期缺少持续维护，后续 PRO / 付费相关规划也没有按用户预期持续公开更新，因此需要先完成 ZPanel 的维护基线。
+
+**修改内容**：
+1. `README.md` — 重写为 ZPanel 项目说明，明确当前 fork、上游来源和 MIT 归属。
+2. `package.json`、`pnpm-lock.yaml` — 包名、描述、关键词改为 `zpanel` / `ZPanel`，并统一使用 pnpm。
+3. `service/go.mod`、`service/**/*.go` — Go module 和内部 import 路径改为 `zpanel`。
+4. `Dockerfile`、`docker-compose.yml`、`build.sh` — 构建产物、容器服务名、二进制名改为 `zpanel`，并修复 `build.sh` 版本号读取命令。
+5. `index.html`、`vite.config.ts`、`src/locales/*.json`、`src/store/modules/panel/helper.ts`、`src/views/login/index.vue` — 前端显示名和默认页脚改为 ZPanel。
+6. `src/components/apps/About/index.vue` — 关于页改为当前维护者、当前仓库和上游项目说明，移除不适合当前 fork 的上游社区 / 捐赠入口。
+7. `sun-panel.code-workspace` → `zpanel.code-workspace` — VS Code workspace 文件按项目名重命名。
+8. `project-log/` — 从模板复制项目知识库，并补齐当前项目第一版文档。
+9. `.node-version`、`package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml` — 固定 Node.js 24.15.0、pnpm 11.1.3，并升级前端核心依赖。
+10. `.github/workflows/container-ghcr.yml`、`docker-compose.yml` — 将容器发布目标改为 GitHub Container Registry。
+11. `src/components/apps/ImportExport/index.vue`、`src/utils/jsonImportExport/index.ts` — 移除旧 `.sunpanel.json` 导入兼容，导出文件名改为 `ZPanel-Data...`。
+12. `service/initialize/database/connect.go` — 默认管理员账号改为 `admin@zpanel.local`。
+
+**遇到的问题**：
+- 当前 shell 中找不到 `pnpm` 和 `go`。
+- 使用 `npx pnpm` 默认拉取 pnpm 11，导致 `pnpm-lock.yaml` 被升级为 lockfile v9，并额外生成 `pnpm-workspace.yaml`。
+- 初期全量 `pnpm run lint` 曾失败，后续已迁移到新的 ESLint 配置，当前全量 lint 无 error。
+- 前端预览时后端未启动，`/api` 请求连接 `127.0.0.1:3002` 失败。
+- TypeScript 6 / Vue 3.5 / Naive UI 新版本暴露出旧 Vue 宏 import、定时器类型、输入组件类型和 slot 名拼写问题。
+
+**解决方式**：
+- 初始验证曾使用 `npx pnpm@8 install --frozen-lockfile` 保持原锁文件，随后按新项目策略升级到 pnpm 11.1.3 并刷新 lockfile v9。
+- 删除 npm lockfile，避免 npm / pnpm 双锁文件长期并存。
+- 对本次触碰的 `docker-compose.yml` 和 About 页单独运行 ESLint，确认没有新增 lint 错误。
+- 预览验证时只确认标题和页面基础渲染，不把后端 API 失败视为前端构建失败。
+- 修复升级后暴露的类型兼容问题，并把 Vite / Vue / pnpm 的配置更新到当前工具链要求。
+
+**验证方式**：
+- `npx pnpm@11.1.3 install`
+- `npx pnpm@11.1.3 run type-check`
+- `npx pnpm@11.1.3 run build-only`
+- `npx eslint docker-compose.yml src/components/apps/About/index.vue`
+- `git diff --check`
+- 本地 `vite preview` + 浏览器读取页面标题和首页文本。
+
+**验证结果**：
+- 前端依赖安装通过。
+- TypeScript 类型检查通过。
+- Vite 生产构建通过。
+- pnpm 11 / TypeScript 6 / Vite 8 下类型检查和生产构建通过。
+- 本次触碰文件的 ESLint 检查通过。
+- `git diff --check` 通过。
+- 本地预览页面标题显示为 `ZPanel`，首页文本包含 `Powered By ZPanel`。
+- 后端构建未运行，原因是当前 shell 未找到 Go。
+- 全量 lint 后续已通过；当前仅剩 3 个 Vue 命名风格 warning。
+
+**本地产物清理**：
+- `dist/` 为本轮构建产物，已在收尾阶段清理。
+- 上游捐赠和 QQ 群相关资源已删除。
+- `node_modules/` 是为本地验证安装的依赖目录，按项目常规保留且已被 `.gitignore` 忽略。
+
+---
+
+<!-- 新记录追加在上方分隔线之后、旧记录之前 -->
+<!-- 格式模板：复制上面的 ## YYYY-MM-DD（主题描述）块，填写具体内容 -->

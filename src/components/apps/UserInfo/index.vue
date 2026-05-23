@@ -83,6 +83,12 @@ function saveSwitchAccounts() {
   localStorage.setItem(switchAccountStorageKey, JSON.stringify(switchAccounts.value))
 }
 
+function clearCurrentSession() {
+  userStore.resetUserInfo()
+  authStore.removeToken()
+  panelState.removeState()
+}
+
 function switchAccount(account: { token: string; userInfo: User.Info }) {
   authStore.setToken(account.token)
   authStore.setUserInfo(account.userInfo)
@@ -94,9 +100,30 @@ function removeSwitchAccount(userId?: number) {
   saveSwitchAccounts()
 }
 
+function updateSwitchAccountUserInfo(userInfo: Partial<User.Info>) {
+  const userId = authStore.userInfo?.id
+  if (!userId)
+    return
+
+  switchAccounts.value = switchAccounts.value.map((item) => {
+    if (item.userInfo.id !== userId)
+      return item
+    return {
+      ...item,
+      userInfo: {
+        ...item.userInfo,
+        ...userInfo,
+      },
+      updatedAt: Date.now(),
+    }
+  })
+  saveSwitchAccounts()
+}
+
 function handleSaveInfo() {
   updateInfo(nickName.value).then(({ code, msg }) => {
     if (code === 0) {
+      updateSwitchAccountUserInfo({ name: nickName.value })
       updateLocalUserInfo()
       isEditNickNameStatus.value = false
     }
@@ -123,6 +150,11 @@ function handleUpdatePassword(e: MouseEvent) {
         // 成功
         updatePasswordModalState.value.show = false
         ms.success(t('common.success'))
+        removeSwitchAccount(authStore.userInfo?.id)
+        clearCurrentSession()
+        setTimeout(() => {
+          location.reload()
+        }, 500)
       }
     }).finally(() => {
       updatePasswordModalState.value.loading = false

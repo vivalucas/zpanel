@@ -22,6 +22,10 @@ export function apiRespErrMsg(res: Response): boolean {
   const apiErrorCodeName = `apiErrorCode.${res.code}`
   const getI18nValue = t(apiErrorCodeName)
   if (apiErrorCodeName === getI18nValue) {
+    if (res.msg) {
+      message.error(res.msg)
+      return true
+    }
     return false
   }
   else {

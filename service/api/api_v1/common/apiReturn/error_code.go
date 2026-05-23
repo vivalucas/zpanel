@@ -10,6 +10,7 @@ var ErrorCodeMap = map[int]string{
 	1005: "No current permission for operation", // 当前无权限操作
 	1006: "Account does not exist",              // 账号不存在
 	1007: "Old password error",                  // 旧密码不正确
+	1008: "Too many login attempts, please try again later",
 
 	// 数据类
 	1200: "Database error",           // 数据库错误

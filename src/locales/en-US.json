@@ -26,6 +26,7 @@
     "1005": "You do not have permission to perform this action",
     "1006": "Account does not exist",
     "1007": "Old password error",
+    "1008": "Too many login attempts, please try again later",
     "1200": "Database error",
     "1201": "Please keep at least one",
     "1202": "Data record not found",

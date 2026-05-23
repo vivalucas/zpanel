@@ -35,13 +35,24 @@ const defaultDiskExtendParam: DiskExtendParam = {
   path: '',
 }
 
-const defaultMonitorData: MonitorData = {
-  extendParam: defaultGenericProgressStyleExtendParam,
-  monitorType: MonitorType.cpu,
+function buildDefaultMonitorData(): MonitorData {
+  return {
+    extendParam: { ...defaultGenericProgressStyleExtendParam },
+    monitorType: MonitorType.cpu,
+  }
+}
+
+function cloneMonitorData(value: MonitorData | null): MonitorData {
+  if (!value)
+    return buildDefaultMonitorData()
+  return {
+    ...value,
+    extendParam: { ...value.extendParam },
+  }
 }
 
 const active = ref<string>(MonitorType.cpu)
-const currentMonitorData = ref<MonitorData>(props.monitorData || { ...defaultMonitorData })
+const currentMonitorData = ref<MonitorData>(cloneMonitorData(props.monitorData))
 const currentGenericProgressStyleExtendParam = ref<GenericProgressStyleExtendParam>({ ...defaultGenericProgressStyleExtendParam })
 const currentDiskExtendParam = ref<DiskExtendParam>({ ...defaultDiskExtendParam })
 
@@ -63,6 +74,7 @@ const show = computed({
 
 watch(() => props.visible, (value) => {
   active.value = props.monitorData?.monitorType || MonitorType.cpu
+  currentMonitorData.value = cloneMonitorData(props.monitorData)
   if (props.monitorData?.monitorType === MonitorType.cpu || props.monitorData?.monitorType === MonitorType.memory)
     currentGenericProgressStyleExtendParam.value = { ...props.monitorData?.extendParam }
   else if (props.monitorData?.monitorType === MonitorType.disk)
@@ -82,10 +94,10 @@ async function handleSubmit() {
   let verificationRes = true
   currentMonitorData.value.monitorType = active.value as MonitorType
   if (currentMonitorData.value.monitorType === MonitorType.cpu || currentMonitorData.value.monitorType === MonitorType.memory) {
-    currentMonitorData.value.extendParam = currentGenericProgressStyleExtendParam
+    currentMonitorData.value.extendParam = { ...currentGenericProgressStyleExtendParam.value }
   }
   else if (currentMonitorData.value.monitorType === MonitorType.disk) {
-    currentMonitorData.value.extendParam = currentDiskExtendParam
+    currentMonitorData.value.extendParam = { ...currentDiskExtendParam.value }
     const res = await DiskEditorRef.value?.verification()
     if (res !== undefined)
       verificationRes = res

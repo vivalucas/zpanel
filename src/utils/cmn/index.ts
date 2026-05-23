@@ -101,22 +101,24 @@ export function getTitle(): string {
 }
 
 //
-export async function updateLocalUserInfo() {
+export async function updateLocalUserInfo(): Promise<boolean> {
   interface Req {
     user: User.Info
     visitMode: VisitMode
   }
 
   try {
-    const { data } = await getAuthInfo<Req>()
-    if (data.user) {
-      userStore.updateUserInfo({ headImage: data.user.headImage, name: data.user.name })
-      authStore.setUserInfo(data.user)
-    }
+    const { code, data } = await getAuthInfo<Req>()
+    if (code !== 0 || !data?.user)
+      return false
+
+    userStore.updateUserInfo({ headImage: data.user.headImage, name: data.user.name })
+    authStore.setUserInfo(data.user)
     authStore.setVisitMode(data.visitMode)
+    return true
   }
   catch {
-    // ignore: network error or token expired
+    return false
   }
 }
 

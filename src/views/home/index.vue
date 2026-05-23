@@ -261,13 +261,13 @@ function getDropdownMenuOptions() {
   return dropdownMenuOptions
 }
 
-onMounted(() => {
+onMounted(async () => {
   // 更新用户信息
-  updateLocalUserInfo()
+  await updateLocalUserInfo()
   getList()
 
   // 更新同步云端配置
-  panelState.updatePanelConfigByCloud()
+  await panelState.updatePanelConfigByCloud()
 
   // 设置标题
   if (panelState.panelConfig.logoText)
@@ -385,7 +385,7 @@ function handleAddItem(itemIconGroupId?: number) {
 
           <!-- 组纵向排列 -->
           <div
-            v-for="(itemGroup, itemGroupIndex) in filterItems" :key="itemGroupIndex"
+            v-for="(itemGroup, itemGroupIndex) in filterItems" :key="itemGroup.id ?? `filter-${itemGroupIndex}`"
             class="item-list mt-[50px]"
             :class="itemGroup.sortStatus ? 'shadow-2xl border shadow-[0_0_30px_10px_rgba(0,0,0,0.3)]  p-[10px] rounded-2xl' : ''"
             @mouseenter="handleSetHoverStatus(itemGroupIndex, true)"
@@ -414,12 +414,12 @@ function handleAddItem(itemIconGroupId?: number) {
             <div v-if="panelState.panelConfig.iconStyle === PanelPanelConfigStyleEnum.info">
               <div v-if="itemGroup.items">
                 <VueDraggable
-                  v-model="itemGroup.items" item-key="sort" :animation="300"
+                  v-model="itemGroup.items" item-key="id" :animation="300"
                   class="icon-info-box"
                   filter=".not-drag"
                   :disabled="!itemGroup.sortStatus"
                 >
-                  <div v-for="item, index in itemGroup.items" :key="index" :title="item.description" @contextmenu="(e) => handleContextMenu(e, itemGroupIndex, item)">
+                  <div v-for="item, index in itemGroup.items" :key="item.id ?? index" :title="item.description" @contextmenu="(e) => handleContextMenu(e, itemGroupIndex, item)">
                     <AppIcon
                       :class="itemGroup.sortStatus ? 'cursor-move' : 'cursor-pointer'"
                       :item-info="item"
@@ -450,13 +450,13 @@ function handleAddItem(itemIconGroupId?: number) {
             <div v-if="panelState.panelConfig.iconStyle === PanelPanelConfigStyleEnum.icon">
               <div v-if="itemGroup.items">
                 <VueDraggable
-                  v-model="itemGroup.items" item-key="sort" :animation="300"
+                  v-model="itemGroup.items" item-key="id" :animation="300"
                   class="icon-small-box"
 
                   filter=".not-drag"
                   :disabled="!itemGroup.sortStatus"
                 >
-                  <div v-for="item, index in itemGroup.items" :key="index" :title="item.description" @contextmenu="(e) => handleContextMenu(e, itemGroupIndex, item)">
+                  <div v-for="item, index in itemGroup.items" :key="item.id ?? index" :title="item.description" @contextmenu="(e) => handleContextMenu(e, itemGroupIndex, item)">
                     <AppIcon
                       :class="itemGroup.sortStatus ? 'cursor-move' : 'cursor-pointer'"
                       :item-info="item"

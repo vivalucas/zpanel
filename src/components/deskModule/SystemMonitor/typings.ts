@@ -9,6 +9,7 @@ export interface CardStyle {
 }
 
 export interface MonitorData {
+  key?: string
   monitorType: MonitorType
   extendParam?: { [key: string]: [value:any] } | any
   description?: string

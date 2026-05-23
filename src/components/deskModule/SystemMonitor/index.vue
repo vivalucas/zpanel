@@ -63,6 +63,19 @@ const cardStyle: CardStyle = {
 }
 
 const monitorDatas = ref<MonitorData[]>([])
+let monitorKeySeed = 0
+
+function buildMonitorKey() {
+  monitorKeySeed += 1
+  return `${Date.now()}-${monitorKeySeed}`
+}
+
+function ensureMonitorKeys(data: MonitorData[]) {
+  return data.map(item => ({
+    ...item,
+    key: item.key || buildMonitorKey(),
+  }))
+}
 
 function handleClick(index: number, item: MonitorData) {
   if (!props.allowEdit)
@@ -73,7 +86,7 @@ function handleClick(index: number, item: MonitorData) {
 }
 
 async function getData() {
-  monitorDatas.value = await getAll()
+  monitorDatas.value = ensureMonitorKeys(await getAll())
 
   if (monitorDatas.value.length === 0) {
     // 防止空 - 默认数据
@@ -86,6 +99,7 @@ async function getData() {
           progressRailColor: '#CFCFCFA8',
         },
         monitorType: MonitorType.cpu,
+        key: buildMonitorKey(),
       },
     )
 
@@ -200,13 +214,13 @@ function handleRightMenuSelect(key: string | number) {
       <!-- 详情图标 -->
       <template v-if="panelState.panelConfig.iconStyle === PanelPanelConfigStyleEnum.info">
         <VueDraggable
-          v-model="monitorDatas" item-key="sort" :animation="300"
+          v-model="monitorDatas" item-key="key" :animation="300"
           class="icon-info-box"
           filter=".not-drag"
           :disabled="!monitorGroup.sortStatus"
         >
           <div
-            v-for="item, index in monitorDatas" :key="index"
+            v-for="item, index in monitorDatas" :key="item.key"
             :title="item.description"
             @click="handleClick(index, item)"
             @contextmenu="(e) => handleContextMenu(e, index, item)"
@@ -226,13 +240,13 @@ function handleRightMenuSelect(key: string | number) {
       <!-- APP图标宫型盒子 -->
       <template v-if="panelState.panelConfig.iconStyle === PanelPanelConfigStyleEnum.icon">
         <VueDraggable
-          v-model="monitorDatas" item-key="sort" :animation="300"
+          v-model="monitorDatas" item-key="key" :animation="300"
           class="icon-small-box"
           filter=".not-drag"
           :disabled="!monitorGroup.sortStatus"
         >
           <div
-            v-for="item, index in monitorDatas" :key="index"
+            v-for="item, index in monitorDatas" :key="item.key"
             :title="item.description"
             @click="handleClick(index, item)"
             @contextmenu="(e) => handleContextMenu(e, index, item)"

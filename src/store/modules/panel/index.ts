@@ -27,16 +27,22 @@ export const usePanelState = defineStore('panel', {
     },
 
     // 获取云端（搭建的服务器）的面板配置
-    updatePanelConfigByCloud() {
-      getUserConfig<Panel.userConfig>().then((res) => {
-        if (res.code === 0)
+    async updatePanelConfigByCloud() {
+      return getUserConfig<Panel.userConfig>().then((res) => {
+        if (res.code === 0) {
           this.panelConfig = { ...defaultStatePanelConfig(), ...res.data.panel }
-        else
+          this.recordState()
+          return true
+        }
+        else {
           this.resetPanelConfig() // 重置恢复默认
+        }
         this.recordState()
+        return false
       }).catch(() => {
         this.resetPanelConfig()
         this.recordState()
+        return false
       })
     },
 

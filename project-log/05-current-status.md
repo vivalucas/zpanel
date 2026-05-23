@@ -1,9 +1,9 @@
 # 当前状态
 
-> **最后更新**：2026-05-21  
-> **最后更新人**：Codex  
-> **最近开发日志**：`06-dev-log.md` 中的 2026-05-21（独立仓库与 1.0.0 发布整理）  
-> **当前可信度**：GitHub CI 前后端通过；Docker Hub / GHCR 镜像发布成功；本地 Docker 实机功能验证仍待补
+> **最后更新**：2026-05-23
+> **最后更新人**：Codex
+> **最近开发日志**：`06-dev-log.md` 中的 2026-05-23（第三轮评审与稳定性修复）
+> **当前可信度**：本地 `pnpm run type-check`、`pnpm run lint`、`pnpm run build`、`cd service && go test ./...` 通过；Docker 管理实机功能验证仍待补
 
 ## 当前版本
 
@@ -34,6 +34,7 @@
 - 已提交并 push `0082469 docs: add multilingual readmes and locale options`。
 - 代码质量第一轮评估已完成，结论是前端已接近可维护基线，后端工程化、测试覆盖和安全基线仍是主要短板。
 - 代码质量治理第一轮已完成：前端 lint warning 从 37 个收敛到 0；后端 `go test ./...` 已能通过；完整前端 `pnpm build` 已通过。
+- 第三轮代码评审已完成并记录到 `11-code-review-log.md` 与 `2026-05-23-review.md`；本轮修复首页初始化、系统监控、登录限流、初始化错误传播和用户资料相关稳定性问题。
 - 新增 GitHub Actions CI、Dependabot、PR 模板、Issue 模板、`CONTRIBUTING.md`、`SECURITY.md`、`.dockerignore`、`.gitattributes` 和 Husky 配置。
 - 新增 `/api/healthz` 健康检查接口及对应 Go 测试。
 - `UPDATELOG.md` 已改为标准 `CHANGELOG.md`，`add-frontend-version.js` 已移入 `scripts/`。
@@ -43,6 +44,7 @@
 ## 进行中
 
 - 代码中仍需继续清理少量上游历史视觉资源和真实多语言文案。
+- 自定义 CSS / JS 恢复路径、搜索框交互拆分、系统监控数据类型收敛仍在评估中。
 
 ## 待处理
 
@@ -80,6 +82,7 @@
 | 旧配置导入兼容已移除 | 旧 `.sunpanel.json` 无法导入 | 已采用 | ZPanel 按全新项目发布 |
 | Docker socket 权限较高 | 配置不当可能扩大宿主机控制面 | 已识别 | 仅管理员接口可访问，部署文档需明确风险 |
 | 非中英语言仍为基线文案 | 用户切换这些语言时暂不能获得真正翻译体验 | 待处理 | 当前先用英文基线保证 locale key 完整；繁体中文先用简中基线 |
+| 自定义 CSS / JS 缺少安全恢复入口 | 错误脚本或样式可能阻断进入设置页 | 待评估 | 需要设计安全模式或启动参数，未在第三轮 Bug 修复中处理 |
 
 ## 下一步
 
@@ -91,14 +94,14 @@
 
 ## 任务交接
 
-**当前任务**：本地 project-log 已恢复并完成第一轮重建；下一步进入本地联调和实机验证。
+**当前任务**：第三轮评审与稳定性修复已完成；下一步进入本地联调、Docker 实机验证和后续质量治理。
 
-**已完成**：独立仓库重建、品牌清理、依赖升级、Docker Hub + GHCR 发布配置、PRO 功能表开源化第一版、README 多语言版本、产品 11 语言 locale 注册、中英文文案优化、CI、健康检查、1.0.0 版本统一、默认端口 6521、前端类型检查 / lint / build 验证、后端 CI 验证。
+**已完成**：独立仓库重建、品牌清理、依赖升级、Docker Hub + GHCR 发布配置、PRO 功能表开源化第一版、README 多语言版本、产品 11 语言 locale 注册、中英文文案优化、CI、健康检查、1.0.0 版本统一、默认端口 6521、前端类型检查 / lint / build 验证、后端 CI 验证、第三轮 Bug 修复。
 
 **未完成**：本地完整联调、Docker 管理实机验证、更多 Go 后端测试覆盖、非中英语言真实翻译版、完整数据库/API 逆向、默认密码策略改进。
 
-**下一步建议**：先做一次完整本地联调；随后补后端测试和 Docker 管理实机验证。
+**下一步建议**：先做一次完整本地联调；随后补后端测试、Docker 管理实机验证和自定义 CSS / JS 恢复方案设计。
 
-**风险 / 阻塞**：当前环境缺少 Docker；后端仍缺测试覆盖；Docker socket 权限高；自定义 JS / CSS 需要恢复手段和安全提示。
+**风险 / 阻塞**：当前环境缺少 Docker；后端仍缺测试覆盖；Docker socket 权限高；自定义 JS / CSS 需要恢复手段和安全提示；前端大 chunk 仍需拆分。
 
 **相关文件**：`README*.md`、`src/locales/`、`src/store/modules/app/helper.ts`、`src/utils/defaultData/index.ts`、`src/components/apps/Style/index.vue`、`src/components/apps/DockerManager/index.vue`、`src/components/deskModule/SearchBox/index.vue`、`project-log/`

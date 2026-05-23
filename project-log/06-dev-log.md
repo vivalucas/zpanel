@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-05-23（第三轮评审与稳定性修复）
+
+**触发原因**：用户将 `project-log/` 推送到 GitHub，并要求以云端 `main` 为基线重新全面阅读项目与规划文档，逐项确认真实 Bug / 优化点、更新评审文档后再修复代码，并在修改后做完整自检。
+
+**修改内容**：
+1. `project-log/2026-05-23-review.md`、`project-log/11-code-review-log.md` — 新增第三轮评审记录，逐项说明真实性、用户场景影响、优先级和本轮处理 / 延后范围。
+2. `service/initialize/app.go` — `DatabaseConnect()` 改为返回错误，启动流程和密码重置流程检查数据库连接、迁移、默认管理员初始化错误，避免半初始化继续运行。
+3. `service/api/api_v1/middleware/login_rate_limit.go`、`service/api/api_v1/common/apiReturn/error_code.go`、`src/locales/*.json`、`src/utils/request/apiMessage.ts` — 登录限流使用统一 API 错误码 `1008`，清理过期 IP 记录，并让前端展示后端错误消息。
+4. `src/components/deskModule/SystemMonitor/*` — CPU 使用率访问增加空值保护；监控配置编辑时克隆数据并保存普通对象；拖拽项使用稳定 key。
+5. `src/views/home/index.vue`、`src/store/modules/panel/index.ts`、`src/utils/cmn/index.ts` — 首页初始化改为等待用户信息和云端配置刷新，`updateLocalUserInfo()` 增加返回值和异常防御。
+6. `src/components/apps/UserInfo/index.vue` — 修改昵称后同步快速切换账号缓存；修改密码成功后移除当前账号缓存、清理本地登录态并刷新页面。
+
+**遇到的问题**：
+- 本地分支落后 `origin/main` 3 个提交，且本地已有第三轮候选改动。
+- `git stash pop` 后登录限流和 `updateLocalUserInfo()` 与远端第二轮修复发生重叠冲突。
+- `pnpm run build` 会生成 `dist/`，并按项目脚本更新忽略文件 `.env` 中的前端版本号。
+
+**解决方式**：
+- 先暂存本地候选改动，删除旧的本地忽略版 `project-log/`，快进拉取云端 `main` 后重新套回候选改动。
+- 冲突处保留远端第二轮修复基础，并合入第三轮新增行为：统一 API 错误码、过期记录清理、`boolean` 返回值和空值防御。
+- 构建后删除 `dist/`，不删除用户本地 `.env`。
+
+**验证方式**：
+- `pnpm run type-check`
+- `pnpm run lint`
+- `pnpm run build`
+- `cd service && go test ./...`
+
+**验证结果**：
+- TypeScript 类型检查通过。
+- ESLint 通过。
+- Vite 生产构建通过；仍有既有的大 chunk 提示、`/custom/index.js` 非 module 提示和 `/custom/index.css` 运行时解析提示。
+- Go 全量测试通过；除 `router` 外多数包仍为 `[no test files]`，核心业务测试覆盖仍不足。
+
+**本地产物清理**：
+- 已删除本轮 `pnpm run build` 生成的 `dist/`。
+- 未删除 `.env`，因为它是用户本地环境文件且已被 Git 忽略；本轮构建脚本仅更新其中的 `VITE_APP_VERSION`。
+
+---
+
 ## 2026-05-21（基础数据与运行时存储重构）
 
 **触发原因**：用户明确表示当前没有历史用户包袱，希望基础结构一步做到位，优先修正上传目录、数据存储、字段设计、会话 token、安全边界等长期骨架问题。

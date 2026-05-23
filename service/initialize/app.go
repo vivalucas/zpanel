@@ -61,7 +61,9 @@ func InitApp() error {
 	// 多语言初始化
 	lang.LangInit("zh-cn") // en-us
 
-	DatabaseConnect()
+	if err := DatabaseConnect(); err != nil {
+		return err
+	}
 
 	// Redis 连接
 	{
@@ -101,7 +103,7 @@ func InitApp() error {
 	return nil
 }
 
-func DatabaseConnect() {
+func DatabaseConnect() error {
 	// 数据库连接 - 开始
 	var dbClientInfo database.DbClient
 	databaseDrive := global.Config.GetValueStringOrDefault("base", "database_drive")
@@ -121,15 +123,21 @@ func DatabaseConnect() {
 	}
 
 	if db, err := database.DbInit(dbClientInfo); err != nil {
-		log.Panicln("Database initialization error", err)
+		return err
 	} else {
 		global.Db = db
 		models.Db = global.Db
 	}
 
-	database.CreateDatabase(databaseDrive, global.Db)
+	if err := database.CreateDatabase(databaseDrive, global.Db); err != nil {
+		return err
+	}
 
-	database.NotFoundAndCreateUser(global.Db)
+	if err := database.NotFoundAndCreateUser(global.Db); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // 命令行运行
@@ -162,7 +170,10 @@ func CommandRun() {
 		}
 		global.Config = config
 
-		DatabaseConnect()
+		if err := DatabaseConnect(); err != nil {
+			fmt.Println("ERROR", err.Error())
+			os.Exit(1)
+		}
 		userInfo := models.User{}
 		if err := global.Db.Where("role=?", 1).Order("id").First(&userInfo).Error; err != nil {
 			fmt.Println("ERROR", err.Error())

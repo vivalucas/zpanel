@@ -479,7 +479,7 @@ function handleAddItem(itemIconGroupId?: number) {
                       @click="handleAddItem(itemGroup.id)"
                     />
                   </div>
-                </vuedraggable>
+                </VueDraggable>
               </div>
             </div>
 

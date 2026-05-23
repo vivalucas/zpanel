@@ -87,8 +87,8 @@
 
 | 项目 | 当前值 | 来源 |
 |------|--------|------|
-| 产品版本 | `1.0.0` | `service/assets/version` 与 `package.json` |
-| 后端版本源 | `1|1.0.0` | `service/assets/version` |
+| 产品版本 | `1.0.2` | `service/assets/version` 与 `package.json` |
+| 后端版本源 | `1|1.0.2` | `service/assets/version` |
 | 健康检查 | `GET /api/healthz` | `service/router/router.go` |
 | 默认 HTTP 端口 | `6521` | `service/assets/conf.example.ini` |
 

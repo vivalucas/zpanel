@@ -4,6 +4,14 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.0.2 - 2026-05-23
+
+- Fixed third-round stability issues found during project review.
+- Improved startup failure handling for database migration and default administrator initialization.
+- Made login rate-limit errors use the standard API error-code flow.
+- Hardened home-page initialization, user-info refresh, password-change logout behavior, and system-monitor configuration editing.
+- Fixed inconsistent `VueDraggable` closing tags in home and system-monitor views.
+
 ## 1.0.1 - 2026-05-21
 
 - Published a clean patch release after validating the new GitHub Release workflow.

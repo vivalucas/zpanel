@@ -44,6 +44,41 @@
 
 ---
 
+## 2026-05-23（1.0.2 小版本发布准备）
+
+**触发原因**：用户要求在再次全面检查项目代码、重点确认上一轮修改点无误后，推进一个小版本号，提交 GitHub，打 tag 并触发构建。
+
+**修改内容**：
+1. `package.json` — 版本号从 `1.0.1` 推进到 `1.0.2`。
+2. `service/assets/version` — 后端版本源从 `1|1.0.1` 推进到 `1|1.0.2`，确保 release workflow 的 tag 校验通过。
+3. `CHANGELOG.md` — 新增 `1.0.2 - 2026-05-23` 发布记录。
+4. `src/views/home/index.vue`、`src/components/deskModule/SystemMonitor/index.vue` — 修正 `VueDraggable` 小写闭合标签，避免模板解析和维护风险。
+5. `project-log/05-current-status.md`、`project-log/08-env-config.md` — 同步当前版本状态。
+
+**遇到的问题**：
+- 复核上一轮改动时发现两个 `VueDraggable` 闭合标签仍使用旧的小写写法；现有构建可通过，但属于真实模板一致性问题。
+
+**解决方式**：
+- 仅做小范围模板修正和版本推进，不扩大到新的功能改造。
+
+**验证方式**：
+- `pnpm run type-check`
+- `pnpm run lint`
+- `cd service && go test ./...`
+- `pnpm run build`
+
+**验证结果**：
+- TypeScript 类型检查通过。
+- ESLint 通过。
+- Go 全量测试通过；核心业务测试覆盖仍不足，多数包仍为 `[no test files]`。
+- Vite 生产构建通过；仍有既有的大 chunk 提示、`/custom/index.js` 非 module 提示和 `/custom/index.css` 运行时解析提示。
+
+**本地产物清理**：
+- 已删除本轮 `pnpm run build` 生成的 `dist/`。
+- 未删除 `.env`，因为它是用户本地环境文件且已被 Git 忽略；本轮构建脚本仅更新其中的 `VITE_APP_VERSION`。
+
+---
+
 ## 2026-05-21（基础数据与运行时存储重构）
 
 **触发原因**：用户明确表示当前没有历史用户包袱，希望基础结构一步做到位，优先修正上传目录、数据存储、字段设计、会话 token、安全边界等长期骨架问题。

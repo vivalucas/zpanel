@@ -30,11 +30,11 @@ onMounted(() => {
       </div>
       <div class="text-xl">
         <NGradientText type="info">
-          <a href="https://github.com/vivalucas/zpanel/releases" class="font-semibold" :title="$t('apps.about.viewUpdateLog')" target="_blank">v{{ versionName }}</a>
+          <a href="https://github.com/vivalucas/zpanel/releases" class="font-semibold" :title="$t('apps.about.viewUpdateLog')" target="_blank" rel="noopener noreferrer">v{{ versionName }}</a>
         </NGradientText>
       </div>
       <div class="mt-2">
-        <a href="https://github.com/vivalucas/zpanel/releases" target="_blank" class="link">{{ $t('apps.about.checkUpdate') }}</a>
+        <a href="https://github.com/vivalucas/zpanel/releases" target="_blank" rel="noopener noreferrer" class="link">{{ $t('apps.about.checkUpdate') }}</a>
       </div>
     </div>
 
@@ -43,16 +43,16 @@ onMounted(() => {
     </NDivider>
     <div class="flex flex-col items-center justify-center text-base">
       <div>
-        {{ $t('apps.about.maintainer') }}<a href="https://github.com/vivalucas" target="_blank" class="link">vivalucas</a>
+        {{ $t('apps.about.maintainer') }}<a href="https://github.com/vivalucas" target="_blank" rel="noopener noreferrer" class="link">vivalucas</a>
       </div>
       <div>
-        {{ $t('apps.about.issue') }}<a href="https://github.com/vivalucas/zpanel/issues" target="_blank" class="link">Github Issues</a>
+        {{ $t('apps.about.issue') }}<a href="https://github.com/vivalucas/zpanel/issues" target="_blank" rel="noopener noreferrer" class="link">Github Issues</a>
       </div>
 
       <div class="flex mt-[10px] flex-wrap justify-center">
         <div class="flex items-center mx-[10px]">
           <img class="w-[20px] h-[20px] mr-[5px]" :src="srcGithub" alt="">
-          <a href="https://github.com/vivalucas/zpanel" target="_blank" class="link">Github</a>
+          <a href="https://github.com/vivalucas/zpanel" target="_blank" rel="noopener noreferrer" class="link">Github</a>
         </div>
       </div>
 

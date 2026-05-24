@@ -43,12 +43,14 @@ const editModalArg = ref<EditModalArg>({
 const groups = ref<Panel.ItemIconGroup[]>([])
 
 function handleAddGroup() {
-  editModalArg.value.show = !editModalArg.value.show
+  editModalArg.value.show = true
+  editModalArg.value.editStatus = 1
+  editModalArg.value.model = { ...defaultMNodal }
 }
 
 function handleEditGroup(groupInfo: Panel.ItemIconGroup) {
   editModalArg.value.show = true
-  editModalArg.value.model = groupInfo
+  editModalArg.value.model = { ...groupInfo }
   editModalArg.value.editStatus = 2
 }
 
@@ -73,6 +75,8 @@ function handleSaveSort() {
     else {
       ms.error(`${t('common.saveFail')}:${msg}`)
     }
+  }).catch(() => {
+    ms.error(t('common.serverError'))
   })
 }
 
@@ -89,6 +93,8 @@ function handleDelete(groupInfo: Panel.ItemIconGroup) {
             ms.error(t('common.deleteFail'))
           else
             refreshList()
+        }).catch(() => {
+          ms.error(t('common.serverError'))
         })
       }
     },
@@ -100,12 +106,16 @@ function handleSaveGroup() {
   formRef.value?.validate((errors) => {
     if (!errors) {
       edit(editModalArg.value.model).then(({ code, msg }) => {
-        if (code !== 0)
+        if (code !== 0) {
           ms.error(msg)
-
+          return
+        }
         refreshList()
         editModalArg.value.show = false
         editModalArg.value.model = { ...defaultMNodal }
+        editModalArg.value.editStatus = 1
+      }).catch(() => {
+        ms.error(t('common.serverError'))
       })
     }
   })
@@ -142,11 +152,11 @@ onMounted(() => {
     <div class=" overflow-auto w-full mt-[20px]  bg-slate-200 dark:bg-zinc-900 rounded-xl" style="height:calc(100% - 65px)">
       <VueDraggable
         v-model="groups"
-        item-key="sort" :animation="300"
+        item-key="id" :animation="300"
         :style="{ padding: sortStatus ? '20px' : '10px' }"
         :disabled="!sortStatus"
       >
-        <div v-for="(item, index) in groups" :key="index" class="w-full">
+        <div v-for="item in groups" :key="item.id" class="w-full">
           <NCard size="small" style="border-radius:10px;margin-bottom: 10px;">
             <div class="flex" :class="sortStatus ? 'cursor-move' : ''">
               <div class="flex items-center">

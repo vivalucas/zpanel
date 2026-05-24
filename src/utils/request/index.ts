@@ -101,7 +101,12 @@ function http<T = unknown>(
   headers.token = authStore.token ?? ''
   headers.lang = appStore.language
   return method === 'GET'
-    ? request.get(url, { params, signal, onDownloadProgress }).then(successHandler, failHandler)
+    ? request.get(url, {
+      params,
+      signal,
+      onDownloadProgress,
+      headers,
+    }).then(successHandler, failHandler)
     : request.post(url, params, { headers, signal, onDownloadProgress }).then(successHandler, failHandler)
 }
 

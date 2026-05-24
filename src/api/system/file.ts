@@ -1,14 +1,16 @@
 import { post } from '@/utils/request'
 
-export function getList<T>() {
+export function getList<T>(data?: Common.ListRequest) {
   return post<T>({
     url: '/file/getList',
+    data,
   })
 }
 
-export function getPublicList<T>() {
+export function getPublicList<T>(data?: Common.ListRequest) {
   return post<T>({
     url: '/file/getPublicList',
+    data,
   })
 }
 

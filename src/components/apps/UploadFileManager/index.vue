@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NAlert, NButton, NButtonGroup, NCard, NEllipsis, NGrid, NGridItem, NImage, NImageGroup, NSwitch, NSpin, useDialog, useMessage } from 'naive-ui'
+import { NAlert, NButton, NButtonGroup, NCard, NEllipsis, NGrid, NGridItem, NImage, NImageGroup, NPagination, NSwitch, NSpin, useDialog, useMessage } from 'naive-ui'
 import { onMounted, ref } from 'vue'
 import { deletes, getList, getPublicList } from '@/api/system/file'
 import { set as savePanelConfig } from '@/api/panel/userConfig'
@@ -19,19 +19,45 @@ const dialog = useDialog()
 const panelStore = usePanelState()
 const loading = ref(false)
 const publicGallery = ref(false)
+const pagination = ref({
+  page: 1,
+  pageSize: 24,
+  pageSizes: [24, 48, 96],
+  itemCount: 0,
+})
 const infoModalState = ref<InfoModalState>({
   show: false,
   title: '',
   fileInfo: null,
 })
 
-async function getFileList() {
+async function getFileList(page: number | null = null) {
   loading.value = true
-  const { data } = publicGallery.value
-    ? await getPublicList<Common.ListResponse<File.Info[]>>()
-    : await getList<Common.ListResponse<File.Info[]>>()
-  imageList.value = data.list
-  loading.value = false
+  try {
+    const currentPage = page ?? pagination.value.page
+    const req: Common.ListRequest = {
+      page: currentPage,
+      limit: pagination.value.pageSize,
+    }
+    const { data } = publicGallery.value
+      ? await getPublicList<Common.ListResponse<File.Info[]>>(req)
+      : await getList<Common.ListResponse<File.Info[]>>(req)
+    pagination.value.page = currentPage
+    pagination.value.itemCount = data.count
+    imageList.value = data.list
+
+    const maxPage = Math.max(1, Math.ceil((data.count || 0) / pagination.value.pageSize))
+    if (pagination.value.page > maxPage) {
+      pagination.value.page = maxPage
+      await getFileList(maxPage)
+    }
+  }
+  catch {
+    ms.error(t('common.networkError'))
+  }
+  finally {
+    loading.value = false
+  }
 }
 
 async function copyImageUrl(text: string) {
@@ -57,10 +83,16 @@ function handleDelete(id: number) {
 
 async function deletesImges(id: number) {
   try {
-    const { code, msg } = await deletes([id])
+    const { code, data, msg } = await deletes<{ deletedIds?: number[]; failedIds?: number[] }>([id])
     if (code === 0) {
-      getFileList()
-      ms.success(t('common.success'))
+      await getFileList(pagination.value.page)
+      if (data?.failedIds?.length) {
+        const deletedCount = data.deletedIds?.length ?? 0
+        ms.warning(`${t('common.success')}: ${deletedCount}, ${t('common.failed')}: ${data.failedIds.length}`)
+      }
+      else {
+        ms.success(t('common.success'))
+      }
     }
     else {
       ms.error(`${t('common.failed')}:${msg}`)
@@ -76,9 +108,35 @@ function handleInfoClick(fileInfo: File.Info) {
   infoModalState.value.show = true
 }
 
-function handleSetWallpaper(imgSrc: string) {
-  panelStore.panelConfig.backgroundImageSrc = imgSrc
-  savePanelConfig({ panel: panelStore.panelConfig })
+async function handleSetWallpaper(imgSrc: string) {
+  try {
+    panelStore.panelConfig.backgroundImageSrc = imgSrc
+    const { code, msg } = await savePanelConfig({ panel: panelStore.panelConfig })
+    if (code === 0)
+      ms.success(t('apps.baseSettings.configSaved'))
+    else
+      ms.error(`${t('common.failed')}: ${msg}`)
+  }
+  catch {
+    ms.error(t('common.serverError'))
+  }
+}
+
+function handlePageChange(page: number) {
+  pagination.value.page = page
+  getFileList(page)
+}
+
+function handlePageSizeChange(pageSize: number) {
+  pagination.value.pageSize = pageSize
+  pagination.value.page = 1
+  getFileList(1)
+}
+
+function handleGalleryChange(value: boolean) {
+  publicGallery.value = value
+  pagination.value.page = 1
+  getFileList(1)
 }
 
 onMounted(() => {
@@ -94,7 +152,7 @@ onMounted(() => {
     </NAlert>
     <div class="mt-2 flex items-center">
       <span class="mr-2">{{ $t('apps.uploadsFileManager.publicGallery') }}</span>
-      <NSwitch v-model:value="publicGallery" @update:value="getFileList" />
+      <NSwitch v-model:value="publicGallery" @update:value="handleGalleryChange" />
     </div>
     <div class="flex justify-center mt-2">
       <div v-if="imageList.length === 0 && !loading" class="flex">
@@ -102,7 +160,7 @@ onMounted(() => {
       </div>
       <NImageGroup v-else>
         <NGrid cols="2 300:2 600:4 900:6 1100:9" :x-gap="5" :y-gap="5">
-          <NGridItem v-for=" item, index in imageList" :key="index">
+          <NGridItem v-for="item in imageList" :key="item.id ?? item.src">
             <NCard size="small" style="border-radius: 5px;" :bordered="true">
               <template #cover>
                 <div class="card transparent-grid">
@@ -132,7 +190,7 @@ onMounted(() => {
                         <SvgIcon icon="lucide:wallpaper" />
                       </template>
                     </NButton>
-                    <NButton size="tiny" tertiary type="error" style="cursor: pointer;" :title="$t('common.delete')" @click="handleDelete(item.id as number)">
+                    <NButton size="tiny" tertiary type="error" style="cursor: pointer;" :title="$t('common.delete')" @click="item.id !== undefined && handleDelete(item.id)">
                       <template #icon>
                         <SvgIcon icon="material-symbols-delete" />
                       </template>
@@ -144,6 +202,18 @@ onMounted(() => {
           </NGridItem>
         </NGrid>
       </NImageGroup>
+    </div>
+
+    <div v-if="pagination.itemCount > 0" class="mt-4 flex justify-center">
+      <NPagination
+        :page="pagination.page"
+        :page-size="pagination.pageSize"
+        :page-sizes="pagination.pageSizes"
+        :item-count="pagination.itemCount"
+        show-size-picker
+        @update:page="handlePageChange"
+        @update:page-size="handlePageSizeChange"
+      />
     </div>
 
     <RoundCardModal v-model:show="infoModalState.show" style="max-width: 300px;" size="small" :title="$t('apps.uploadsFileManager.infoTitle')">

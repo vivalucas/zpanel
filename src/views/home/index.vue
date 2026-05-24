@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
 import { NBackTop, NButton, NButtonGroup, NDropdown, NModal, NSkeleton, NSpin, useDialog, useMessage } from 'naive-ui'
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { AppIcon, AppStarter, EditItem } from './components'
 import { Clock, SearchBox, SystemMonitor } from '@/components/deskModule'
 import { SvgIcon } from '@/components/common'
 import { deletes, getListByGroupId, saveSort } from '@/api/panel/itemIcon'
 import { getList as getGroupList } from '@/api/panel/itemIconGroup'
 
-import { setTitle, updateLocalUserInfo } from '@/utils/cmn'
+import { openExternalUrl, setTitle, updateLocalUserInfo } from '@/utils/cmn'
 import { useAuthStore, usePanelState } from '@/store'
 import { PanelPanelConfigStyleEnum, PanelStateNetworkModeEnum } from '@/enums'
 import { VisitMode } from '@/enums/auth'
@@ -57,7 +57,7 @@ function openPage(openMethod: number, url: string, title?: string) {
       window.location.href = url
       break
     case 2:
-      window.open(url)
+      openExternalUrl(url)
       break
     case 3:
       windowShow.value = true
@@ -122,7 +122,7 @@ function handleRightMenuSelect(key: string | number) {
   switch (key) {
     case 'newWindows':
       if (jumpUrl)
-        window.open(jumpUrl)
+        openExternalUrl(jumpUrl)
       break
     case 'openWanUrl':
       if (currentRightSelectItem.value)
@@ -229,8 +229,8 @@ function handleSaveSort(itemGroup: ItemGroup) {
   })
 }
 
-function getDropdownMenuOptions() {
-  const dropdownMenuOptions = [
+const dropdownMenuOptions = computed(() => {
+  const options = [
     {
       label: t('iconItem.newWindowOpen'),
       key: 'newWindows',
@@ -239,21 +239,21 @@ function getDropdownMenuOptions() {
   ]
 
   if (currentRightSelectItem.value?.lanUrl && panelState.networkMode === PanelStateNetworkModeEnum.wan) {
-    dropdownMenuOptions.push({
+    options.push({
       label: t('panelHome.openLanUrl'),
       key: 'openLanUrl',
     })
   }
 
   if (currentRightSelectItem.value?.lanUrl && panelState.networkMode === PanelStateNetworkModeEnum.lan) {
-    dropdownMenuOptions.push({
+    options.push({
       label: t('panelHome.openWanUrl'),
       key: 'openWanUrl',
     })
   }
 
   if (authStore.visitMode === VisitMode.VISIT_MODE_LOGIN) {
-    dropdownMenuOptions.push({
+    options.push({
       label: t('common.edit'),
       key: 'edit',
     }, {
@@ -261,9 +261,8 @@ function getDropdownMenuOptions() {
       key: 'delete',
     })
   }
-
-  return dropdownMenuOptions
-}
+  return options
+})
 
 onMounted(async () => {
   // 更新用户信息
@@ -510,7 +509,7 @@ function handleAddItem(itemIconGroupId?: number) {
     <!-- 右键菜单 -->
     <NDropdown
       placement="bottom-start" trigger="manual" :x="dropdownMenuX" :y="dropdownMenuY"
-      :options="getDropdownMenuOptions()" :show="dropdownShow" :on-clickoutside="onClickoutside" @select="handleRightMenuSelect"
+      :options="dropdownMenuOptions" :show="dropdownShow" :on-clickoutside="onClickoutside" @select="handleRightMenuSelect"
     />
 
     <!-- 悬浮按钮 -->

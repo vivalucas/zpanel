@@ -102,17 +102,14 @@ async function importIcons(): Promise<string | null> {
 
 // 导出图标
 async function exportIcons(): Promise<IconGroup[]> {
-  const iconGroups: IconGroup[] = []
-
   // 获取组数据
   const { code, data } = await getGroupList<Common.ListResponse<ItemGroup[]>>()
 
   if (code === 0) {
-    // 使用 Promise.all 等待所有异步操作完成
-    await Promise.all(data.list.map(async (element) => {
+    return Promise.all(data.list.map(async (element) => {
       const group: IconGroup = {
         title: element.title as string,
-        sort: element.sort as 0,
+        sort: element.sort ?? 99999,
         children: [],
       }
 
@@ -132,24 +129,25 @@ async function exportIcons(): Promise<IconGroup[]> {
         }
       }
 
-      iconGroups.push(group)
+      return group
     }))
-
-    return iconGroups
   }
-  else {
-    return []
-  }
+  return []
 }
 
 async function importStyle(): Promise<string | null> {
   const styleConfig = importObj.value?.getStyleConfig()
   if (!styleConfig)
     return null
-  panelState.panelConfig = { ...panelState.panelConfig, ...styleConfig }
-  panelState.recordState()
-  const res = await savePanelConfig({ panel: panelState.panelConfig })
-  return res.code === 0 ? null : res.msg
+  try {
+    panelState.panelConfig = { ...panelState.panelConfig, ...styleConfig }
+    panelState.recordState()
+    const res = await savePanelConfig({ panel: panelState.panelConfig })
+    return res.code === 0 ? null : res.msg
+  }
+  catch {
+    return t('common.serverError')
+  }
 }
 
 onMounted(() => {
@@ -178,8 +176,14 @@ function handleFileChange(options: { file: UploadFileInfo; fileList: Array<Uploa
       }
       uploadLoading.value = false
     }
+    reader.onerror = () => {
+      uploadLoading.value = false
+      ms.error(`${t('common.failed')}: ${t('common.repeatLater')}`)
+    }
     reader.readAsText(options.file.file)
+    return
   }
+  uploadLoading.value = false
 }
 
 // 验证导入文件
@@ -201,7 +205,7 @@ function importCheck() {
         // （暂时不做）此处可以判断，当前的配置文件是否存在的导入项目（不存在隐藏importItems里面的值）操作变量：importItems
 
         // 通过了验证,打开弹窗
-        importRoundModalShow.value = !importRoundModalShow.value
+        importRoundModalShow.value = true
 
         // console.log(importObj.value.geticons())
       }
@@ -223,42 +227,62 @@ function importCheck() {
 // 开始导出
 async function handleStartExport() {
   loading.value = true
-  // console.log('要导出的项目', checkedItems.value)
-  // 获取软件版本号
-  const exportResult = exportJson(version.value)
-  if (checkedItems.value.includes('icons')) {
-    const iconGroups = await exportIcons()
-    exportResult.addIconsData(iconGroups)
+  try {
+    const exportResult = exportJson(version.value)
+    if (checkedItems.value.includes('icons')) {
+      const iconGroups = await exportIcons()
+      exportResult.addIconsData(iconGroups)
+    }
+    if (checkedItems.value.includes('style'))
+      exportResult.addStyleData(panelState.panelConfig)
+
+    jsonData.value = exportResult.string()
+    exportResult.exportFile()
+    exportRoundModalShow.value = false
+    ms.success(t('common.success'))
   }
-  if (checkedItems.value.includes('style'))
-    exportResult.addStyleData(panelState.panelConfig)
-
-  // console.log('导出结果')
-
-  jsonData.value = exportResult.string()
-  exportResult.exportFile()
-  loading.value = false
-  exportRoundModalShow.value = false
-  // ms.success(t('common.success'))
+  catch {
+    ms.error(t('common.serverError'))
+  }
+  finally {
+    loading.value = false
+  }
 }
 
 // 开始导入
 async function handleStartImport() {
   loading.value = true
-  if (checkedItems.value.includes('icons')) {
-    const errMsg = await importIcons()
-    if (errMsg !== null)
-      ms.success(`${t('common.failed')}:${errMsg}`)
-  }
-  if (checkedItems.value.includes('style')) {
-    const errMsg = await importStyle()
-    if (errMsg !== null)
-      ms.error(`${t('common.failed')}:${errMsg}`)
-  }
+  try {
+    let hasError = false
+    if (checkedItems.value.includes('icons')) {
+      const errMsg = await importIcons()
+      if (errMsg !== null) {
+        hasError = true
+        ms.error(`${t('common.failed')}:${errMsg}`)
+      }
+    }
+    if (checkedItems.value.includes('style')) {
+      const errMsg = await importStyle()
+      if (errMsg !== null) {
+        hasError = true
+        ms.error(`${t('common.failed')}:${errMsg}`)
+      }
+    }
 
-  loading.value = false
-  importRoundModalShow.value = false
-  ms.success(`${t('common.success')}, ${t('common.refreshPage')}`)
+    if (!hasError) {
+      importRoundModalShow.value = false
+      ms.success(`${t('common.success')}, ${t('common.refreshPage')}`)
+    }
+    else {
+      ms.warning(`${t('common.failed')}: ${t('common.repeatLater')}`)
+    }
+  }
+  catch {
+    ms.error(t('common.serverError'))
+  }
+  finally {
+    loading.value = false
+  }
 }
 </script>
 

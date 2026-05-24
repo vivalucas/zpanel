@@ -52,7 +52,7 @@ export function noticeCreate(info: Notice.NoticeInfo) {
           text: true,
           type: 'info',
           onClick: () => {
-            window.open(info.url, '_blank')
+            openExternalUrl(info.url)
             n.destroy()
           },
         },
@@ -98,6 +98,12 @@ export function setTitle(titile: string) {
 
 export function getTitle(): string {
   return document.title
+}
+
+export function openExternalUrl(url: string) {
+  const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
+  if (newWindow)
+    newWindow.opener = null
 }
 
 //

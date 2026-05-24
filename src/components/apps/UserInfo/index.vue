@@ -76,7 +76,12 @@ async function logoutApi() {
 }
 
 function loadSwitchAccounts() {
-  switchAccounts.value = JSON.parse(localStorage.getItem(switchAccountStorageKey) || '[]')
+  try {
+    switchAccounts.value = JSON.parse(localStorage.getItem(switchAccountStorageKey) || '[]')
+  }
+  catch {
+    switchAccounts.value = []
+  }
 }
 
 function saveSwitchAccounts() {
@@ -120,17 +125,27 @@ function updateSwitchAccountUserInfo(userInfo: Partial<User.Info>) {
   saveSwitchAccounts()
 }
 
-function handleSaveInfo() {
-  updateInfo(nickName.value).then(({ code, msg }) => {
+async function handleSaveInfo() {
+  try {
+    const { code, msg } = await updateInfo(nickName.value)
     if (code === 0) {
       updateSwitchAccountUserInfo({ name: nickName.value })
-      updateLocalUserInfo()
+      const updated = await updateLocalUserInfo()
+      if (!updated && authStore.userInfo) {
+        authStore.setUserInfo({
+          ...authStore.userInfo,
+          name: nickName.value,
+        })
+      }
       isEditNickNameStatus.value = false
     }
     else {
       ms.error(`${t('common.editFail')}:${msg}`)
     }
-  })
+  }
+  catch {
+    ms.error(t('common.serverError'))
+  }
 }
 
 function handleUpdatePassword(e: MouseEvent) {

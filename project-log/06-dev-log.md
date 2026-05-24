@@ -4,6 +4,79 @@
 
 ---
 
+## 2026-05-24（文件列表分页与保存失败反馈修复）
+
+**触发原因**：在复查上一轮改动时，确认 SearchBox 保存失败仍然被静默吞掉，文件删除在物理文件与数据库记录之间仍有不一致窗口，文件列表也需要把“取消 500 条截断”推进成可控分页。
+
+**修改内容**：
+1. `src/components/deskModule/SearchBox/index.vue` — 搜索引擎配置保存失败补充错误提示，避免云端保存失败时用户无感知。
+2. `service/api/api_v1/system/file.go`、`src/api/system/file.ts`、`src/components/apps/UploadFileManager/index.vue` — 文件列表改为接收 `page/limit` 并分页返回；前端补充分页控件和切换逻辑，避免一次性加载全部图片。
+3. `service/api/api_v1/system/file.go`、`src/components/apps/UploadFileManager/index.vue` — 文件删除继续保留引用校验，删除失败时回传 `deletedIds` / `failedIds`，前端按部分成功 / 部分失败展示结果。
+4. `src/components/apps/UploadFileManager/index.vue` — 壁纸设置、图库切换和分页查询统一收口，减少空转请求和重复刷新。
+
+**遇到的问题**：
+- 文件列表接口原本没有分页参数，但前端图库和公共图库都可能增长较快，不能再沿用全量返回。
+- SearchBox 保存失败不该只靠日志暴露，否则用户会误判状态已经同步。
+
+**解决方式**：
+- 参照用户管理页的分页模式，为文件列表补齐 `page/limit` 请求与 `count` 计数，并在前端加分页组件。
+- 保留删除前引用校验，删除过程继续按单个文件回写成功 / 失败结果，避免一次失败吞掉整批结果。
+- 将 SearchBox 的保存失败改为显式报错，避免静默失败。
+
+**验证方式**：
+- `corepack pnpm run type-check`
+- `corepack pnpm run lint`
+- `corepack pnpm run build`
+- `cd service && go test ./...`
+
+**验证结果**：
+- TypeScript 类型检查通过。
+- ESLint 通过。
+- Vite 生产构建通过；仍有既有的 `/custom/index.js` module 提示、`/custom/index.css` runtime 提示和大 chunk 提示。
+- Go 全量测试通过；当前仍以 `[no test files]` 为主。
+
+**本地产物清理**：
+- 已删除本轮 `pnpm run build` 生成的 `dist/`。
+- `.env` 由构建脚本更新了前端版本号，作为忽略文件保留。
+
+---
+
+## 2026-05-24（导入导出、文件管理与交互稳态优化）
+
+**触发原因**：用户确认要把上一轮评审里已确认的问题一次性优化掉，重点覆盖导入导出、文件管理、搜索框、分组编辑、用户资料和外链安全边界。
+
+**修改内容**：
+1. `src/utils/request/index.ts` — GET 请求补充 `headers` 透传，保持与 POST 一致的 token / lang 行为。
+2. `src/utils/cmn/index.ts`、`src/views/home/index.vue`、`src/components/deskModule/SearchBox/index.vue`、`src/components/apps/About/index.vue` — 抽出外链打开辅助函数，并为新窗口链接补充 `noopener/noreferrer`。
+3. `src/components/apps/ImportExport/index.vue`、`src/components/apps/UploadFileManager/index.vue` — 修正导入导出加载态和错误态，导出结果保持原顺序，导入失败不再错误提示成功；文件管理器补充网络兜底、部分删除反馈和壁纸设置反馈。
+4. `src/components/apps/ItemGroupManage/index.vue`、`src/views/home/components/AppStarter/index.vue`、`src/components/deskModule/SearchBox/index.vue` — 分组编辑改为草稿对象，拖拽 / 列表 key 改为稳定值，搜索引擎状态不再共享默认数组引用。
+5. `service/api/api_v1/system/file.go` — 文件列表查询取消固定 500 条截断，改为总数 + 全量列表查询；文件删除从“事务里删文件”改为“先校验引用、后删文件和记录”，降低数据库与文件系统不一致风险。
+6. `src/components/apps/UserInfo/index.vue`、`src/components/apps/Style/index.vue` — 用户资料和站点配置增加失败兜底，避免未捕获 Promise 影响交互。
+
+**遇到的问题**：
+- 导入导出和文件删除都涉及前端 / 后端双向契约，必须先确认返回数据结构再改 UI 反馈。
+- 搜索框和默认状态存在共享引用，单纯改 key 不够，必须把默认状态工厂化。
+
+**解决方式**：
+- 统一用工厂函数生成默认状态，编辑态使用草稿拷贝，保存 / 删除使用显式失败分支。
+- 统一外链打开方式，减少分散的 `window.open` 调用。
+- 文件删除保留引用校验，但把物理删除移出数据库事务，避免回滚后文件已经消失。
+
+**验证方式**：
+- `corepack pnpm run type-check`
+- `corepack pnpm run lint`
+- `corepack pnpm run build`
+- `cd service && go test ./...`
+
+**验证结果**：
+- TypeScript 类型检查通过。
+- ESLint 通过。
+- Vite 生产构建通过；仍有既有的 `/custom/index.js` module 提示、`/custom/index.css` runtime 提示和大 chunk 提示。
+- Go 全量测试通过；当前仍以 `[no test files]` 为主。
+
+**本地产物清理**：
+- 无
+
 ## 2026-05-24（安全渲染与类型收敛优化）
 
 **触发原因**：用户要求把前面识别出的优化点尽量一次性收紧，重点是部署前的安全渲染、类型边界和明显状态问题，同时准备推进新版本发布。

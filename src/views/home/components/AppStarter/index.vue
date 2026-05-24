@@ -157,8 +157,8 @@ onUnmounted(() => {
                   }"
                 >
                   <div
-                    v-for=" (item, index) in apps"
-                    :key="index"
+                    v-for="item in apps"
+                    :key="item.componentName"
                     :style="{ color: componentName === item.componentName ? 'var(--n-color-target)' : '' }"
                     @click="handleClickApp(item)"
                   >

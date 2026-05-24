@@ -104,10 +104,34 @@ func (a *FileApi) UploadFiles(c *gin.Context) {
 }
 
 func (a *FileApi) GetList(c *gin.Context) {
-	list := []models.File{}
+	param := commonApiStructs.RequestPage{}
 	userInfo, _ := base.GetCurrentUserInfo(c)
+	if err := c.ShouldBindBodyWith(&param, binding.JSON); err != nil {
+		apiReturn.ErrorParamFomat(c, err.Error())
+		return
+	}
+
+	page := param.Page
+	if page <= 0 {
+		page = 1
+	}
+	limit := param.Limit
+	if limit <= 0 {
+		limit = 24
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	list := []models.File{}
 	var count int64
-	if err := global.Db.Order("created_at desc").Limit(500).Find(&list, "owner_id=? AND status=?", userInfo.ID, models.FileStatusActive).Count(&count).Error; err != nil {
+	countQuery := global.Db.Model(&models.File{}).Where("owner_id=? AND status=?", userInfo.ID, models.FileStatusActive)
+	if err := countQuery.Count(&count).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	listQuery := global.Db.Model(&models.File{}).Where("owner_id=? AND status=?", userInfo.ID, models.FileStatusActive)
+	if err := listQuery.Order("created_at desc").Limit(limit).Offset((page - 1) * limit).Find(&list).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
@@ -120,9 +144,33 @@ func (a *FileApi) GetList(c *gin.Context) {
 }
 
 func (a *FileApi) GetPublicList(c *gin.Context) {
+	param := commonApiStructs.RequestPage{}
+	if err := c.ShouldBindBodyWith(&param, binding.JSON); err != nil {
+		apiReturn.ErrorParamFomat(c, err.Error())
+		return
+	}
+
+	page := param.Page
+	if page <= 0 {
+		page = 1
+	}
+	limit := param.Limit
+	if limit <= 0 {
+		limit = 24
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
 	list := []models.File{}
 	var count int64
-	if err := global.Db.Order("created_at desc").Find(&list, "visibility=? AND status=?", models.FileVisibilityPublic, models.FileStatusActive).Count(&count).Error; err != nil {
+	countQuery := global.Db.Model(&models.File{}).Where("visibility=? AND status=?", models.FileVisibilityPublic, models.FileStatusActive)
+	if err := countQuery.Count(&count).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	listQuery := global.Db.Model(&models.File{}).Where("visibility=? AND status=?", models.FileVisibilityPublic, models.FileStatusActive)
+	if err := listQuery.Order("created_at desc").Limit(limit).Offset((page - 1) * limit).Find(&list).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
@@ -142,13 +190,11 @@ func (a *FileApi) Deletes(c *gin.Context) {
 		return
 	}
 
-	txErr := global.Db.Transaction(func(tx *gorm.DB) error {
-		files := []models.File{}
-
-		if err := tx.Order("created_at desc").Find(&files, "owner_id=? AND id in ? AND status=?", userInfo.ID, req.Ids, models.FileStatusActive).Error; err != nil {
+	files := []models.File{}
+	if err := global.Db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.File{}).Where("owner_id=? AND id in ? AND status=?", userInfo.ID, req.Ids, models.FileStatusActive).Find(&files).Error; err != nil {
 			return err
 		}
-
 		for _, v := range files {
 			var refCount int64
 			if err := tx.Model(&models.FileReference{}).Where("file_id=?", v.ID).Count(&refCount).Error; err != nil {
@@ -157,30 +203,33 @@ func (a *FileApi) Deletes(c *gin.Context) {
 			if refCount > 0 {
 				return fmt.Errorf("file %d is still referenced", v.ID)
 			}
-			if err := os.Remove(storage.AbsolutePath(v.RelativePath)); err != nil && !os.IsNotExist(err) {
-				if updateErr := tx.Model(&models.File{}).Where("id=?", v.ID).Update("status", models.FileStatusDeleteFailed).Error; updateErr != nil {
-					return updateErr
-				}
-				continue
-			}
-			if err := tx.Model(&models.File{}).Where("id=?", v.ID).Update("status", models.FileStatusDeleted).Error; err != nil {
-				return err
-			}
 		}
-
-		if err := tx.Delete(&models.File{}, "owner_id=? AND id in ? AND status=?", userInfo.ID, req.Ids, models.FileStatusDeleted).Error; err != nil {
-			return err
-		}
-
 		return nil
-	})
-
-	if txErr != nil {
-		apiReturn.ErrorDatabase(c, txErr.Error())
+	}); err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
 
-	apiReturn.Success(c)
+	deletedIDs := []uint{}
+	failedIDs := []uint{}
+	for _, v := range files {
+		if err := os.Remove(storage.AbsolutePath(v.RelativePath)); err != nil && !os.IsNotExist(err) {
+			_ = global.Db.Model(&models.File{}).Where("id=?", v.ID).Update("status", models.FileStatusDeleteFailed).Error
+			failedIDs = append(failedIDs, v.ID)
+			continue
+		}
+		if err := global.Db.Delete(&models.File{}, "id=?", v.ID).Error; err != nil {
+			_ = global.Db.Model(&models.File{}).Where("id=?", v.ID).Update("status", models.FileStatusDeleteFailed).Error
+			failedIDs = append(failedIDs, v.ID)
+			continue
+		}
+		deletedIDs = append(deletedIDs, v.ID)
+	}
+
+	apiReturn.SuccessData(c, gin.H{
+		"deletedIds": deletedIDs,
+		"failedIds":  failedIDs,
+	})
 
 }
 

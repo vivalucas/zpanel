@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NAvatar, NButton, NCheckbox, NInput } from 'naive-ui'
+import { NAvatar, NButton, NCheckbox, NInput, useMessage } from 'naive-ui'
 import { SvgIcon } from '@/components/common'
 import { useModuleConfig } from '@/store/modules'
 import { useAuthStore } from '@/store'
 import { VisitMode } from '@/enums/auth'
+import { openExternalUrl } from '@/utils/cmn'
+import { t } from '@/locales'
 
 import SvgSrcBaidu from '@/assets/search_engine_svg/baidu.svg'
 import SvgSrcBing from '@/assets/search_engine_svg/bing.svg'
@@ -29,6 +31,7 @@ interface State {
 const moduleConfigName = 'deskModuleSearchBox'
 const moduleConfig = useModuleConfig()
 const authStore = useAuthStore()
+const ms = useMessage()
 const searchTerm = ref('')
 const isFocused = ref(false)
 const searchSelectListShow = ref(false)
@@ -37,31 +40,55 @@ const newEngine = ref<DeskModule.SearchBox.SearchEngine>({
   title: '',
   url: '',
 })
-const defaultSearchEngineList = ref<DeskModule.SearchBox.SearchEngine[]>([
-  {
-    iconSrc: SvgSrcGoogle,
-    title: 'Google',
-    url: 'https://www.google.com/search?q=%s',
-  },
-  {
-    iconSrc: SvgSrcBaidu,
-    title: 'Baidu',
-    url: 'https://www.baidu.com/s?wd=%s',
-  },
-  {
-    iconSrc: SvgSrcBing,
-    title: 'Bing',
-    url: 'https://www.bing.com/search?q=%s',
-  },
-])
-
-const defaultState: State = {
-  currentSearchEngine: defaultSearchEngineList.value[0],
-  searchEngineList: defaultSearchEngineList.value,
-  newWindowOpen: false,
+function createDefaultSearchEngineList(): DeskModule.SearchBox.SearchEngine[] {
+  return [
+    {
+      iconSrc: SvgSrcGoogle,
+      title: 'Google',
+      url: 'https://www.google.com/search?q=%s',
+    },
+    {
+      iconSrc: SvgSrcBaidu,
+      title: 'Baidu',
+      url: 'https://www.baidu.com/s?wd=%s',
+    },
+    {
+      iconSrc: SvgSrcBing,
+      title: 'Bing',
+      url: 'https://www.bing.com/search?q=%s',
+    },
+  ]
 }
 
-const state = ref<State>({ ...defaultState })
+function createDefaultState(): State {
+  const searchEngineList = createDefaultSearchEngineList()
+  return {
+    currentSearchEngine: { ...searchEngineList[0] },
+    searchEngineList,
+    newWindowOpen: false,
+  }
+}
+
+function normalizeState(saved: Partial<State> | null | undefined): State {
+  const defaultState = createDefaultState()
+  if (!saved)
+    return defaultState
+
+  const searchEngineList = (saved.searchEngineList?.length ? saved.searchEngineList : defaultState.searchEngineList).map(item => ({ ...item }))
+  const currentSearchEngine = searchEngineList.find(item =>
+    item.title === saved.currentSearchEngine?.title
+    && item.url === saved.currentSearchEngine?.url
+    && item.iconSrc === saved.currentSearchEngine?.iconSrc,
+  ) || searchEngineList[0]
+
+  return {
+    currentSearchEngine: { ...currentSearchEngine },
+    searchEngineList,
+    newWindowOpen: !!saved.newWindowOpen,
+  }
+}
+
+const state = ref<State>(createDefaultState())
 
 const onFocus = (): void => {
   isFocused.value = true
@@ -79,13 +106,15 @@ function handleEngineClick() {
 }
 
 function handleEngineUpdate(engine: DeskModule.SearchBox.SearchEngine) {
-  state.value.currentSearchEngine = engine
-  moduleConfig.saveToCloud(moduleConfigName, state.value)
+  state.value.currentSearchEngine = { ...engine }
+  saveSearchState()
   searchSelectListShow.value = false
 }
 
 function saveSearchState() {
-  moduleConfig.saveToCloud(moduleConfigName, state.value)
+  moduleConfig.saveToCloud(moduleConfigName, state.value).catch(() => {
+    ms.error(t('common.serverError'))
+  })
 }
 
 function addSearchEngine() {
@@ -106,8 +135,8 @@ function removeSearchEngine(index: number) {
   if (state.value.searchEngineList.length <= 1)
     return
   const removed = state.value.searchEngineList.splice(index, 1)[0]
-  if (removed === state.value.currentSearchEngine)
-    state.value.currentSearchEngine = state.value.searchEngineList[0]
+  if (removed && removed.title === state.value.currentSearchEngine.title && removed.url === state.value.currentSearchEngine.url)
+    state.value.currentSearchEngine = { ...state.value.searchEngineList[0] }
   saveSearchState()
 }
 
@@ -118,7 +147,7 @@ function handleSearchClick() {
   const fullUrl = replaceOrAppendKeywordToUrl(url, keyword.value)
   handleClearSearchTerm()
   if (state.value.newWindowOpen)
-    window.open(fullUrl)
+    openExternalUrl(fullUrl)
   else
     window.location.href = fullUrl
 }
@@ -144,9 +173,11 @@ function handleClearSearchTerm() {
 onMounted(() => {
   moduleConfig.getValueByNameFromCloud<State>('deskModuleSearchBox').then(({ code, data }) => {
     if (code === 0)
-      state.value = data || defaultState
+      state.value = normalizeState(data)
     else
-      state.value = defaultState
+      state.value = createDefaultState()
+  }).catch(() => {
+    state.value = createDefaultState()
   })
 })
 </script>
@@ -173,8 +204,8 @@ onMounted(() => {
       <div class="flex items-center">
         <div class="flex items-center">
           <div
-            v-for="item, index in state.searchEngineList"
-            :key="index"
+            v-for="item in state.searchEngineList"
+            :key="`${item.title}-${item.url}`"
             :title="item.title"
             class="w-[40px] h-[40px] mr-[10px]  cursor-pointer bg-[#ffffff] flex items-center justify-center rounded-xl"
             @click="handleEngineUpdate(item)"
@@ -191,7 +222,7 @@ onMounted(() => {
       </div>
 
       <div class="mt-[10px]">
-        <NCheckbox v-model:checked="state.newWindowOpen" @update-checked="moduleConfig.saveToCloud(moduleConfigName, state)">
+        <NCheckbox v-model:checked="state.newWindowOpen" @update-checked="saveSearchState">
           <span :style="{ color: textColor }">
             {{ $t('deskModule.searchBox.openWithNewOpen') }}
           </span>
@@ -207,7 +238,7 @@ onMounted(() => {
           </NButton>
           <NButton
             v-for="item, index in state.searchEngineList"
-            :key="`${item.title}-${index}`"
+            :key="`${item.title}-${item.url}`"
             size="tiny"
             quaternary
             type="error"

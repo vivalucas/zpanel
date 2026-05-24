@@ -93,6 +93,8 @@ function uploadCloud() {
       ms.success(t('apps.baseSettings.configSaved'))
     else
       ms.error(t('apps.baseSettings.configFailed', { message: res.msg }))
+  }).catch(() => {
+    ms.error(t('common.serverError'))
   })
 }
 
@@ -108,6 +110,8 @@ function saveSiteSetting() {
       ms.error(`${t('common.saveFail')}: ${msg}`)
   }).finally(() => {
     siteSettingLoading.value = false
+  }).catch(() => {
+    ms.error(t('common.serverError'))
   })
 }
 

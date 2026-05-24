@@ -67,6 +67,24 @@ func (a *MonitorApi) GetDiskStateByPath(c *gin.Context) {
 		return
 	}
 
+	mountpoints, err := monitor.GetDiskMountpoints()
+	if err != nil {
+		apiReturn.Error(c, "failed")
+		return
+	}
+
+	isKnownMountpoint := false
+	for _, mountpoint := range mountpoints {
+		if mountpoint.Mountpoint == req.Path {
+			isKnownMountpoint = true
+			break
+		}
+	}
+	if !isKnownMountpoint {
+		apiReturn.ErrorParamFomat(c, "invalid mountpoint")
+		return
+	}
+
 	cacheDiskName := global.SystemMonitor_DISK_INFO + req.Path
 
 	if v, ok := global.SystemMonitor.Get(cacheDiskName); ok {

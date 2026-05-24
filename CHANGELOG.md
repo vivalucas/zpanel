@@ -4,6 +4,13 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.0.4 - 2026-05-25
+
+- Restricted disk monitor requests to known mountpoints.
+- Hardened markdown code-block language rendering.
+- Switched the runtime Docker image to a non-root user.
+- Pinned the runtime Alpine base image and removed unused runtime shell packages.
+
 ## 1.0.3 - 2026-05-24
 
 - Hardened markdown rendering by disabling raw HTML execution in result content.

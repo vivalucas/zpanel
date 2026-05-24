@@ -21,13 +21,20 @@ const { isMobile } = useBasicLayout()
 
 const textRef = ref<HTMLElement>()
 
+function sanitizeHighlightLang(lang?: string) {
+  if (!lang)
+    return ''
+
+  return /^[A-Za-z0-9_+#.-]+$/.test(lang) ? lang : ''
+}
+
 const mdi = new MarkdownIt({
   html: false,
   linkify: true,
   highlight(code, language) {
-    const validLang = !!(language && hljs.getLanguage(language))
+    const lang = sanitizeHighlightLang(language)
+    const validLang = !!(lang && hljs.getLanguage(lang))
     if (validLang) {
-      const lang = language ?? ''
       return highlightBlock(hljs.highlight(code, { language: lang }).value, lang)
     }
     return highlightBlock(hljs.highlightAuto(code).value, '')

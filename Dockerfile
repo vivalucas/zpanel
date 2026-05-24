@@ -16,7 +16,7 @@ FROM golang:1.26.3-alpine AS server_image
 
 WORKDIR /build
 
-RUN apk add --no-cache bash curl gcc git musl-dev
+RUN apk add --no-cache curl gcc git musl-dev
 
 COPY ./service/go.mod ./service/go.sum ./
 
@@ -29,7 +29,7 @@ RUN go env -w GO111MODULE=on \
 
 
 
-FROM alpine
+FROM alpine:3.22
 
 WORKDIR /app
 
@@ -39,9 +39,14 @@ COPY --from=server_image /build/zpanel /app/zpanel
 
 EXPOSE 6521
 
-RUN apk add --no-cache bash ca-certificates su-exec tzdata \
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup -S zpanel \
+    && adduser -S -G zpanel -u 1000 zpanel \
     && chmod +x ./zpanel \
-    && ./zpanel -config
+    && ./zpanel -config \
+    && chown -R zpanel:zpanel /app
+
+USER zpanel
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://127.0.0.1:6521/api/healthz >/dev/null || exit 1

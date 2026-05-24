@@ -1,13 +1,13 @@
 # 当前状态
 
-> **最后更新**：2026-05-23
+> **最后更新**：2026-05-24
 > **最后更新人**：Codex
-> **最近开发日志**：`06-dev-log.md` 中的 2026-05-23（第三轮评审与稳定性修复）
-> **当前可信度**：本地 `pnpm run type-check`、`pnpm run lint`、`pnpm run build`、`cd service && go test ./...` 通过；Docker 管理实机功能验证仍待补
+> **最近开发日志**：`06-dev-log.md` 中的 2026-05-24（安全渲染与类型收敛优化）
+> **当前可信度**：本地 `corepack pnpm run type-check`、`corepack pnpm run lint`、`corepack pnpm run build`、`cd service && go test ./...` 通过；Docker 管理实机功能验证仍待补
 
 ## 当前版本
 
-**ZPanel 1.0.2 稳定性修复阶段** — 已从 GitHub fork 仓库调整为重新创建的独立仓库，当前已完成 1.0.0 / 1.0.1 发布基线，并准备发布包含第三轮评审修复的 1.0.2 小版本。项目已完成品牌清理、仓库规范化、CI、Docker Hub + GHCR 镜像发布和默认端口统一。
+**ZPanel 1.0.3 稳定性优化阶段** — 已从 GitHub fork 仓库调整为重新创建的独立仓库，当前已完成 1.0.0 / 1.0.1 发布基线、1.0.2 稳定性修复和 1.0.3 安全渲染 / 类型收敛优化。项目已完成品牌清理、仓库规范化、CI、Docker Hub + GHCR 镜像发布和默认端口统一。
 
 ## 当前阶段
 
@@ -23,7 +23,7 @@
 - Go module 从 `sun-panel` 改为 `zpanel`，后端 import 路径同步更新。
 - Dockerfile、docker-compose、build.sh 的二进制名 / 服务名 / 产物名改为 `zpanel`。
 - Node.js 固定为 24.15.0，pnpm 固定为 11.1.3，Go 目标版本提升到 1.26.3。
-- 产品版本已推进到 `1.0.2`：`package.json` 与 `service/assets/version` 同步，版本源为 `1|1.0.2`。
+- 产品版本已推进到 `1.0.3`：`package.json` 与 `service/assets/version` 同步，版本源为 `1|1.0.3`。
 - 默认端口从 `3002` 统一改为 `6521`，已同步 Dockerfile、docker-compose、配置模板、README 和 Vite 开发代理。
 - Docker 默认镜像改为 `vivalucas/zpanel:latest`，容器发布同时推送 Docker Hub 与 GHCR。
 - 关于页改为当前维护者、当前仓库链接和上游归属说明。
@@ -35,6 +35,7 @@
 - 代码质量第一轮评估已完成，结论是前端已接近可维护基线，后端工程化、测试覆盖和安全基线仍是主要短板。
 - 代码质量治理第一轮已完成：前端 lint warning 从 37 个收敛到 0；后端 `go test ./...` 已能通过；完整前端 `pnpm build` 已通过。
 - 第三轮代码评审已完成并记录到 `11-code-review-log.md` 与 `2026-05-23-review.md`；本轮修复首页初始化、系统监控、登录限流、初始化错误传播和用户资料相关稳定性问题。
+- 1.0.3 优化已完成：关闭 markdown 原始 HTML 渲染，收紧模块配置和请求工具类型，补充首页 URL / ID 空值防御，并修复用户编辑弹窗状态复用问题。
 - 新增 GitHub Actions CI、Dependabot、PR 模板、Issue 模板、`CONTRIBUTING.md`、`SECURITY.md`、`.dockerignore`、`.gitattributes` 和 Husky 配置。
 - 新增 `/api/healthz` 健康检查接口及对应 Go 测试。
 - `UPDATELOG.md` 已改为标准 `CHANGELOG.md`，`add-frontend-version.js` 已移入 `scripts/`。
@@ -94,9 +95,9 @@
 
 ## 任务交接
 
-**当前任务**：第三轮评审与稳定性修复已完成；下一步进入本地联调、Docker 实机验证和后续质量治理。
+**当前任务**：1.0.3 安全渲染与类型收敛优化已完成；下一步进入本地联调、Docker 实机验证和后续质量治理。
 
-**已完成**：独立仓库重建、品牌清理、依赖升级、Docker Hub + GHCR 发布配置、PRO 功能表开源化第一版、README 多语言版本、产品 11 语言 locale 注册、中英文文案优化、CI、健康检查、1.0.2 版本推进、默认端口 6521、前端类型检查 / lint / build 验证、后端 CI 验证、第三轮 Bug 修复。
+**已完成**：独立仓库重建、品牌清理、依赖升级、Docker Hub + GHCR 发布配置、PRO 功能表开源化第一版、README 多语言版本、产品 11 语言 locale 注册、中英文文案优化、CI、健康检查、1.0.3 版本推进、默认端口 6521、前端类型检查 / lint / build 验证、后端 CI 验证、第三轮 Bug 修复、安全渲染和类型收敛优化。
 
 **未完成**：本地完整联调、Docker 管理实机验证、更多 Go 后端测试覆盖、非中英语言真实翻译版、完整数据库/API 逆向、默认密码策略改进。
 

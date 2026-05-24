@@ -8,7 +8,7 @@ import { router } from '@/router'
 let loginMessageShow = false
 export interface HttpOption {
   url: string
-  data?: any
+  data?: unknown
   method?: string
   headers?: Record<string, string>
   onDownloadProgress?: (progressEvent: AxiosProgressEvent) => void
@@ -17,7 +17,7 @@ export interface HttpOption {
   afterRequest?: () => void
 }
 
-export interface Response<T = any> {
+export interface Response<T = unknown> {
   data: T
   // message: string | null
   // status: string
@@ -25,7 +25,13 @@ export interface Response<T = any> {
   code: number
 }
 
-function http<T = any>(
+function resolveRequestData(data: unknown) {
+  return typeof data === 'function'
+    ? (data as () => unknown)()
+    : data ?? {}
+}
+
+function http<T = unknown>(
   { url, data, method, headers, onDownloadProgress, signal, beforeRequest, afterRequest }: HttpOption,
 ) {
   const authStore = useAuthStore()
@@ -88,7 +94,7 @@ function http<T = any>(
 
   method = method || 'GET'
 
-  const params = Object.assign(typeof data === 'function' ? data() : data ?? {}, {})
+  const params = resolveRequestData(data)
   if (!headers)
     headers = {}
 
@@ -99,7 +105,7 @@ function http<T = any>(
     : request.post(url, params, { headers, signal, onDownloadProgress }).then(successHandler, failHandler)
 }
 
-export function get<T = any>(
+export function get<T = unknown>(
   { url, data, method = 'GET', onDownloadProgress, signal, beforeRequest, afterRequest }: HttpOption,
 ): Promise<Response<T>> {
   return http<T>({
@@ -113,7 +119,7 @@ export function get<T = any>(
   })
 }
 
-export function post<T = any>(
+export function post<T = unknown>(
   { url, data, method = 'POST', headers, onDownloadProgress, signal, beforeRequest, afterRequest }: HttpOption,
 ): Promise<Response<T>> {
   return http<T>({

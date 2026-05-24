@@ -8,6 +8,8 @@
 
 > 2026-05-21 再补充：独立仓库 1.0.0 整理后，GitHub Actions Frontend / Backend 已通过，新增 `/api/healthz` 健康检查和 `service/router/router_test.go`。后端不再是“完全 0 测试”，但测试覆盖仍非常低，尚不足以支撑大规模重构。
 
+> 2026-05-24 补充：1.0.3 已关闭结果组件中的 markdown 原始 HTML 渲染，收紧请求 / 模块配置工具类型，并补充首页和用户管理中的 ID / URL 运行时防御。自定义 CSS / JS 仍属于高权限管理员能力，仍需后续设计安全恢复入口。
+
 ## 2026-05-21 实测状态补充
 
 | 检查项 | 当前结果 | 说明 |
@@ -75,7 +77,7 @@
 | 硬编码加密密钥 | `src/utils/crypto/index.ts:3` | `CryptoSecret = '__CRYPTO_SECRET__'`，源码可见即密钥泄露 |
 | XSS via `v-html` | `src/views/home/index.vue:498` | `footerHtml` 未消毒直接渲染 |
 | XSS via `v-html` | `src/views/login/index.vue:160` | `loginFooter` 未消毒直接渲染 |
-| XSS via markdown | `Result/index.vue:25` | `markdown-it` 开启 `html: true` |
+| XSS via markdown | `Result/index.vue` | 1.0.3 已关闭 `markdown-it` 原始 HTML 渲染；仍需继续评估自定义内容展示边界 |
 | 脚本注入 | `src/App.vue:36-42` | `customJs` 直接注入 `<script>` 到 DOM |
 
 **改进优先级**：🔴 高 — 安全问题可能导致生产环境被攻击。

@@ -33,7 +33,7 @@ export const useModuleConfig = defineStore('module-config-store', {
     },
 
     // 保存到网络
-    async saveToCloud(name: string, value: any) {
+    async saveToCloud(name: string, value: unknown) {
       const moduleName = `module-${name}`
       // 保存至网络
       return save(moduleName, value)

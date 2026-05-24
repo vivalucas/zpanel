@@ -7,7 +7,7 @@ export function getValueByName<T>(name: string) {
   })
 }
 
-export function save<T>(name: string, value: any) {
+export function save<T>(name: string, value: unknown) {
   return post<T>({
     url: '/system/moduleConfig/save',
     data: {

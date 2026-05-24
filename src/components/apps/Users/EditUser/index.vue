@@ -21,14 +21,14 @@ interface Emit {
   (e: 'done', id: number): void// 创建完成
 }
 
-const formInitValue = {
+const createFormValue = (): User.Info => ({
   name: '',
   username: '',
   role: 2,
   status: 3,
-}
+})
 
-const model = ref<User.Info>(formInitValue)
+const model = ref<User.Info>(createFormValue())
 const formRef = ref<FormInst | null>(null)
 
 const roleOtions = ref([
@@ -81,16 +81,16 @@ const show = computed({
 
 watch(show, () => {
   if (props.userInfo?.id)
-    model.value = props.userInfo || {}
+    model.value = { ...createFormValue(), ...props.userInfo }
 
   else
-    model.value = formInitValue
+    model.value = createFormValue()
 })
 
 const add = async () => {
   const res = await userManageEdit<User.Info>(model.value)
-  if (res.code === 0)
-    emit('done', res.data.id as number)
+  if (res.code === 0 && typeof res.data.id === 'number')
+    emit('done', res.data.id)
 
   else if (res.code !== -1)
     message.warning(t('common.failed'))

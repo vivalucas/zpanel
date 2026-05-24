@@ -87,8 +87,8 @@
 
 | 项目 | 当前值 | 来源 |
 |------|--------|------|
-| 产品版本 | `1.0.2` | `service/assets/version` 与 `package.json` |
-| 后端版本源 | `1|1.0.2` | `service/assets/version` |
+| 产品版本 | `1.0.3` | `service/assets/version` 与 `package.json` |
+| 后端版本源 | `1|1.0.3` | `service/assets/version` |
 | 健康检查 | `GET /api/healthz` | `service/router/router.go` |
 | 默认 HTTP 端口 | `6521` | `service/assets/conf.example.ini` |
 
@@ -123,6 +123,7 @@ go run main.go
 
 | 日期 | 变更内容 | 原因 |
 |------|----------|------|
+| 2026-05-24 | 更新版本源到 `1.0.3` | 发布安全渲染和类型收敛优化 |
 | 2026-05-21 | 移除新配置模板中的 `base.source_path` / `base.source_temp_path` | 当前项目无历史包袱，直接采用 `storage.*` 作为运行时存储配置 |
 | 2026-05-21 | 将当前运行时默认路径同步为 `./data` | 基础结构重构已开始落地 |
 | 2026-05-21 | 补充目标运行时目录配置 | 后续需要替换按日期分散的上传目录，并统一数据库、上传、缓存、日志、备份路径 |

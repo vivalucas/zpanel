@@ -77,12 +77,11 @@ function handleItemClick(itemGroupIndex: number, item: Panel.ItemInfo) {
     return
   }
 
-  let jumpUrl = ''
-
-  if (item)
-    jumpUrl = (panelState.networkMode === PanelStateNetworkModeEnum.lan ? item.lanUrl : item.url) as string
-  if (item.lanUrl === '')
-    jumpUrl = item.url
+  const jumpUrl = panelState.networkMode === PanelStateNetworkModeEnum.lan
+    ? item.lanUrl || item.url
+    : item.url || item.lanUrl
+  if (!jumpUrl)
+    return
 
   openPage(item.openMethod, jumpUrl, item.title)
 }
@@ -109,7 +108,7 @@ function getList() {
 // 从后端获取组下面的图标
 function updateItemIconGroupByNet(itemIconGroupIndex: number, itemIconGroupId: number) {
   getListByGroupId<Common.ListResponse<Panel.ItemInfo[]>>(itemIconGroupId).then((res) => {
-    if (res.code === 0)
+    if (res.code === 0 && items.value[itemIconGroupIndex])
       items.value[itemIconGroupIndex].items = res.data.list
   })
 }
@@ -135,7 +134,8 @@ function handleRightMenuSelect(key: string | number) {
       break
     case 'edit':
       // 这里有个奇怪的问题，如果不使用{...}的方式 父组件的值会同步修改 标记一下
-      handleEditItem({ ...currentRightSelectItem.value } as Panel.ItemInfo)
+      if (currentRightSelectItem.value)
+        handleEditItem({ ...currentRightSelectItem.value })
       break
     case 'delete':
       dialog.warning({
@@ -203,26 +203,30 @@ function handleChangeNetwork(mode: PanelStateNetworkModeEnum) {
 // }
 
 function handleSaveSort(itemGroup: ItemGroup) {
-  const saveItems: Common.SortItemRequest[] = []
-  if (itemGroup.items) {
-    for (let i = 0; i < itemGroup.items.length; i++) {
-      const element = itemGroup.items[i]
-      saveItems.push({
-        id: element.id as number,
-        sort: i + 1,
-      })
-    }
+  if (!itemGroup.items || typeof itemGroup.id !== 'number')
+    return
 
-    saveSort({ itemIconGroupId: itemGroup.id as number, sortItems: saveItems }).then(({ code, msg }) => {
-      if (code === 0) {
-        ms.success(t('common.saveSuccess'))
-        itemGroup.sortStatus = false
-      }
-      else {
-        ms.error(`${t('common.saveFail')}:${msg}`)
-      }
+  const saveItems: Common.SortItemRequest[] = []
+  for (let i = 0; i < itemGroup.items.length; i++) {
+    const element = itemGroup.items[i]
+    if (typeof element.id !== 'number')
+      return
+
+    saveItems.push({
+      id: element.id,
+      sort: i + 1,
     })
   }
+
+  saveSort({ itemIconGroupId: itemGroup.id, sortItems: saveItems }).then(({ code, msg }) => {
+    if (code === 0) {
+      ms.success(t('common.saveSuccess'))
+      itemGroup.sortStatus = false
+    }
+    else {
+      ms.error(`${t('common.saveFail')}:${msg}`)
+    }
+  })
 }
 
 function getDropdownMenuOptions() {
@@ -309,8 +313,9 @@ function handleSetSortStatus(groupIndex: number, sortStatus: boolean) {
   // 并未保存排序重新更新数据
   if (!sortStatus) {
     // 单独更新组
-    if (items.value[groupIndex] && items.value[groupIndex].id)
-      updateItemIconGroupByNet(groupIndex, items.value[groupIndex].id as number)
+    const itemGroupId = items.value[groupIndex]?.id
+    if (typeof itemGroupId === 'number')
+      updateItemIconGroupByNet(groupIndex, itemGroupId)
   }
 }
 

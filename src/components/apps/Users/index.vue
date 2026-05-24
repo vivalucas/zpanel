@@ -84,9 +84,13 @@ const createColumns = ({
               case 'update':
                 update(row)
                 break
-              case 'publicMode':
+              case 'publicMode': {
+                if (typeof row.id !== 'number')
+                  return
+                const rowId = row.id
+
                 // 取消
-                if (publicVisitUserId.value && publicVisitUserId.value === row.id) {
+                if (publicVisitUserId.value === rowId) {
                   setPublicVisitUser(null).then(({ code }) => {
                     if (code === 0)
                       publicVisitUserId.value = null
@@ -94,12 +98,13 @@ const createColumns = ({
                 }
                 else {
                 // 设置
-                  setPublicVisitUser(row.id as number).then(({ code }) => {
+                  setPublicVisitUser(rowId).then(({ code }) => {
                     if (code === 0)
-                      publicVisitUserId.value = row.id as number
+                      publicVisitUserId.value = rowId
                   })
                 }
                 break
+              }
               case 'delete':
                 dialog.warning({
                   title: t('common.warning'),
@@ -107,7 +112,8 @@ const createColumns = ({
                   positiveText: t('common.confirm'),
                   negativeText: t('common.cancel'),
                   onPositiveClick: () => {
-                    deletes([row.id as number])
+                    if (typeof row.id === 'number')
+                      deletes([row.id])
                   },
                 })
                 break

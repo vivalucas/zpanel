@@ -4,6 +4,40 @@
 
 ---
 
+## 2026-05-24（安全渲染与类型收敛优化）
+
+**触发原因**：用户要求把前面识别出的优化点尽量一次性收紧，重点是部署前的安全渲染、类型边界和明显状态问题，同时准备推进新版本发布。
+
+**修改内容**：
+1. `src/views/home/components/Result/index.vue` — 关闭 markdown-it 的原始 HTML 渲染，避免结果内容直接执行 HTML。
+2. `src/utils/request/index.ts`、`src/api/system/moduleConfig.ts`、`src/store/modules/moduleConfig/index.ts` — 收紧请求和模块配置接口类型，从 `any` 迁移到 `unknown`，减少隐式宽类型扩散。
+3. `src/components/apps/Users/EditUser/index.vue` — 新建 / 编辑用户时改为每次生成新表单对象，避免弹窗状态复用；提交成功时改为只在拿到有效 `id` 后回传。
+4. `src/views/home/index.vue`、`src/components/apps/Users/index.vue` — 补充首页 URL / ID 运行时防御，去掉危险断言，修正右键菜单和排序保存流程中的空值边界。
+5. `package.json`、`service/assets/version`、`CHANGELOG.md`、`project-log/05-current-status.md`、`project-log/08-env-config.md` — 同步推进 `1.0.3` 版本和对应说明文档。
+
+**遇到的问题**：
+- `src/components/apps/Users/index.vue` 的 `case` 分支新增局部变量后触发 ESLint `no-case-declarations`，需要加块级作用域。
+- `pnpm` 在本地未作为全局命令存在，验证需要使用 `corepack pnpm`。
+
+**解决方式**：
+- 对 `case 'publicMode'` 增加块级作用域，保持语义不变并满足 lint 规则。
+- 使用 `corepack pnpm` 运行前端命令，避免依赖系统 PATH。
+
+**验证方式**：
+- `corepack pnpm run type-check`
+- `corepack pnpm run lint`
+- `corepack pnpm run build`
+- `cd service && go test ./...`
+
+**验证结果**：
+- TypeScript 类型检查通过。
+- ESLint 通过。
+- Vite 生产构建通过；仍保留既有的 chunk 体积提示，以及 `/custom/index.js` 非 module 的构建提醒。
+- Go 全量测试通过。
+
+**本地产物清理**：
+- `dist/` 与构建生成的 `.env` 已删除。
+
 ## 2026-05-23（第三轮评审与稳定性修复）
 
 **触发原因**：用户将 `project-log/` 推送到 GitHub，并要求以云端 `main` 为基线重新全面阅读项目与规划文档，逐项确认真实 Bug / 优化点、更新评审文档后再修复代码，并在修改后做完整自检。

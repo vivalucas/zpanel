@@ -59,7 +59,7 @@ func DefaultSiteSetting() SiteSetting {
 		SiteTitle:   "ZPanel",
 		SiteIcon:    "/favicon.svg",
 		LoginTitle:  "ZPanel",
-		LoginFooter: `Powered By <a href="https://github.com/vivalucas/zpanel" target="_blank" class="ml-[5px] text-slate-500">ZPanel</a>`,
+		LoginFooter: `Powered By <a href="https://github.com/vivalucas/zpanel" target="_blank" rel="noopener noreferrer">ZPanel</a>`,
 	}
 }
 

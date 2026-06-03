@@ -1,6 +1,6 @@
 services:
   zpanel:
-    image: 'vivalucas/zpanel:1.0.7'
+    image: 'vivalucas/zpanel:latest'
     container_name: zpanel
     volumes:
       - ./conf:/app/conf

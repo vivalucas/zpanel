@@ -4,6 +4,12 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.0.8 - 2026-06-04
+
+- Redesigned the login page with a refined glass-style light layout, blue primary action, and responsive mobile spacing.
+- Fixed login footer rendering so configured footer HTML displays as a normal link instead of escaped text.
+- Updated the default Docker Compose image example to use `vivalucas/zpanel:latest`.
+
 ## 1.0.7 - 2026-06-04
 
 - Fixed Docker startup when the runtime needs to extract embedded language files into `/app/lang` while running as the non-root `zpanel` user.

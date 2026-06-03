@@ -76,7 +76,7 @@ ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放�
 ```yaml
 services:
   zpanel:
-    image: vivalucas/zpanel:1.0.7
+    image: vivalucas/zpanel:latest
     container_name: zpanel
     volumes:
       - ./conf:/app/conf
@@ -96,7 +96,7 @@ docker compose up -d
 默认镜像：
 
 ```text
-vivalucas/zpanel:1.0.7
+vivalucas/zpanel:latest
 ```
 
 默认端口：`6521`
@@ -110,7 +110,7 @@ vivalucas/zpanel:1.0.7
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
 
-`latest` 指向最近发布的稳定镜像；生产部署更建议固定版本号，例如 `vivalucas/zpanel:1.0.7`，升级时再显式调整版本。
+`latest` 指向最近发布的稳定镜像。若需要可重复回滚，也可以改用固定版本号，例如 `vivalucas/zpanel:1.0.8`。
 
 健康检查接口：
 

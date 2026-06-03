@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { NButton, NCard, NForm, NFormItem, NGradientText, NInput, NSelect, useMessage } from 'naive-ui'
-import { onMounted, ref } from 'vue'
+import { NButton, NCard, NForm, NFormItem, NInput, NSelect, useMessage } from 'naive-ui'
+import { computed, onMounted, ref } from 'vue'
 import { login } from '@/api'
 import { useAppStore, useAuthStore } from '@/store'
 import { Captcha, SvgIcon } from '@/components/common'
@@ -21,12 +21,15 @@ const siteSetting = ref<System.SiteSetting>({
   siteTitle: 'ZPanel',
   siteIcon: '/favicon.svg',
   loginTitle: 'ZPanel',
-  loginSubtitle: '',
-  loginFooter: 'Powered By ZPanel',
+  loginSubtitle: 'A refined self-hosted start page for your services.',
+  loginFooter: 'Powered By <a href="https://github.com/vivalucas/zpanel" target="_blank" rel="noopener noreferrer">ZPanel</a>',
   customCss: '',
   customJs: '',
 })
 const captchaId = ref('')
+const loginFooterHtml = computed(() => {
+  return siteSetting.value.loginFooter || 'Powered By <a href="https://github.com/vivalucas/zpanel" target="_blank" rel="noopener noreferrer">ZPanel</a>'
+})
 
 // const isShowRegister = ref<boolean>(false)
 
@@ -100,100 +103,306 @@ onMounted(() => {
 
 <template>
   <div class="login-container">
-    <NCard class="login-card" style="border-radius: 20px;">
-      <div class="mb-5 flex items-center justify-end">
-        <div class="mr-2">
-          <SvgIcon icon="ion-language" style="width: 20;height: 20;" />
+    <div class="login-shell">
+      <div class="login-brand">
+        <div class="login-mark">
+          Z
         </div>
-        <div class="min-w-[100px]">
-          <NSelect v-model:value="languageValue" size="small" :options="languageOptions" @update-value="handleChangeLanguage" />
-        </div>
-      </div>
-
-      <div class="login-title  ">
-        <NGradientText :size="30" type="success" class="!font-bold">
-          {{ siteSetting.loginTitle || siteSetting.siteTitle || $t('common.appName') }}
-        </NGradientText>
-        <div v-if="siteSetting.loginSubtitle" class="mt-2 text-slate-500 text-sm">
-          {{ siteSetting.loginSubtitle }}
+        <div>
+          <h1>{{ siteSetting.loginTitle || siteSetting.siteTitle || $t('common.appName') }}</h1>
+          <p>{{ siteSetting.loginSubtitle || 'A refined self-hosted start page for your services.' }}</p>
         </div>
       </div>
-      <NForm :model="form" label-width="100px" @keydown.enter="handleSubmit">
-        <NFormItem>
-          <NInput v-model:value="form.username" :placeholder="$t('login.usernamePlaceholder')">
-            <template #prefix>
-              <SvgIcon icon="ph:user-bold" />
-            </template>
-          </NInput>
-        </NFormItem>
 
-        <NFormItem>
-          <NInput v-model:value="form.password" type="password" :placeholder="$t('login.passwordPlaceholder')">
-            <template #prefix>
-              <SvgIcon icon="mdi:password-outline" />
-            </template>
-          </NInput>
-        </NFormItem>
-
-        <NFormItem v-if="loginCaptcha">
-          <div class="w-[120px] h-[34px] mr-[20px] rounded border flex cursor-pointer">
-            <Captcha :src="`/api/captcha/getImageByCaptchaId/${captchaId}/120/34`" />
+      <NCard class="login-card" :bordered="false">
+        <div class="login-toolbar">
+          <div class="login-language">
+            <SvgIcon icon="ion-language" class="login-language-icon" />
+            <NSelect v-model:value="languageValue" size="small" :options="languageOptions" @update-value="handleChangeLanguage" />
           </div>
-          <NInput v-model:value="form.vcode" type="text" :placeholder="$t('login.captchaPlaceholder')" />
-        </NFormItem>
-        <NFormItem style="margin-top: 10px">
-          <NButton type="primary" block :loading="loading" @click="handleSubmit">
-            {{ $t('login.loginButton') }}
-          </NButton>
-        </NFormItem>
+        </div>
 
-        <!-- <div class="flex justify-end">
-          <NButton v-if="isShowRegister" quaternary type="info" class="flex" @click="$router.push({ path: '/register' })">
-            注册
-          </NButton>
-          <NButton quaternary type="info" class="flex" @click="$router.push({ path: '/resetPassword' })">
-            忘记密码?
-          </NButton>
-        </div> -->
+        <NForm class="login-form" :model="form" label-width="100px" @keydown.enter="handleSubmit">
+          <NFormItem>
+            <NInput v-model:value="form.username" :placeholder="$t('login.usernamePlaceholder')" size="large">
+              <template #prefix>
+                <SvgIcon icon="ph:user-bold" />
+              </template>
+            </NInput>
+          </NFormItem>
 
-        <div class="flex justify-center text-slate-300" v-text="siteSetting.loginFooter" />
-      </NForm>
-    </NCard>
+          <NFormItem>
+            <NInput v-model:value="form.password" type="password" :placeholder="$t('login.passwordPlaceholder')" size="large">
+              <template #prefix>
+                <SvgIcon icon="mdi:password-outline" />
+              </template>
+            </NInput>
+          </NFormItem>
+
+          <NFormItem v-if="loginCaptcha">
+            <div class="captcha-preview">
+              <Captcha :src="`/api/captcha/getImageByCaptchaId/${captchaId}/120/34`" />
+            </div>
+            <NInput v-model:value="form.vcode" type="text" :placeholder="$t('login.captchaPlaceholder')" size="large" />
+          </NFormItem>
+
+          <NFormItem class="login-submit">
+            <NButton class="login-button" color="#007aff" block size="large" :loading="loading" @click="handleSubmit">
+              {{ $t('login.loginButton') }}
+            </NButton>
+          </NFormItem>
+        </NForm>
+      </NCard>
+
+      <div class="login-footer" v-html="loginFooterHtml" />
+    </div>
   </div>
 </template>
 
-  <style scoped>
-    .login-container {
-        padding: 20px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background-color: #f2f6ff;
-    }
+<style scoped>
+.login-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(110, 168, 255, 0.28), transparent 30%),
+    radial-gradient(circle at 85% 22%, rgba(255, 255, 255, 0.86), transparent 24%),
+    linear-gradient(135deg, #eef4ff 0%, #f8fbff 46%, #e8f0ff 100%);
+}
 
-    /* 夜间模式 */
-    :global(.dark) .login-container{
-      background-color: rgb(43, 43, 43);
-    }
+.login-container::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.42) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.42) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.34), transparent 72%);
+}
 
-    @media (min-width: 600px) {
-        .login-card {
-            width: auto;
-            margin: 0px 10px;
-        }
-        .login-button {
-            width: 100%;
-        }
-    }
+.login-shell {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 420px);
+}
 
-    .login-card {
-        margin: 20px;
-        min-width:400px;
-    }
+.login-brand {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 22px;
+  color: #111827;
+}
 
-  .login-title{
-    text-align: center;
-    margin: 20px;
+.login-mark {
+  display: grid;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  font-size: 27px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(145deg, #007aff, #5ac8fa);
+  border-radius: 16px;
+  box-shadow: 0 16px 36px rgba(0, 122, 255, 0.28);
+}
+
+.login-brand h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 760;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.login-brand p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.login-card {
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(24px) saturate(1.35);
+}
+
+.login-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+.login-language {
+  display: grid;
+  grid-template-columns: 20px minmax(112px, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 154px;
+  color: #64748b;
+}
+
+.login-language-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.login-form :deep(.n-form-item) {
+  --n-label-height: 0;
+  margin-bottom: 16px;
+}
+
+.login-form :deep(.n-form-item-feedback-wrapper) {
+  min-height: 0;
+}
+
+.login-form :deep(.n-input) {
+  background: rgba(255, 255, 255, 0.74);
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+}
+
+.login-form :deep(.n-input-wrapper) {
+  padding-right: 14px;
+  padding-left: 14px;
+}
+
+.login-form :deep(.n-input__border),
+.login-form :deep(.n-input__state-border) {
+  border-radius: 14px;
+}
+
+.captcha-preview {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  width: 120px;
+  height: 40px;
+  margin-right: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+}
+
+.login-submit {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.login-button {
+  height: 44px;
+  font-size: 15px;
+  font-weight: 650;
+  border-radius: 14px;
+  box-shadow: 0 14px 28px rgba(0, 122, 255, 0.22);
+}
+
+.login-button :deep(.n-button__border),
+.login-button :deep(.n-button__state-border) {
+  border-radius: 14px;
+}
+
+.login-footer {
+  margin-top: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.login-footer :deep(a) {
+  margin-left: 4px;
+  font-weight: 600;
+  color: #475569;
+  text-decoration: none;
+}
+
+.login-footer :deep(a:hover) {
+  color: #007aff;
+}
+
+:global(.dark) .login-container {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(64, 156, 255, 0.22), transparent 31%),
+    radial-gradient(circle at 82% 16%, rgba(148, 163, 184, 0.12), transparent 24%),
+    linear-gradient(135deg, #0f172a 0%, #111827 46%, #172033 100%);
+}
+
+:global(.dark) .login-container::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+}
+
+:global(.dark) .login-brand {
+  color: #f8fafc;
+}
+
+:global(.dark) .login-brand p {
+  color: #94a3b8;
+}
+
+:global(.dark) .login-card {
+  background: rgba(15, 23, 42, 0.64);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
+}
+
+:global(.dark) .login-language {
+  color: #cbd5e1;
+}
+
+:global(.dark) .login-form :deep(.n-input) {
+  background: rgba(15, 23, 42, 0.64);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+}
+
+:global(.dark) .captcha-preview {
+  background: rgba(15, 23, 42, 0.64);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+:global(.dark) .login-footer {
+  color: #64748b;
+}
+
+:global(.dark) .login-footer :deep(a) {
+  color: #cbd5e1;
+}
+
+@media (max-width: 520px) {
+  .login-container {
+    align-items: flex-start;
+    padding-top: 54px;
   }
-  </style>
+
+  .login-brand {
+    align-items: flex-start;
+  }
+
+  .login-brand h1 {
+    font-size: 28px;
+  }
+
+  .login-brand p {
+    font-size: 13px;
+  }
+
+  .login-card {
+    border-radius: 22px;
+  }
+}
+</style>

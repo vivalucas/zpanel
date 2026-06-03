@@ -33,12 +33,28 @@ func (a *ItemIconGroup) Edit(c *gin.Context) {
 		if req.Sort != 0 {
 			updateField = append(updateField, "Sort")
 		}
-		global.Db.Model(&models.ItemIconGroup{}).
+		var count int64
+		if err := global.Db.Model(&models.ItemIconGroup{}).Where("id=? AND user_id=?", req.ID, userInfo.ID).Count(&count).Error; err != nil {
+			apiReturn.ErrorDatabase(c, err.Error())
+			return
+		}
+		if count == 0 {
+			apiReturn.ErrorNoAccess(c)
+			return
+		}
+		result := global.Db.Model(&models.ItemIconGroup{}).
 			Select(updateField).
-			Where("id=?", req.ID).Updates(&req)
+			Where("id=? AND user_id=?", req.ID, userInfo.ID).Updates(&req)
+		if result.Error != nil {
+			apiReturn.ErrorDatabase(c, result.Error.Error())
+			return
+		}
 	} else {
 		// 创建
-		global.Db.Create(&req)
+		if err := global.Db.Create(&req).Error; err != nil {
+			apiReturn.ErrorDatabase(c, err.Error())
+			return
+		}
 	}
 
 	apiReturn.SuccessData(c, req)

@@ -1,12 +1,12 @@
 services:
   zpanel:
-    image: 'vivalucas/zpanel:latest'
+    image: 'vivalucas/zpanel:1.0.5'
     container_name: zpanel
     volumes:
       - ./conf:/app/conf
       - ./data:/app/data
     ports:
-      - 6521:6521
+      - 127.0.0.1:6521:6521
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:6521/api/healthz']
       interval: 30s

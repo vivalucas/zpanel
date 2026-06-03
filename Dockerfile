@@ -39,7 +39,7 @@ COPY --from=server_image /build/zpanel /app/zpanel
 
 EXPOSE 6521
 
-RUN apk add --no-cache ca-certificates tzdata \
+RUN apk add --no-cache ca-certificates docker-cli tzdata \
     && addgroup -S zpanel \
     && adduser -S -G zpanel -u 1000 zpanel \
     && chmod +x ./zpanel \

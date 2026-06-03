@@ -71,17 +71,37 @@ ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放�
 
 ## 快速开始
 
+创建 `docker-compose.yml`：
+
+```yaml
+services:
+  zpanel:
+    image: vivalucas/zpanel:1.0.5
+    container_name: zpanel
+    volumes:
+      - ./conf:/app/conf
+      - ./data:/app/data
+    ports:
+      - "127.0.0.1:6521:6521"
+    restart: always
+```
+
+启动服务：
+
 ```bash
+docker compose pull
 docker compose up -d
 ```
 
 默认镜像：
 
 ```text
-vivalucas/zpanel:latest
+vivalucas/zpanel:1.0.5
 ```
 
 默认端口：`6521`
+
+如果只在局域网直接访问，可以把端口映射改成 `6521:6521`。如果要公网访问，建议保持 `127.0.0.1:6521:6521`，再用 Nginx、Caddy、Traefik 等反向代理提供域名和 HTTPS。
 
 ### Release
 
@@ -89,6 +109,8 @@ vivalucas/zpanel:latest
 
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
+
+`latest` 指向最近发布的稳定镜像；生产部署更建议固定版本号，例如 `vivalucas/zpanel:1.0.5`，升级时再显式调整版本。
 
 健康检查接口：
 
@@ -108,11 +130,30 @@ Password: 12345678
 如果要在 ZPanel 中管理宿主机 Docker 容器，需要挂载 Docker socket：
 
 ```yaml
-volumes:
-  - /var/run/docker.sock:/var/run/docker.sock
+services:
+  zpanel:
+    group_add:
+      - "${DOCKER_GID}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-这个权限较高，只建议在可信环境启用。
+多数 Linux 主机上，Docker socket 属于宿主机 Docker 用户组。启动前先写入 `DOCKER_GID`：
+
+```bash
+echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" > .env
+docker compose up -d
+```
+
+如果你的环境不能使用 `group_add`，可以用下面这个隔离性更低的兜底方式让容器以 root 运行：
+
+```yaml
+services:
+  zpanel:
+    user: "0:0"
+```
+
+官方镜像已包含 `docker-cli`，Docker 管理功能会在容器内执行 `docker` 命令并通过挂载的宿主机 socket 操作 Docker。这个权限很高，只建议在可信环境启用，并务必保护好管理员账号。
 
 ## 适用场景
 

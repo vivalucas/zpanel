@@ -83,14 +83,32 @@ ZPanel is still refreshing its own branding, screenshots, and documentation asse
 
 ### Docker Compose
 
+Create a `docker-compose.yml` file:
+
+```yaml
+services:
+  zpanel:
+    image: vivalucas/zpanel:1.0.5
+    container_name: zpanel
+    volumes:
+      - ./conf:/app/conf
+      - ./data:/app/data
+    ports:
+      - "127.0.0.1:6521:6521"
+    restart: always
+```
+
+Then start ZPanel:
+
 ```bash
+docker compose pull
 docker compose up -d
 ```
 
 Default image:
 
 ```text
-vivalucas/zpanel:latest
+vivalucas/zpanel:1.0.5
 ```
 
 Default port:
@@ -106,12 +124,16 @@ Default persistent directories:
 ./data
 ```
 
+If you want direct LAN access without a reverse proxy, change the port mapping to `6521:6521`. For public internet access, keep the service bound to `127.0.0.1` and put HTTPS in front of it with Nginx, Caddy, Traefik, or a similar reverse proxy.
+
 ### Releases
 
 Version tags create GitHub Releases with release notes, Linux amd64 deployment packages, and `SHA256SUMS`. The Docker image is still the recommended deployment artifact for most users:
 
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
+
+`latest` points to the most recently published stable image, but production deployments should prefer an explicit version tag such as `vivalucas/zpanel:1.0.5` for repeatable upgrades.
 
 Health check endpoint:
 
@@ -133,11 +155,30 @@ Change the default password after the first login.
 Docker management is optional. If ZPanel runs inside a container and you want it to manage host containers, mount the Docker socket:
 
 ```yaml
-volumes:
-  - /var/run/docker.sock:/var/run/docker.sock
+services:
+  zpanel:
+    group_add:
+      - "${DOCKER_GID}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-This gives ZPanel high-level control over Docker on the host. Only enable it in a trusted environment and keep the administrator account secure.
+On most Linux hosts, the socket is owned by the host Docker group. Set `DOCKER_GID` before starting the container:
+
+```bash
+echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" > .env
+docker compose up -d
+```
+
+If your environment cannot use `group_add`, the less isolated fallback is to run the container as root:
+
+```yaml
+services:
+  zpanel:
+    user: "0:0"
+```
+
+The official image includes `docker-cli`, and Docker management works by running `docker` commands inside the container against the mounted host socket. This gives ZPanel high-level control over Docker on the host. Only enable it in a trusted environment and keep the administrator account secure.
 
 ---
 
@@ -210,12 +251,10 @@ go build -o zpanel --ldflags="-X zpanel/global.RUNCODE=release" main.go
 
 ## Project Status
 
-ZPanel has completed its initial fork cleanup and a broad engineering pass across product behavior, deployment, security posture, and repository standards. Frontend type-check, lint, and production build have passed in the current workspace.
+ZPanel has completed its initial fork cleanup and a broad engineering pass across product behavior, deployment, security posture, and repository standards. Frontend type-check, lint, production build, backend tests, and backend release build are expected to pass before release.
 
 Still pending before a polished release:
 
-- Go backend build verification in a local Go environment
-- Docker management verification in a real Docker environment
 - New ZPanel logo, screenshots, and release assets
 - Security review for custom JS / CSS, Docker socket access, and public gallery behavior
 

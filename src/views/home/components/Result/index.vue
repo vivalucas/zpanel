@@ -25,7 +25,7 @@ function sanitizeHighlightLang(lang?: string) {
   if (!lang)
     return ''
 
-  return /^[A-Za-z0-9_+#.-]+$/.test(lang) ? lang : ''
+  return /^[\w+#.-]+$/.test(lang) ? lang : ''
 }
 
 const mdi = new MarkdownIt({

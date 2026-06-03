@@ -111,12 +111,15 @@ func StrToUint(s string) uint {
 // 获取系统信息
 func GetSysVersionInfo() Version_Info {
 	cBytes, _ := assets.Asset("assets/version")
-	c := string(cBytes)
+	c := strings.TrimSpace(string(cBytes))
 	info := strings.Split(c, "|")
+	if len(info) < 2 {
+		return Version_Info{}
+	}
 
 	return Version_Info{
-		Version_code: StrToInt(info[0]),
-		Version:      info[1],
+		Version_code: StrToInt(strings.TrimSpace(info[0])),
+		Version:      strings.TrimSpace(info[1]),
 	}
 }
 

@@ -4,6 +4,14 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.0.5 - 2026-06-03
+
+- Added `docker-cli` to the runtime image so Docker management can use a mounted host Docker socket.
+- Restricted navigation item and group updates to the authenticated owner.
+- Fixed the frontend lint failure in markdown code-block language validation.
+- Normalized embedded version parsing so API responses do not include trailing whitespace.
+- Updated Docker deployment documentation with version pinning, pull-before-start, reverse proxy guidance, and Docker socket permission handling.
+
 ## 1.0.4 - 2026-05-25
 
 - Restricted disk monitor requests to known mountpoints.

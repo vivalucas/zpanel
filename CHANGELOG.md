@@ -4,6 +4,11 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.0.10 - 2026-06-04
+
+- Preserved custom wallpaper mask behavior while keeping the new default light background clean.
+- Removed a leftover internal `sun-main` class name from the dashboard shell.
+
 ## 1.0.9 - 2026-06-04
 
 - Unified the main dashboard, app launcher, floating controls, app icons, and About panel around a lighter glass-style visual system.

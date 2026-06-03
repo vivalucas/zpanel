@@ -47,15 +47,26 @@ const settingModalShow = ref(false)
 const items = ref<ItemGroup[]>([])
 const filterItems = ref<ItemGroup[]>([])
 const panelFooterHtml = computed(() => panelState.panelConfig.footerHtml || '')
+const useDefaultHomeBackground = computed(() => {
+  const backgroundImageSrc = panelState.panelConfig.backgroundImageSrc || ''
+  return !backgroundImageSrc || backgroundImageSrc.includes('defaultBackground')
+})
+
 const homeBackgroundStyle = computed(() => {
   const backgroundImageSrc = panelState.panelConfig.backgroundImageSrc || ''
-  const isLegacyDefault = backgroundImageSrc.includes('defaultBackground')
-
   return {
     filter: `blur(${panelState.panelConfig.backgroundBlur}px)`,
-    background: backgroundImageSrc && !isLegacyDefault
+    background: !useDefaultHomeBackground.value
       ? `url(${backgroundImageSrc}) center / cover no-repeat`
       : 'radial-gradient(circle at 16% 10%, rgba(90, 200, 250, 0.22), transparent 30%), radial-gradient(circle at 86% 18%, rgba(0, 122, 255, 0.16), transparent 26%), linear-gradient(135deg, #eef4ff 0%, #f8fbff 46%, #e9f1ff 100%)',
+  }
+})
+const homeMaskStyle = computed(() => {
+  const maskNumber = panelState.panelConfig.backgroundMaskNumber ?? 0
+  return {
+    backgroundColor: useDefaultHomeBackground.value
+      ? `rgba(255,255,255,${Math.min(maskNumber, 0.16)})`
+      : `rgba(0,0,0,${maskNumber})`,
   }
 })
 
@@ -345,11 +356,11 @@ function handleAddItem(itemIconGroupId?: number) {
 </script>
 
 <template>
-  <div class="w-full h-full sun-main">
+  <div class="w-full h-full zpanel-main">
     <div
       class="cover wallpaper" :style="homeBackgroundStyle"
     />
-    <div class="mask" :style="{ backgroundColor: `rgba(255,255,255,${Math.min(panelState.panelConfig.backgroundMaskNumber ?? 0, 0.16)})` }" />
+    <div class="mask" :style="homeMaskStyle" />
     <div ref="scrollContainerRef" class="absolute w-full h-full overflow-auto">
       <div
         class="p-2.5 mx-auto"
@@ -622,7 +633,7 @@ html {
   height: 100%;
 }
 
-.sun-main {
+.zpanel-main {
   user-select: none;
 }
 

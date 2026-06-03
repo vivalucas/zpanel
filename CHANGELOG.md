@@ -4,6 +4,12 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.0.7 - 2026-06-04
+
+- Fixed Docker startup when the runtime needs to extract embedded language files into `/app/lang` while running as the non-root `zpanel` user.
+- Replaced the startup banner ASCII art with ZPanel branding.
+- Updated Docker deployment examples to pin `vivalucas/zpanel:1.0.7`.
+
 ## 1.0.6 - 2026-06-03
 
 - Added a Docker entrypoint that initializes mounted `conf` and `data` directories and fixes their ownership before starting ZPanel as the non-root runtime user.

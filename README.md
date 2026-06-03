@@ -88,7 +88,7 @@ Create a `docker-compose.yml` file:
 ```yaml
 services:
   zpanel:
-    image: vivalucas/zpanel:1.0.6
+    image: vivalucas/zpanel:1.0.7
     container_name: zpanel
     volumes:
       - ./conf:/app/conf
@@ -108,7 +108,7 @@ docker compose up -d
 Default image:
 
 ```text
-vivalucas/zpanel:1.0.6
+vivalucas/zpanel:1.0.7
 ```
 
 Default port:
@@ -133,7 +133,7 @@ Version tags create GitHub Releases with release notes, Linux amd64 deployment p
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
 
-`latest` points to the most recently published stable image, but production deployments should prefer an explicit version tag such as `vivalucas/zpanel:1.0.6` for repeatable upgrades.
+`latest` points to the most recently published stable image, but production deployments should prefer an explicit version tag such as `vivalucas/zpanel:1.0.7` for repeatable upgrades.
 
 Health check endpoint:
 

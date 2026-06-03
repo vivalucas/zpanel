@@ -203,10 +203,11 @@ func CommandRun() {
 }
 
 func Logo() {
-	fmt.Println("     ____            ___                __")
-	fmt.Println("    / __/_ _____    / _ \\___ ____  ___ / /")
-	fmt.Println("   _\\ \\/ // / _ \\  / ___/ _ `/ _ \\/ -_) / ")
-	fmt.Println("  /___/\\_,_/_//_/ /_/   \\_,_/_//_/\\__/_/  ")
+	fmt.Println("  ______ ____                  __")
+	fmt.Println(" /__  / / __ \\ ____ _ ____   / /")
+	fmt.Println("   / / / /_/ // __ `// __ \\ / / ")
+	fmt.Println("  / /_/ ____// /_/ // / / // /  ")
+	fmt.Println(" /____/_/     \\__,_//_/ /_//_/   ")
 	fmt.Println("")
 
 	versionInfo := cmn.GetSysVersionInfo()

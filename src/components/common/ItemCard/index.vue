@@ -13,7 +13,7 @@ interface Prop {
 
 const props = withDefaults(defineProps<Prop>(), {})
 
-const defaultBackground = '#2a2a2a6b'
+const defaultBackground = 'rgba(255, 255, 255, 0.68)'
 const propClass = ref(props.class)
 </script>
 
@@ -52,3 +52,19 @@ const propClass = ref(props.class)
     </div>
   </div>
 </template>
+
+<style scoped>
+.item-card-info,
+.item-card-small-icon {
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.item-card-small-title {
+  margin-top: 8px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-shadow: none;
+}
+</style>

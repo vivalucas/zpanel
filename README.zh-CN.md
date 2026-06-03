@@ -110,7 +110,7 @@ vivalucas/zpanel:latest
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
 
-`latest` 指向最近发布的稳定镜像。若需要可重复回滚，也可以改用固定版本号，例如 `vivalucas/zpanel:1.0.8`。
+`latest` 指向最近发布的稳定镜像。若需要可重复回滚，也可以改用固定版本号，例如 `vivalucas/zpanel:1.0.9`。
 
 健康检查接口：
 

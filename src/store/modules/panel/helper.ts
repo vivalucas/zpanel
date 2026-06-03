@@ -1,17 +1,16 @@
 import { ss } from '@/utils/storage'
 import { PanelPanelConfigStyleEnum, PanelStateNetworkModeEnum } from '@/enums'
-import defaultBackground from '@/assets/defaultBackground.webp'
 const LOCAL_NAME = 'panelStorage'
 
-const defaultFooterHtml = '<div class="flex justify-center text-slate-300" style="margin-top:100px">Powered By <a href="https://github.com/vivalucas/zpanel" target="_blank" class="ml-[5px]">ZPanel</a></div>'
+const defaultFooterHtml = 'Powered By <a href="https://github.com/vivalucas/zpanel" target="_blank" rel="noopener noreferrer">ZPanel</a>'
 
 export function defaultStatePanelConfig(): Panel.panelConfig {
   return {
-    backgroundImageSrc: defaultBackground,
+    backgroundImageSrc: '',
     backgroundBlur: 0,
     backgroundMaskNumber: 0,
     iconStyle: PanelPanelConfigStyleEnum.icon,
-    iconTextColor: '#ffffff',
+    iconTextColor: '#1f2937',
     iconTextInfoHideDescription: false,
     iconTextIconHideTitle: false,
     logoText: 'ZPanel',

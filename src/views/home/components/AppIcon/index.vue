@@ -18,9 +18,12 @@ const props = withDefaults(defineProps<Prop>(), {
   size: 70,
 })
 
-const defaultBackground = '#2a2a2a6b'
+const defaultBackground = 'rgba(255, 255, 255, 0.68)'
 
 const calculateLuminance = (color: string) => {
+  if (!/^#[0-9a-f]{6}$/i.test(color))
+    return 1
+
   const hex = color.replace(/^#/, '')
   const r = parseInt(hex.substring(0, 2), 16)
   const g = parseInt(hex.substring(2, 4), 16)
@@ -39,7 +42,7 @@ const textColor = computed(() => {
     <!-- 详情图标 -->
     <div
       v-if="style === PanelPanelConfigStyleEnum.info"
-      class="app-icon-info w-full rounded-2xl  transition-all duration-200 hover:shadow-[0_0_20px_10px_rgba(0,0,0,0.2)] flex"
+      class="app-icon-info w-full rounded-2xl transition-all duration-200 flex"
       :style="{ background: itemInfo?.icon?.backgroundColor || defaultBackground }"
     >
       <!-- 图标 -->
@@ -70,7 +73,7 @@ const textColor = computed(() => {
     <!-- 极简(小)图标（APP） -->
     <div v-if="style === PanelPanelConfigStyleEnum.icon" class="app-icon-small">
       <div
-        class="app-icon-small-icon overflow-hidden rounded-2xl zpanel w-[70px] h-[70px] mx-auto rounded-2xl transition-all duration-200 hover:shadow-[0_0_20px_10px_rgba(0,0,0,0.2)]"
+        class="app-icon-small-icon overflow-hidden rounded-2xl zpanel w-[70px] h-[70px] mx-auto rounded-2xl transition-all duration-200"
         :title="itemInfo?.description"
       >
         <ItemIcon :item-icon="itemInfo?.icon" />
@@ -85,3 +88,25 @@ const textColor = computed(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.app-icon-info,
+.app-icon-small-icon {
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.app-icon-info:hover,
+.app-icon-small-icon:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 46px rgba(15, 23, 42, 0.16);
+}
+
+.app-icon-small-title {
+  margin-top: 8px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-shadow: none;
+}
+</style>

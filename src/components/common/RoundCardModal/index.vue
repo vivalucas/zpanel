@@ -16,7 +16,7 @@ interface Emit {
 const attrs = useAttrs()
 
 const bindAttrs = computed<{ class: string; style: string }>(() => ({
-  class: (attrs.class as string) || '',
+  class: ['zpanel-glass-modal', attrs.class as string].filter(Boolean).join(' '),
   style: (attrs.style as string) || '',
 }))
 
@@ -30,7 +30,7 @@ const showModal = computed({
 </script>
 
 <template>
-  <NModal v-model:show="showModal" preset="card" :size="size" v-bind="bindAttrs" style="border-radius: 1rem;" :style="$parent" :title="title">
+  <NModal v-model:show="showModal" preset="card" :size="size" v-bind="bindAttrs" :title="title">
     <template #cover>
       <slot name="cover" />
     </template>
@@ -49,3 +49,45 @@ const showModal = computed({
     <slot />
   </NModal>
 </template>
+
+<style>
+.zpanel-glass-modal.n-card {
+  overflow: hidden;
+  color: #111827;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 24px;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(26px) saturate(1.28);
+}
+
+.zpanel-glass-modal .n-card-header {
+  padding: 22px 26px 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.zpanel-glass-modal .n-card__content {
+  padding: 0 22px 22px;
+}
+
+.zpanel-glass-modal .n-card-header__main {
+  font-size: 18px;
+  font-weight: 760;
+  color: #111827;
+}
+
+.dark .zpanel-glass-modal.n-card {
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.84);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+}
+
+.dark .zpanel-glass-modal .n-card-header {
+  border-bottom-color: rgba(148, 163, 184, 0.16);
+}
+
+.dark .zpanel-glass-modal .n-card-header__main {
+  color: #f8fafc;
+}
+</style>

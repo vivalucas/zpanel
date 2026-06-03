@@ -4,6 +4,14 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.0.9 - 2026-06-04
+
+- Unified the main dashboard, app launcher, floating controls, app icons, and About panel around a lighter glass-style visual system.
+- Removed the legacy large logo from the About panel.
+- Replaced legacy favicon, logo, Apple touch icon, and PWA icon assets with ZPanel-branded assets.
+- Fixed the dashboard footer so configured footer HTML renders normally instead of showing raw markup.
+- Replaced the new-install default dashboard background with a cleaner light gradient.
+
 ## 1.0.8 - 2026-06-04
 
 - Redesigned the login page with a refined glass-style light layout, blue primary action, and responsive mobile spacing.

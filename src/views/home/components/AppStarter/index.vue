@@ -127,29 +127,29 @@ onUnmounted(() => {
       size="small"
     >
       <template #header>
-        <div class="flex items-center select-none" @click="collapsed = !collapsed">
-          <div class="text-3xl cursor-pointer" style="color:var(--n-color-target)">
+        <div class="app-starter-header" @click="collapsed = !collapsed">
+          <div class="app-starter-toggle">
             <SvgIcon class=" transition-all duration-500" :icon="collapsed ? 'tabler-layout-sidebar-right-collapse-filled' : 'tabler-layout-sidebar-left-collapse-filled'" />
           </div>
-          <div class="ml-1">
+          <div>
             {{ title === '' ? defaultTitle : title }}
           </div>
         </div>
       </template>
       <div class="w-full h-full app-starter-modal-content">
         <NSpace vertical size="large" style="height: 100%;width: 100%;">
-          <NLayout has-sider style="border-radius:0.75rem;">
+          <NLayout has-sider class="app-starter-layout">
             <NLayoutSider
               v-model:collapsed="collapsed"
               collapse-mode="width"
               :collapsed-width="0"
               :width="isSmallScreen ? '100%' : 240"
-              style="height: 100%;"
+              class="app-starter-sider"
               content-style="overflow: hidden"
             >
-              <div class="w-full h-full dark:bg-[#2c2c32]">
+              <div class="w-full h-full">
                 <div
-                  class="p-[5px] bg-slate-200 dark:bg-zinc-900 rounded-xl overflow-auto"
+                  class="app-starter-nav"
                   :style="{
                     width: isSmallScreen ? '100%' : '220px',
                     minWidth: '200px',
@@ -159,29 +159,22 @@ onUnmounted(() => {
                   <div
                     v-for="item in apps"
                     :key="item.componentName"
-                    :style="{ color: componentName === item.componentName ? 'var(--n-color-target)' : '' }"
+                    class="app-starter-nav-item"
+                    :class="{ active: componentName === item.componentName }"
                     @click="handleClickApp(item)"
                   >
-                    <div
-                      class="bg-white dark:bg-zinc-800 p-[10px] rounded-lg mb-[5px] font-bold cursor-pointer flex items-center hover:bg-slate-50 focus:bg-slate-50"
-                    >
-                      <div class="flex items-center justify-center">
-                        <div class="text-lg">
-                          <SvgIcon :icon="item.icon" />
-                        </div>
-                        <span class="ml-2">{{ item.name }}</span>
+                    <div class="app-starter-nav-button">
+                      <div class="app-starter-nav-icon">
+                        <SvgIcon :icon="item.icon" />
                       </div>
-                    <!-- 更多按钮 -->
-                    <!-- <div class="ml-auto">
-                      <SvgIcon icon="mingcute-more-1-fill" />
-                    </div> -->
+                      <span>{{ item.name }}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </NLayoutSider>
-            <NLayoutContent :content-style="{ height }">
-              <div class="rounded-2xl h-full overflow-auto transition-all duration-500 min-w-[300px] h-full" :class="(isSmallScreen && !collapsed) ? 'opacity-0' : 'opacity-100'">
+            <NLayoutContent class="app-starter-content" :content-style="{ height }">
+              <div class="app-starter-content-inner" :class="(isSmallScreen && !collapsed) ? 'opacity-0' : 'opacity-100'">
                 <AppLoader :component-name="componentName" class="h-full" />
               </div>
             </NLayoutContent>
@@ -193,13 +186,119 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.text-shadow {
-  text-shadow: 0px 0px 5px gray;
+.app-starter-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-weight: 760;
+  color: #111827;
+  cursor: pointer;
+  user-select: none;
 }
-</style>
 
-<style>
-.dark .app-starter-modal-content .n-layout{
-    background-color: #2c2c32;
+.app-starter-toggle {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: #007aff;
+  background: rgba(0, 122, 255, 0.1);
+  border-radius: 10px;
+}
+
+.app-starter-layout {
+  background: transparent;
+  border-radius: 20px;
+}
+
+.app-starter-sider {
+  height: 100%;
+  background: transparent;
+}
+
+.app-starter-nav {
+  height: 100%;
+  padding: 8px;
+  overflow: auto;
+  background: rgba(241, 245, 249, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 18px;
+}
+
+.app-starter-nav-item {
+  margin-bottom: 6px;
+}
+
+.app-starter-nav-button {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.app-starter-nav-button:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.88);
+  transform: translateY(-1px);
+}
+
+.app-starter-nav-item.active .app-starter-nav-button {
+  color: #007aff;
+  background: rgba(0, 122, 255, 0.1);
+  border-color: rgba(0, 122, 255, 0.16);
+}
+
+.app-starter-nav-icon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  font-size: 18px;
+}
+
+.app-starter-content {
+  background: transparent;
+}
+
+.app-starter-content-inner {
+  height: 100%;
+  min-width: 300px;
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: 18px;
+  transition: opacity 0.3s ease;
+}
+
+:global(.dark) .app-starter-header {
+  color: #f8fafc;
+}
+
+:global(.dark) .app-starter-nav {
+  background: rgba(15, 23, 42, 0.62);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+:global(.dark) .app-starter-nav-button {
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+:global(.dark) .app-starter-nav-button:hover {
+  color: #f8fafc;
+  background: rgba(30, 41, 59, 0.72);
+}
+
+:global(.dark) .app-starter-content-inner {
+  background: rgba(15, 23, 42, 0.56);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 </style>

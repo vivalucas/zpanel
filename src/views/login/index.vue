@@ -106,7 +106,10 @@ onMounted(() => {
     <div class="login-shell">
       <div class="login-brand">
         <div class="login-mark">
-          Z
+          <span />
+          <span />
+          <span />
+          <span />
         </div>
         <div>
           <h1>{{ siteSetting.loginTitle || siteSetting.siteTitle || $t('common.appName') }}</h1>
@@ -203,15 +206,21 @@ onMounted(() => {
 .login-mark {
   display: grid;
   flex: 0 0 auto;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
   width: 52px;
   height: 52px;
-  place-items: center;
-  font-size: 27px;
-  font-weight: 800;
-  color: #fff;
+  padding: 11px;
   background: linear-gradient(145deg, #007aff, #5ac8fa);
   border-radius: 16px;
   box-shadow: 0 16px 36px rgba(0, 122, 255, 0.28);
+}
+
+.login-mark span {
+  display: block;
+  background: rgba(255, 255, 255, 0.86);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 
 .login-brand h1 {

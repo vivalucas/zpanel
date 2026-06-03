@@ -10,7 +10,7 @@ interface Prop {
 }
 
 const props = withDefaults(defineProps<Prop>(), { size: 70 })
-const defaultBackground = '#2a2a2a6b'
+const defaultBackground = 'rgba(255, 255, 255, 0.58)'
 const defaultStyle = ref({
   width: `${props.size}px`,
   height: `${props.size}px`,

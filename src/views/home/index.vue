@@ -46,6 +46,18 @@ const settingModalShow = ref(false)
 
 const items = ref<ItemGroup[]>([])
 const filterItems = ref<ItemGroup[]>([])
+const panelFooterHtml = computed(() => panelState.panelConfig.footerHtml || '')
+const homeBackgroundStyle = computed(() => {
+  const backgroundImageSrc = panelState.panelConfig.backgroundImageSrc || ''
+  const isLegacyDefault = backgroundImageSrc.includes('defaultBackground')
+
+  return {
+    filter: `blur(${panelState.panelConfig.backgroundBlur}px)`,
+    background: backgroundImageSrc && !isLegacyDefault
+      ? `url(${backgroundImageSrc}) center / cover no-repeat`
+      : 'radial-gradient(circle at 16% 10%, rgba(90, 200, 250, 0.22), transparent 30%), radial-gradient(circle at 86% 18%, rgba(0, 122, 255, 0.16), transparent 26%), linear-gradient(135deg, #eef4ff 0%, #f8fbff 46%, #e9f1ff 100%)',
+  }
+})
 
 function backTopListenTarget() {
   return scrollContainerRef.value || document
@@ -335,14 +347,9 @@ function handleAddItem(itemIconGroupId?: number) {
 <template>
   <div class="w-full h-full sun-main">
     <div
-      class="cover wallpaper" :style="{
-        filter: `blur(${panelState.panelConfig.backgroundBlur}px)`,
-        background: `url(${panelState.panelConfig.backgroundImageSrc}) no-repeat`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }"
+      class="cover wallpaper" :style="homeBackgroundStyle"
     />
-    <div class="mask" :style="{ backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber})` }" />
+    <div class="mask" :style="{ backgroundColor: `rgba(255,255,255,${Math.min(panelState.panelConfig.backgroundMaskNumber ?? 0, 0.16)})` }" />
     <div ref="scrollContainerRef" class="absolute w-full h-full overflow-auto">
       <div
         class="p-2.5 mx-auto"
@@ -354,16 +361,16 @@ function handleAddItem(itemIconGroupId?: number) {
       >
         <!-- 头 -->
         <div class="mx-[auto] w-[80%]">
-          <div class="flex mx-[auto] items-center justify-center text-white">
+          <div class="home-hero flex mx-[auto] items-center justify-center">
             <div class="logo">
-              <span class="text-2xl md:text-6xl font-bold text-shadow">
+              <span class="text-2xl md:text-6xl font-bold">
                 {{ panelState.panelConfig.logoText }}
               </span>
             </div>
             <div class="divider text-base lg:text-2xl mx-[10px]">
               |
             </div>
-            <div class="text-shadow">
+            <div>
               <Clock :hide-second="!panelState.panelConfig.clockShowSecond" />
             </div>
           </div>
@@ -391,13 +398,13 @@ function handleAddItem(itemIconGroupId?: number) {
           <div
             v-for="(itemGroup, itemGroupIndex) in filterItems" :key="itemGroup.id ?? `filter-${itemGroupIndex}`"
             class="item-list mt-[50px]"
-            :class="itemGroup.sortStatus ? 'shadow-2xl border shadow-[0_0_30px_10px_rgba(0,0,0,0.3)]  p-[10px] rounded-2xl' : ''"
+            :class="itemGroup.sortStatus ? 'item-list-sorting' : ''"
             @mouseenter="handleSetHoverStatus(itemGroupIndex, true)"
             @mouseleave="handleSetHoverStatus(itemGroupIndex, false)"
           >
             <!-- 分组标题 -->
-            <div class="text-white text-xl font-extrabold mb-[20px] ml-[10px] flex items-center">
-              <span class="group-title text-shadow">
+            <div class="group-heading text-xl font-extrabold mb-[20px] ml-[10px] flex items-center">
+              <span class="group-title">
                 {{ itemGroup.title }}
               </span>
               <div
@@ -502,7 +509,7 @@ function handleAddItem(itemIconGroupId?: number) {
             </div>
           </div>
         </div>
-        <div class="mt-5 footer" v-text="panelState.panelConfig.footerHtml" />
+        <div class="mt-5 footer" v-html="panelFooterHtml" />
       </div>
     </div>
 
@@ -513,11 +520,11 @@ function handleAddItem(itemIconGroupId?: number) {
     />
 
     <!-- 悬浮按钮 -->
-    <div class="fixed-element shadow-[0_0_10px_2px_rgba(0,0,0,0.2)]">
+    <div class="fixed-element floating-tools">
       <NButtonGroup vertical>
         <!-- 网络模式切换按钮组 -->
         <NButton
-          v-if="panelState.networkMode === PanelStateNetworkModeEnum.lan && panelState.panelConfig.netModeChangeButtonShow" color="#2a2a2a6b"
+          v-if="panelState.networkMode === PanelStateNetworkModeEnum.lan && panelState.panelConfig.netModeChangeButtonShow" quaternary
           :title="t('panelHome.changeToWanModel')" @click="handleChangeNetwork(PanelStateNetworkModeEnum.wan)"
         >
           <template #icon>
@@ -526,7 +533,7 @@ function handleAddItem(itemIconGroupId?: number) {
         </NButton>
 
         <NButton
-          v-if="panelState.networkMode === PanelStateNetworkModeEnum.wan && panelState.panelConfig.netModeChangeButtonShow" color="#2a2a2a6b"
+          v-if="panelState.networkMode === PanelStateNetworkModeEnum.wan && panelState.panelConfig.netModeChangeButtonShow" quaternary
           :title="t('panelHome.changeToLanModel')" @click="handleChangeNetwork(PanelStateNetworkModeEnum.lan)"
         >
           <template #icon>
@@ -534,13 +541,13 @@ function handleAddItem(itemIconGroupId?: number) {
           </template>
         </NButton>
 
-        <NButton v-if="authStore.visitMode === VisitMode.VISIT_MODE_LOGIN" color="#2a2a2a6b" @click="settingModalShow = !settingModalShow">
+        <NButton v-if="authStore.visitMode === VisitMode.VISIT_MODE_LOGIN" quaternary @click="settingModalShow = !settingModalShow">
           <template #icon>
             <SvgIcon class="text-white font-xl" icon="majesticons-applications" />
           </template>
         </NButton>
 
-        <NButton v-if="authStore.visitMode === VisitMode.VISIT_MODE_PUBLIC" color="#2a2a2a6b" :title="$t('panelHome.goToLogin')" @click="router.push('/login')">
+        <NButton v-if="authStore.visitMode === VisitMode.VISIT_MODE_PUBLIC" quaternary :title="$t('panelHome.goToLogin')" @click="router.push('/login')">
           <template #icon>
             <SvgIcon class="text-white font-xl" icon="material-symbols:account-circle" />
           </template>
@@ -557,8 +564,8 @@ function handleAddItem(itemIconGroupId?: number) {
       :bottom="10"
       style="background-color:transparent;border: none;box-shadow: none;"
     >
-      <div class="shadow-[0_0_10px_2px_rgba(0,0,0,0.2)]">
-        <NButton color="#2a2a2a6b">
+      <div class="floating-tools">
+        <NButton quaternary>
           <template #icon>
             <SvgIcon class="text-white font-xl" icon="icon-park-outline:to-top" />
           </template>
@@ -602,7 +609,7 @@ function handleAddItem(itemIconGroupId?: number) {
 body,
 html {
   overflow: hidden;
-  background-color: rgb(54, 54, 54);
+  background-color: #eef4ff;
 }
 </style>
 
@@ -624,17 +631,7 @@ html {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  /* background: url(@/assets/start_sky.jpg) no-repeat; */
-
   transform: scale(1.05);
-}
-
-.text-shadow {
-  text-shadow: 2px 2px 50px rgb(0, 0, 0);
-}
-
-.app-icon-text-shadow {
-  text-shadow: 2px 2px 5px rgb(0, 0, 0);
 }
 
 .fixed-element {
@@ -644,6 +641,78 @@ html {
   /* 距离屏幕顶部的距离 */
   bottom: 50px;
   /* 距离屏幕左侧的距离 */
+}
+
+.wallpaper::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.42) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.42) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent 72%);
+}
+
+.home-hero {
+  color: #111827;
+}
+
+.home-hero .divider {
+  color: #94a3b8;
+}
+
+.group-heading {
+  color: #1f2937;
+}
+
+.group-buttons :deep(svg) {
+  color: #475569;
+}
+
+.item-list-sorting {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.floating-tools {
+  overflow: hidden;
+  color: #334155;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 14px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.floating-tools :deep(.n-button) {
+  color: #334155;
+}
+
+.floating-tools :deep(.n-button__content svg) {
+  color: #334155;
+}
+
+.footer {
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+}
+
+.footer :deep(a) {
+  margin-left: 4px;
+  font-weight: 600;
+  color: #475569;
+  text-decoration: none;
+}
+
+.footer :deep(a:hover) {
+  color: #007aff;
 }
 
 .icon-info-box {

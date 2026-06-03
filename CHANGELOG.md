@@ -4,6 +4,11 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.0.6 - 2026-06-03
+
+- Added a Docker entrypoint that initializes mounted `conf` and `data` directories and fixes their ownership before starting ZPanel as the non-root runtime user.
+- Hardened configuration initialization so config creation or read failures return explicit startup errors instead of nil-pointer panics.
+
 ## 1.0.5 - 2026-06-03
 
 - Added `docker-cli` to the runtime image so Docker management can use a mounted host Docker socket.

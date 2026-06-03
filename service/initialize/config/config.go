@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"zpanel/global"
 	"zpanel/lib/cmn"
@@ -52,6 +53,11 @@ func ConfigInit() (*iniConfig.IniConfig, error) {
 		// 创建成功再次读取文件
 		if configAgain, errAgain, _ := Conf(getDefaultConfig()); errAgain != nil {
 			return nil, errAgain
+		} else if configAgain == nil || configAgain.Err != nil {
+			if configAgain != nil && configAgain.Err != nil {
+				return nil, configAgain.Err
+			}
+			return nil, fmt.Errorf("configuration initialization failed")
 		} else {
 			if global.Logger != nil {
 				global.Logger.Infoln("尝试读取配置文件'conf/conf.ini',二次读取配置文件成功")
@@ -66,18 +72,30 @@ func ConfigInit() (*iniConfig.IniConfig, error) {
 // 配置初始化
 // errCode=1 说明初始化流程
 func Conf(defaultConfig map[string]map[string]string) (config *iniConfig.IniConfig, err error, errCode int) {
-	CreateConfExample("conf.example.ini", "conf.example.ini")
+	if err = CreateConfExample("conf.example.ini", "conf.example.ini"); err != nil {
+		return
+	}
 	exists, err := cmn.PathExists("conf/conf.ini")
 	if exists {
 		config = iniConfig.NewIniConfig("conf/conf.ini") // 读取配置
+		if config.Err != nil {
+			err = config.Err
+			return
+		}
 		config.Default = defaultConfig
 	} else if err != nil {
-
+		return
 	} else {
 		// docker 运行模式，生成配置文件
 		if global.ISDOCKER != "" {
-			cmn.AssetsTakeFileToPath("conf.example.ini", "conf/conf.ini")
+			if err = cmn.AssetsTakeFileToPath("conf.example.ini", "conf/conf.ini"); err != nil {
+				return
+			}
 			config = iniConfig.NewIniConfig("conf/conf.ini") // 读取配置
+			if config.Err != nil {
+				err = config.Err
+				return
+			}
 			config.Default = defaultConfig
 		} else {
 			errCode = 1

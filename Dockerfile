@@ -37,16 +37,17 @@ COPY --from=web_image /build/dist /app/web
 
 COPY --from=server_image /build/zpanel /app/zpanel
 
+COPY ./docker-entrypoint.sh /app/docker-entrypoint.sh
+
 EXPOSE 6521
 
-RUN apk add --no-cache ca-certificates docker-cli tzdata \
+RUN apk add --no-cache ca-certificates docker-cli su-exec tzdata \
     && addgroup -S zpanel \
     && adduser -S -G zpanel -u 1000 zpanel \
     && chmod +x ./zpanel \
-    && ./zpanel -config \
-    && chown -R zpanel:zpanel /app
+    && chmod +x ./docker-entrypoint.sh
 
-USER zpanel
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://127.0.0.1:6521/api/healthz >/dev/null || exit 1

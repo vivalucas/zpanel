@@ -4,6 +4,82 @@
 
 ---
 
+## 2026-06-04（v1.1.2 发布：系统应用弹窗主题一致性）
+
+**触发原因**：用户确认系统应用弹窗浅 / 深色主题一致性修复后，要求推进版本号并全渠道更新最新版本。
+
+**修改内容**：
+1. `package.json` — 版本号从 `1.1.1` 推进到 `1.1.2`。
+2. `service/assets/version` — 版本源从 `1|1.1.1` 推进到 `1|1.1.2`，确保 release workflow 的 tag 校验通过。
+3. `CHANGELOG.md` — 新增 `1.1.2` 发布记录，覆盖系统应用弹窗浅 / 深色一致性、最大宽度控件优化、主题入口恢复和 project-log 同步。
+4. `README.md`、`README.zh-CN.md` — 固定版本示例更新为 `vivalucas/zpanel:1.1.2`。
+5. `project-log/05-current-status.md`、`project-log/08-env-config.md` — 当前状态和版本源同步到 `1.1.2`。
+
+**发布渠道**：
+- GitHub Release：由 `v1.1.2` tag 触发 `.github/workflows/release.yml`。
+- GHCR：由 `v1.1.2` tag 触发 `.github/workflows/container-ghcr.yml`，发布 `ghcr.io/vivalucas/zpanel:1.1.2` 与 `latest`。
+- Docker Hub：由 `v1.1.2` tag 触发 `.github/workflows/container-ghcr.yml`，发布 `vivalucas/zpanel:1.1.2` 与 `latest`。
+
+**验证方式**：
+- 版本一致性脚本（`package.json` 与 `service/assets/version`）
+- `./node_modules/.bin/vue-tsc --noEmit`
+- `./node_modules/.bin/eslint .`
+- `npm run build`
+- `cd service && go test ./...`
+
+**验证结果**：
+- 版本一致性通过：`1.1.2`。
+- TypeScript 类型检查通过。
+- ESLint 全量通过。
+- Vite 生产构建通过；仍有既有的 `/custom/index.js` 非 module 提示、`/custom/index.css` 运行时解析提示和大 chunk 提示。
+- Go 全量测试通过；当前仍以 `[no test files]` 为主，仅 `router` 包有测试。
+
+**本地产物清理**：
+- `npm run build` 生成的 `dist/` 未进入 Git 工作区。
+- `.env` 由构建脚本更新前端版本号，作为忽略文件保留。
+
+---
+
+## 2026-06-04（系统应用弹窗浅深色一致性修复）
+
+**触发原因**：用户反馈系统应用弹窗在深色模式下出现深浅混杂、表格和卡片割裂，以及风格设置中的“最大宽度”输入组视觉不协调；随后要求回头全面解决深浅色问题，并检查入口、UI、功能和文档规范。
+
+**修改内容**：
+1. `src/hooks/useTheme.ts` — 保留 `light` / `dark` / `auto` 主题逻辑，简化 `html.dark` class 切换实现，确保 Naive UI 主题和 Tailwind dark class 同步。
+2. `src/utils/request/apiMessage.ts` — 修正离散 message API 的主题选择逻辑，让 API 错误提示跟随当前浅 / 深色主题。
+3. `src/components/common/RoundCardModal/index.vue` — 调整通用弹窗外壳浅色样式，并补充深色模式下的背景、边框、标题栏和阴影。
+4. `src/views/home/components/AppStarter/index.vue` — 为系统应用弹窗补齐浅 / 深色变量和组件覆盖，统一侧边导航、内容区、卡片、按钮、输入框、提示框和表格的视觉表现。
+5. `src/components/apps/Style/index.vue` — 重排“最大宽度”控件，隐藏数字输入步进按钮，拆开数值输入与单位选择，并补充深色模式下的局部标签和壁纸上传框样式。
+6. `src/components/apps/UserInfo/index.vue` — 保留“我的信息”中的主题选择入口，只清理无效注释。
+
+**遇到的问题**：
+- 早期为了快速避免深浅混杂曾短暂尝试固定浅色，但这会破坏 README 中声明的暗色 / 亮色 / 自动主题能力，也不符合用户最终诉求。
+- `zpanel-settings-modal` 不只用于系统应用弹窗，也被添加 / 编辑项目弹窗复用，深色覆盖必须保持通用语义，避免只为单一截图写死样式。
+- 本地后端未启动时，浏览器只能验证首页基础渲染，无法完整打开已登录态的系统应用弹窗做端到端视觉截图。
+
+**解决方式**：
+- 恢复并保留主题切换入口，把修复范围收敛到弹窗体系的浅 / 深色变量和组件覆盖，而不是关闭深色模式。
+- 浅色保留清爽白底 / 浅灰边线；深色统一为 `slate` 系背景、边线和蓝色强调，避免半透明暗灰与浅色组件混搭。
+- 将“最大宽度”输入组改为清晰的横向字段布局，减少 Naive 紧凑输入组在该场景下的视觉噪声。
+
+**验证方式**：
+- `./node_modules/.bin/vue-tsc --noEmit`
+- `./node_modules/.bin/eslint .`
+- `npm run build`
+- 手动 diff 审查主题入口、`RoundCardModal` 复用范围、`AppStarter` 深浅色覆盖和 `Style` 页面局部样式。
+
+**验证结果**：
+- TypeScript 类型检查通过。
+- ESLint 全量通过。
+- Vite 生产构建通过；仍有既有的 `/custom/index.js` 非 module 提示、`/custom/index.css` 运行时解析提示和大 chunk 提示。
+- 本地后端未启动，系统应用弹窗未做完整浏览器端截图验证；已通过代码链路和构建检查确认入口与主题逻辑一致。
+
+**本地产物清理**：
+- 已停止本轮临时启动的 Vite dev server。
+- `.env` 由构建脚本更新前端版本号，作为忽略文件保留；无额外需要删除的构建产物进入 Git 工作区。
+
+---
+
 ## 2026-06-04（v1.1.1 发布准备：前端一致性与壁纸优化）
 
 **触发原因**：用户确认自查无明显问题后，要求统一推进版本号并发布全部渠道的新版本。

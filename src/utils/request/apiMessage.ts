@@ -7,7 +7,7 @@ import { useAppStore } from '@/store'
 
 const themeRef = ref<'light' | 'dark'>('light')
 const configProviderPropsRef = computed<ConfigProviderProps>(() => ({
-  theme: themeRef.value === 'light' ? lightTheme : darkTheme,
+  theme: themeRef.value === 'dark' ? darkTheme : lightTheme,
 }))
 export const { message } = createDiscreteApi(['message'], { configProviderProps: configProviderPropsRef })
 
@@ -15,7 +15,7 @@ export function apiRespErrMsg(res: Response): boolean {
   const appStore = useAppStore()
   const osTheme = useOsTheme()
   if (appStore.theme === 'auto')
-    themeRef.value = osTheme.value ?? 'light'
+    themeRef.value = osTheme.value === 'dark' ? 'dark' : 'light'
   else
     themeRef.value = appStore.theme === 'dark' ? 'dark' : 'light'
 

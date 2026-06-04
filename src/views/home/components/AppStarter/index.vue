@@ -221,8 +221,8 @@ onUnmounted(() => {
   height: 100%;
   padding: 8px;
   overflow: auto;
-  background: rgba(241, 245, 249, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.66);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   border-radius: 18px;
 }
 
@@ -239,15 +239,18 @@ onUnmounted(() => {
   font-weight: 700;
   color: #334155;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid transparent;
+  background: #fff;
+  border: 1px solid #e5e7eb;
   border-radius: 14px;
-  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
 
 .app-starter-nav-button:hover {
   color: #0f172a;
-  background: rgba(255, 255, 255, 0.88);
+  background: #fff;
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
   transform: translateY(-1px);
 }
 
@@ -273,11 +276,9 @@ onUnmounted(() => {
   height: 100%;
   min-width: 300px;
   overflow: auto;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.64), rgba(248, 251, 255, 0.38));
-  border: 1px solid rgba(255, 255, 255, 0.66);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
-  backdrop-filter: blur(22px) saturate(1.22);
   transition: opacity 0.3s ease;
 }
 
@@ -285,24 +286,39 @@ onUnmounted(() => {
   color: #f8fafc;
 }
 
+:global(.dark) .app-starter-toggle {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.16);
+}
+
 :global(.dark) .app-starter-nav {
-  background: rgba(15, 23, 42, 0.62);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: #111827;
+  border-color: #334155;
 }
 
 :global(.dark) .app-starter-nav-button {
   color: #cbd5e1;
-  background: rgba(15, 23, 42, 0.62);
+  background: #1f2937;
+  border-color: #334155;
+  box-shadow: none;
 }
 
 :global(.dark) .app-starter-nav-button:hover {
   color: #f8fafc;
-  background: rgba(30, 41, 59, 0.72);
+  background: #273449;
+  border-color: #475569;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+}
+
+:global(.dark) .app-starter-nav-item.active .app-starter-nav-button {
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(96, 165, 250, 0.36);
 }
 
 :global(.dark) .app-starter-content-inner {
-  background: rgba(15, 23, 42, 0.56);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: #0f172a;
+  border-color: #334155;
 }
 </style>
 
@@ -316,15 +332,31 @@ onUnmounted(() => {
   --zpanel-danger-pressed: #d70015;
   --zpanel-text: #111827;
   --zpanel-muted: #64748b;
-  --zpanel-line: rgba(148, 163, 184, 0.2);
-  --zpanel-glass: rgba(255, 255, 255, 0.68);
-  --zpanel-glass-strong: rgba(255, 255, 255, 0.82);
+  --zpanel-line: #e2e8f0;
+  --zpanel-glass: #fff;
+  --zpanel-glass-strong: #fff;
+}
+
+.dark .zpanel-settings-modal {
+  --zpanel-blue: #60a5fa;
+  --zpanel-blue-hover: #93c5fd;
+  --zpanel-blue-pressed: #3b82f6;
+  --zpanel-danger: #f87171;
+  --zpanel-danger-hover: #fca5a5;
+  --zpanel-danger-pressed: #ef4444;
+  --zpanel-text: #e5e7eb;
+  --zpanel-muted: #94a3b8;
+  --zpanel-line: #334155;
+  --zpanel-glass: #111827;
+  --zpanel-glass-strong: #1f2937;
 }
 
 .zpanel-settings-modal .n-card__content {
-  background:
-    radial-gradient(circle at 12% 0%, rgba(0, 122, 255, 0.08), transparent 28%),
-    linear-gradient(135deg, rgba(247, 250, 255, 0.82), rgba(255, 255, 255, 0.64));
+  background: #f8fafc;
+}
+
+.dark .zpanel-settings-modal .n-card__content {
+  background: #0f172a;
 }
 
 .zpanel-settings-modal .zpanel-settings-page {
@@ -339,12 +371,18 @@ onUnmounted(() => {
   --n-border-radius: 18px !important;
   --n-color: var(--zpanel-glass) !important;
   --n-color-modal: var(--zpanel-glass) !important;
-  --n-border-color: rgba(255, 255, 255, 0.74) !important;
-  --n-box-shadow: 0 16px 42px rgba(15, 23, 42, 0.08) !important;
+  --n-border-color: #e2e8f0 !important;
+  --n-box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.74);
-  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.dark .zpanel-settings-modal .n-card {
+  --n-border-color: var(--zpanel-line) !important;
+  --n-box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22) !important;
+  border-color: var(--zpanel-line);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
 }
 
 .zpanel-settings-modal .n-card + .n-card {
@@ -381,6 +419,18 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
+.dark .zpanel-settings-modal .n-button--primary-type {
+  --n-color: #2563eb !important;
+  --n-color-hover: #1d4ed8 !important;
+  --n-color-pressed: #1e40af !important;
+  --n-color-focus: #1d4ed8 !important;
+  --n-border: 1px solid rgba(96, 165, 250, 0.32) !important;
+  --n-border-hover: 1px solid rgba(147, 197, 253, 0.42) !important;
+  --n-border-pressed: 1px solid rgba(147, 197, 253, 0.34) !important;
+  --n-border-focus: 1px solid rgba(147, 197, 253, 0.42) !important;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.26);
+}
+
 .zpanel-settings-modal .n-button--error-type {
   --n-color: rgba(255, 59, 48, 0.1) !important;
   --n-color-hover: rgba(255, 59, 48, 0.16) !important;
@@ -402,10 +452,10 @@ onUnmounted(() => {
 .zpanel-settings-modal .n-button--info-type,
 .zpanel-settings-modal .n-button--default-type {
   --n-color: rgba(255, 255, 255, 0.62) !important;
-  --n-color-hover: rgba(255, 255, 255, 0.82) !important;
-  --n-color-pressed: rgba(241, 245, 249, 0.9) !important;
-  --n-color-focus: rgba(255, 255, 255, 0.82) !important;
-  --n-border: 1px solid rgba(148, 163, 184, 0.22) !important;
+  --n-color-hover: #fff !important;
+  --n-color-pressed: #f1f5f9 !important;
+  --n-color-focus: #fff !important;
+  --n-border: 1px solid #cbd5e1 !important;
   --n-border-hover: 1px solid rgba(0, 122, 255, 0.28) !important;
   --n-border-pressed: 1px solid rgba(0, 122, 255, 0.34) !important;
   --n-border-focus: 1px solid rgba(0, 122, 255, 0.28) !important;
@@ -416,16 +466,45 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
+.dark .zpanel-settings-modal .n-button--warning-type,
+.dark .zpanel-settings-modal .n-button--success-type,
+.dark .zpanel-settings-modal .n-button--info-type,
+.dark .zpanel-settings-modal .n-button--default-type {
+  --n-color: #1f2937 !important;
+  --n-color-hover: #273449 !important;
+  --n-color-pressed: #111827 !important;
+  --n-color-focus: #273449 !important;
+  --n-border: 1px solid #475569 !important;
+  --n-border-hover: 1px solid rgba(96, 165, 250, 0.46) !important;
+  --n-border-pressed: 1px solid rgba(96, 165, 250, 0.38) !important;
+  --n-border-focus: 1px solid rgba(96, 165, 250, 0.46) !important;
+  --n-text-color: #cbd5e1 !important;
+  --n-text-color-hover: #93c5fd !important;
+  --n-text-color-pressed: #60a5fa !important;
+  --n-text-color-focus: #93c5fd !important;
+}
+
 .zpanel-settings-modal .n-input,
 .zpanel-settings-modal .n-input-number,
 .zpanel-settings-modal .n-base-selection {
   --n-border-radius: 12px !important;
-  --n-color: rgba(255, 255, 255, 0.66) !important;
-  --n-color-focus: rgba(255, 255, 255, 0.88) !important;
-  --n-border: 1px solid rgba(148, 163, 184, 0.24) !important;
+  --n-color: #fff !important;
+  --n-color-focus: #fff !important;
+  --n-border: 1px solid #cbd5e1 !important;
   --n-border-hover: 1px solid rgba(0, 122, 255, 0.28) !important;
   --n-border-focus: 1px solid rgba(0, 122, 255, 0.42) !important;
   --n-box-shadow-focus: 0 0 0 3px rgba(0, 122, 255, 0.12) !important;
+}
+
+.dark .zpanel-settings-modal .n-input,
+.dark .zpanel-settings-modal .n-input-number,
+.dark .zpanel-settings-modal .n-base-selection {
+  --n-color: #111827 !important;
+  --n-color-focus: #111827 !important;
+  --n-border: 1px solid #475569 !important;
+  --n-border-hover: 1px solid rgba(96, 165, 250, 0.5) !important;
+  --n-border-focus: 1px solid rgba(96, 165, 250, 0.72) !important;
+  --n-box-shadow-focus: 0 0 0 3px rgba(96, 165, 250, 0.16) !important;
 }
 
 .zpanel-settings-modal .n-switch.n-switch--active .n-switch__rail {
@@ -443,22 +522,46 @@ onUnmounted(() => {
   border: 1px solid rgba(0, 122, 255, 0.12) !important;
 }
 
+.dark .zpanel-settings-modal .n-alert {
+  background: rgba(59, 130, 246, 0.14) !important;
+  border-color: rgba(96, 165, 250, 0.24) !important;
+}
+
 .zpanel-settings-modal .n-data-table {
   --n-border-radius: 16px !important;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: #fff;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
+}
+
+.dark .zpanel-settings-modal .n-data-table {
+  background: #111827;
+  border-color: var(--zpanel-line);
 }
 
 .zpanel-settings-modal .n-data-table-th,
 .zpanel-settings-modal .n-data-table-td {
-  background: transparent !important;
+  background: #fff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.dark .zpanel-settings-modal .n-data-table-th,
+.dark .zpanel-settings-modal .n-data-table-td {
+  color: #e5e7eb !important;
+  background: #111827 !important;
+  border-color: var(--zpanel-line) !important;
 }
 
 .zpanel-settings-modal .n-data-table-th {
   color: #334155;
   font-weight: 760;
+  background: #f8fafc !important;
+}
+
+.dark .zpanel-settings-modal .n-data-table-th {
+  color: #cbd5e1 !important;
+  background: #1f2937 !important;
 }
 
 .zpanel-settings-modal .n-tag {
@@ -467,23 +570,5 @@ onUnmounted(() => {
 
 .zpanel-settings-modal .text-slate-500 {
   color: var(--zpanel-muted) !important;
-}
-
-.dark .zpanel-settings-modal {
-  --zpanel-text: #f8fafc;
-  --zpanel-muted: #94a3b8;
-  --zpanel-glass: rgba(15, 23, 42, 0.48);
-  --zpanel-glass-strong: rgba(15, 23, 42, 0.66);
-}
-
-.dark .zpanel-settings-modal .n-card__content {
-  background:
-    radial-gradient(circle at 12% 0%, rgba(10, 132, 255, 0.14), transparent 28%),
-    linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(30, 41, 59, 0.62));
-}
-
-.dark .zpanel-settings-modal .n-data-table {
-  background: rgba(15, 23, 42, 0.42);
-  border-color: rgba(255, 255, 255, 0.1);
 }
 </style>

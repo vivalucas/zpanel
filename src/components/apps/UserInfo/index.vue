@@ -200,7 +200,6 @@ function handleChangeLanuage(value: Language) {
 function handleChangeTheme(value: Theme) {
   themeValue.value = value
   appStore.setTheme(value)
-  // location.reload()
 }
 
 onMounted(() => {

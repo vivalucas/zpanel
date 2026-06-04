@@ -5,14 +5,12 @@ import { useAppStore } from '@/store'
 
 export function useTheme() {
   const appStore = useAppStore()
-
-  const OsTheme = useOsTheme()
+  const osTheme = useOsTheme()
 
   const isDark = computed(() => {
     if (appStore.theme === 'auto')
-      return OsTheme.value === 'dark'
-    else
-      return appStore.theme === 'dark'
+      return osTheme.value === 'dark'
+    return appStore.theme === 'dark'
   })
 
   const theme = computed(() => {
@@ -20,21 +18,13 @@ export function useTheme() {
   })
 
   const themeOverrides = computed<GlobalThemeOverrides>(() => {
-    if (isDark.value) {
-      return {
-        common: {},
-      }
-    }
     return {}
   })
 
   watch(
     () => isDark.value,
     (dark) => {
-      if (dark)
-        document.documentElement.classList.add('dark')
-      else
-        document.documentElement.classList.remove('dark')
+      document.documentElement.classList.toggle('dark', dark)
     },
     { immediate: true },
   )

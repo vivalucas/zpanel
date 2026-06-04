@@ -54,16 +54,17 @@ const showModal = computed({
 .zpanel-glass-modal.n-card {
   overflow: hidden;
   color: #111827;
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(203, 213, 225, 0.86);
   border-radius: 24px;
-  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.2);
-  backdrop-filter: blur(26px) saturate(1.28);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(22px) saturate(1.08);
 }
 
 .zpanel-glass-modal .n-card-header {
   padding: 22px 26px 14px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
 }
 
 .zpanel-glass-modal .n-card__content {
@@ -77,14 +78,15 @@ const showModal = computed({
 }
 
 .dark .zpanel-glass-modal.n-card {
-  color: #f8fafc;
-  background: rgba(15, 23, 42, 0.84);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+  color: #e5e7eb;
+  background: rgba(17, 24, 39, 0.96);
+  border-color: rgba(71, 85, 105, 0.9);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
 }
 
 .dark .zpanel-glass-modal .n-card-header {
-  border-bottom-color: rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.94);
+  border-bottom-color: rgba(51, 65, 85, 0.95);
 }
 
 .dark .zpanel-glass-modal .n-card-header__main {

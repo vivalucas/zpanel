@@ -334,12 +334,24 @@ onMounted(() => {
         </NGridItem>
 
         <NGridItem span="12 400:12">
-          <div class="flex items-center mt-[10px]">
-            <span class="mr-[10px]">{{ $t('apps.baseSettings.maxWidth') }}</span>
-            <div class="flex">
-              <NInputGroup>
-                <NInputNumber v-model:value="panelState.panelConfig.maxWidth" size="small" :max="9999999999" :style="{ width: '100px' }" placeholder="1200" />
-                <NSelect v-model:value="panelState.panelConfig.maxWidthUnit" :style="{ width: '80px' }" :options="maxWidthUnitOption" size="small" />
+          <div class="settings-field max-width-field">
+            <span class="settings-field-label">{{ $t('apps.baseSettings.maxWidth') }}</span>
+            <div class="max-width-control">
+              <NInputGroup class="max-width-input-group">
+                <NInputNumber
+                  v-model:value="panelState.panelConfig.maxWidth"
+                  size="small"
+                  :max="9999999999"
+                  :show-button="false"
+                  class="max-width-number"
+                  placeholder="1200"
+                />
+                <NSelect
+                  v-model:value="panelState.panelConfig.maxWidthUnit"
+                  class="max-width-unit"
+                  :options="maxWidthUnitOption"
+                  size="small"
+                />
               </NInputGroup>
             </div>
           </div>
@@ -409,5 +421,63 @@ onMounted(() => {
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 16px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+:global(.dark) .wallpaper-drop {
+  color: #e5e7eb;
+  background:
+    linear-gradient(135deg, rgba(31, 41, 55, 0.9), rgba(15, 23, 42, 0.72));
+  border-color: #475569;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.settings-field-label {
+  flex: 0 0 86px;
+  color: #334155;
+  font-weight: 600;
+  line-height: 34px;
+}
+
+:global(.dark) .settings-field-label {
+  color: #cbd5e1;
+}
+
+.max-width-field {
+  align-items: flex-start;
+}
+
+.max-width-control {
+  width: min(100%, 260px);
+}
+
+.max-width-input-group {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.max-width-number {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.max-width-unit {
+  flex: 0 0 78px;
+}
+
+.max-width-input-group :deep(.n-input),
+.max-width-input-group :deep(.n-base-selection) {
+  border-radius: 12px !important;
+}
+
+.max-width-input-group :deep(.n-input__input-el) {
+  font-weight: 500;
 }
 </style>

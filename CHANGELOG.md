@@ -4,6 +4,19 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.1.2 - 2026-06-04
+
+### UI Improvements
+
+- Fixed the system applications modal so light, dark, and automatic themes render consistently across the modal shell, sidebar, content panels, cards, tables, alerts, buttons, inputs, and form controls.
+- Improved the settings modal light theme by reducing muddy glass effects and using clearer white surfaces, slate borders, and more stable table contrast.
+- Improved the style settings "maximum width" control by separating the value input from the unit selector, removing noisy stepper buttons, and aligning the field with the surrounding settings layout.
+
+### Maintenance
+
+- Restored the theme selector flow after the UI cleanup and kept API error messages aligned with the active theme.
+- Updated project logs for the theme consistency fix and release preparation.
+
 ## 1.1.1 - 2026-06-04
 
 ### UI Improvements

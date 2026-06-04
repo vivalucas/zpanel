@@ -303,7 +303,7 @@ onMounted(() => {
       </NButton>
     </NCard>
 
-    <RoundCardModal v-model:show="updatePasswordModalState.show" size="small" preset="card" style="width: 400px" :title="$t('settingUserInfo.updatePassword')">
+    <RoundCardModal v-model:show="updatePasswordModalState.show" class="zpanel-settings-modal" size="small" preset="card" style="width: 400px" :title="$t('settingUserInfo.updatePassword')">
       <NForm ref="formRef" :model="updatePasswordModalState.form" :rules="updatePasswordModalFormRules">
         <NFormItem path="oldPassword" :label="$t('settingUserInfo.oldPassword')">
           <NInput v-model:value="updatePasswordModalState.form.oldPassword" :maxlength="20" type="password" :placeholder="$t('settingUserInfo.oldPassword')" />

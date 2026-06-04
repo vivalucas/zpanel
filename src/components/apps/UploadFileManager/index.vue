@@ -216,7 +216,7 @@ onMounted(() => {
       />
     </div>
 
-    <RoundCardModal v-model:show="infoModalState.show" style="max-width: 300px;" size="small" :title="$t('apps.uploadsFileManager.infoTitle')">
+    <RoundCardModal v-model:show="infoModalState.show" class="zpanel-settings-modal" style="max-width: 300px;" size="small" :title="$t('apps.uploadsFileManager.infoTitle')">
       <div>
         <div>
           <div class="mb-2">

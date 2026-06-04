@@ -140,7 +140,7 @@ onMounted(refresh)
       </div>
     </NAlert>
     <NDataTable :columns="columns" :data="containers" :loading="loading" :bordered="false" />
-    <NModal v-model:show="logModalShow" preset="card" style="max-width: 900px" :title="$t('apps.dockerManager.containerLogs')">
+    <NModal v-model:show="logModalShow" preset="card" class="zpanel-settings-modal zpanel-glass-modal" style="max-width: 900px" :title="$t('apps.dockerManager.containerLogs')">
       <NInput :value="logs" type="textarea" readonly :autosize="{ minRows: 18, maxRows: 28 }" />
     </NModal>
   </div>

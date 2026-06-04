@@ -4,6 +4,41 @@
 
 ---
 
+## 2026-06-04（v1.1.3 发布：系统应用深色模式全页修复）
+
+**触发原因**：`v1.1.2` 发布后，用户反馈系统应用深色模式仍有明显问题：左侧导航、右侧内容外层和多个设置子页面仍显示浅色背景。该问题影响所有系统应用子页面，需要立即发布补丁版覆盖 `latest`。
+
+**修改内容**：
+1. `src/views/home/components/AppStarter/index.vue` — 将系统应用页面级深色选择器从 scoped 样式迁移到全局 `zpanel-settings-modal` 样式块，确保能命中 Naive Layout 生成的真实 DOM。
+2. `src/views/home/components/AppStarter/index.vue` — 补充 `.n-layout`、`.n-layout-sider`、`.n-layout-content`、滚动容器、左侧导航、右侧内容外层的深色背景和边框覆盖。
+3. `src/views/home/components/AppStarter/index.vue` — 补充所有子页面通用局部类的深色覆盖：`item-group-list`、`icon-editor`、`icon-type-tabs`、`transparent-grid`、Docker 错误代码块和 About 面板。
+4. `package.json`、`service/assets/version`、`CHANGELOG.md`、`README*.md`、`project-log/05-current-status.md`、`project-log/08-env-config.md` — 版本推进到 `1.1.3`，固定镜像示例同步更新。
+
+**发布渠道**：
+- GitHub Release：由 `v1.1.3` tag 触发 `.github/workflows/release.yml`。
+- GHCR：由 `v1.1.3` tag 触发 `.github/workflows/container-ghcr.yml`，发布 `ghcr.io/vivalucas/zpanel:1.1.3` 与 `latest`。
+- Docker Hub：由 `v1.1.3` tag 触发 `.github/workflows/container-ghcr.yml`，发布 `vivalucas/zpanel:1.1.3` 与 `latest`。
+
+**验证方式**：
+- 版本一致性脚本（`package.json` 与 `service/assets/version`）
+- `./node_modules/.bin/vue-tsc --noEmit`
+- `./node_modules/.bin/eslint .`
+- `npm run build`
+- `cd service && go test ./...`
+
+**验证结果**：
+- 版本一致性通过：`1.1.3`。
+- TypeScript 类型检查通过。
+- ESLint 全量通过。
+- Vite 生产构建通过；仍有既有的 `/custom/index.js` 非 module 提示、`/custom/index.css` 运行时解析提示和大 chunk 提示。
+- Go 全量测试通过；当前仍以 `[no test files]` 为主，仅 `router` 包有测试。
+
+**本地产物清理**：
+- `npm run build` 生成的 `dist/` 未进入 Git 工作区。
+- `.env` 由构建脚本更新前端版本号，作为忽略文件保留。
+
+---
+
 ## 2026-06-04（v1.1.2 发布：系统应用弹窗主题一致性）
 
 **触发原因**：用户确认系统应用弹窗浅 / 深色主题一致性修复后，要求推进版本号并全渠道更新最新版本。

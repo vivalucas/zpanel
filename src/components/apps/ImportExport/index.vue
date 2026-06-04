@@ -302,7 +302,7 @@ async function handleStartImport() {
         </NButton>
       </div>
     </div>
-    <RoundCardModal v-model:show="importRoundModalShow" style="max-width: 400px;" :title=" $t('apps.exportImport.import')">
+    <RoundCardModal v-model:show="importRoundModalShow" class="zpanel-settings-modal" style="max-width: 400px;" :title=" $t('apps.exportImport.import')">
       <div v-if="importWarning.length > 0">
         <NAlert :title="$t('common.warning')" type="warning">
           <div v-for="(text, index) in importWarning " :key="index">
@@ -329,7 +329,7 @@ async function handleStartImport() {
       </NSpace>
     </RoundCardModal>
 
-    <RoundCardModal v-model:show="exportRoundModalShow" style="max-width: 400px;" :title=" $t('apps.exportImport.export')">
+    <RoundCardModal v-model:show="exportRoundModalShow" class="zpanel-settings-modal" style="max-width: 400px;" :title=" $t('apps.exportImport.export')">
       <NDivider title-placement="left">
         {{ $t('apps.exportImport.selectExportData') }}
       </NDivider>

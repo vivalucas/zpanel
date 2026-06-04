@@ -282,44 +282,6 @@ onUnmounted(() => {
   transition: opacity 0.3s ease;
 }
 
-:global(.dark) .app-starter-header {
-  color: #f8fafc;
-}
-
-:global(.dark) .app-starter-toggle {
-  color: #60a5fa;
-  background: rgba(59, 130, 246, 0.16);
-}
-
-:global(.dark) .app-starter-nav {
-  background: #111827;
-  border-color: #334155;
-}
-
-:global(.dark) .app-starter-nav-button {
-  color: #cbd5e1;
-  background: #1f2937;
-  border-color: #334155;
-  box-shadow: none;
-}
-
-:global(.dark) .app-starter-nav-button:hover {
-  color: #f8fafc;
-  background: #273449;
-  border-color: #475569;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
-}
-
-:global(.dark) .app-starter-nav-item.active .app-starter-nav-button {
-  color: #93c5fd;
-  background: rgba(37, 99, 235, 0.18);
-  border-color: rgba(96, 165, 250, 0.36);
-}
-
-:global(.dark) .app-starter-content-inner {
-  background: #0f172a;
-  border-color: #334155;
-}
 </style>
 
 <style>
@@ -351,12 +313,77 @@ onUnmounted(() => {
   --zpanel-glass-strong: #1f2937;
 }
 
+.dark .zpanel-settings-modal .app-starter-header {
+  color: #f8fafc;
+}
+
+.dark .zpanel-settings-modal .app-starter-toggle {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.16);
+}
+
+.dark .zpanel-settings-modal .app-starter-layout,
+.dark .zpanel-settings-modal .app-starter-modal-content,
+.dark .zpanel-settings-modal .app-starter-sider,
+.dark .zpanel-settings-modal .app-starter-content {
+  background: transparent !important;
+}
+
+.dark .zpanel-settings-modal .app-starter-nav {
+  background: #111827 !important;
+  border-color: #334155 !important;
+}
+
+.dark .zpanel-settings-modal .app-starter-nav-button {
+  color: #cbd5e1;
+  background: #1f2937 !important;
+  border-color: #334155 !important;
+  box-shadow: none;
+}
+
+.dark .zpanel-settings-modal .app-starter-nav-button:hover {
+  color: #f8fafc;
+  background: #273449 !important;
+  border-color: #475569 !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+}
+
+.dark .zpanel-settings-modal .app-starter-nav-item.active .app-starter-nav-button {
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.18) !important;
+  border-color: rgba(96, 165, 250, 0.36) !important;
+}
+
+.dark .zpanel-settings-modal .app-starter-content-inner {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+.dark .zpanel-settings-modal .n-layout,
+.dark .zpanel-settings-modal .n-layout-sider,
+.dark .zpanel-settings-modal .n-layout-content,
+.dark .zpanel-settings-modal .n-layout-scroll-container,
+.dark .zpanel-settings-modal .n-layout-sider-scroll-container {
+  background: transparent !important;
+}
+
 .zpanel-settings-modal .n-card__content {
   background: #f8fafc;
 }
 
 .dark .zpanel-settings-modal .n-card__content {
   background: #0f172a;
+}
+
+.dark .zpanel-settings-modal .n-card-header,
+.dark .zpanel-settings-modal .n-card__content,
+.dark .zpanel-settings-modal .n-card__footer {
+  color: var(--zpanel-text);
+}
+
+.dark .zpanel-settings-modal.n-card,
+.dark .zpanel-settings-modal .n-card {
+  color: var(--zpanel-text) !important;
 }
 
 .zpanel-settings-modal .zpanel-settings-page {
@@ -381,12 +408,73 @@ onUnmounted(() => {
 .dark .zpanel-settings-modal .n-card {
   --n-border-color: var(--zpanel-line) !important;
   --n-box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22) !important;
+  --n-color: var(--zpanel-glass) !important;
+  --n-color-modal: var(--zpanel-glass) !important;
   border-color: var(--zpanel-line);
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
 }
 
 .zpanel-settings-modal .n-card + .n-card {
   margin-top: 12px !important;
+}
+
+.dark .zpanel-settings-modal .item-group-list,
+.dark .zpanel-settings-modal .icon-editor {
+  background: rgba(15, 23, 42, 0.72) !important;
+  border-color: #334155 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+.dark .zpanel-settings-modal .icon-type-tabs {
+  background: #111827 !important;
+  border-color: #334155 !important;
+}
+
+.dark .zpanel-settings-modal .icon-type-tabs button {
+  color: #cbd5e1 !important;
+}
+
+.dark .zpanel-settings-modal .icon-type-tabs button.active {
+  color: #93c5fd !important;
+  background: rgba(37, 99, 235, 0.18) !important;
+  box-shadow: none !important;
+}
+
+.dark .zpanel-settings-modal .transparent-grid {
+  background-color: #111827 !important;
+  background-image:
+    linear-gradient(45deg, rgba(51, 65, 85, 0.58) 25%, transparent 25%, transparent 75%, rgba(51, 65, 85, 0.58) 75%),
+    linear-gradient(45deg, rgba(51, 65, 85, 0.58) 25%, transparent 25%, transparent 75%, rgba(51, 65, 85, 0.58) 75%) !important;
+}
+
+.dark .zpanel-settings-modal .docker-error-body pre {
+  color: #cbd5e1 !important;
+  background: #111827 !important;
+  border-color: #334155 !important;
+}
+
+.dark .zpanel-settings-modal .docker-error-detail {
+  color: var(--zpanel-muted) !important;
+}
+
+.dark .zpanel-settings-modal .about-panel {
+  color: #f8fafc !important;
+}
+
+.dark .zpanel-settings-modal .about-card {
+  color: #cbd5e1 !important;
+  background: rgba(15, 23, 42, 0.72) !important;
+  border-color: #334155 !important;
+}
+
+.dark .zpanel-settings-modal .n-form-item-label,
+.dark .zpanel-settings-modal .n-checkbox,
+.dark .zpanel-settings-modal .n-empty,
+.dark .zpanel-settings-modal .n-pagination,
+.dark .zpanel-settings-modal .n-upload-dragger,
+.dark .zpanel-settings-modal .n-divider,
+.dark .zpanel-settings-modal .n-divider__title {
+  color: var(--zpanel-text) !important;
 }
 
 .zpanel-settings-modal .n-button {
@@ -507,6 +595,20 @@ onUnmounted(() => {
   --n-box-shadow-focus: 0 0 0 3px rgba(96, 165, 250, 0.16) !important;
 }
 
+.dark .zpanel-settings-modal .n-input__input-el,
+.dark .zpanel-settings-modal .n-input__textarea-el,
+.dark .zpanel-settings-modal .n-base-selection-label,
+.dark .zpanel-settings-modal .n-base-selection-input,
+.dark .zpanel-settings-modal .n-input__placeholder,
+.dark .zpanel-settings-modal .n-base-selection-placeholder {
+  color: var(--zpanel-text) !important;
+}
+
+.dark .zpanel-settings-modal .n-input__placeholder,
+.dark .zpanel-settings-modal .n-base-selection-placeholder {
+  color: var(--zpanel-muted) !important;
+}
+
 .zpanel-settings-modal .n-switch.n-switch--active .n-switch__rail {
   background-color: var(--zpanel-blue) !important;
 }
@@ -538,6 +640,14 @@ onUnmounted(() => {
 .dark .zpanel-settings-modal .n-data-table {
   background: #111827;
   border-color: var(--zpanel-line);
+}
+
+.dark .zpanel-settings-modal .n-data-table-wrapper,
+.dark .zpanel-settings-modal .n-data-table-base-table,
+.dark .zpanel-settings-modal .n-data-table-base-table-body,
+.dark .zpanel-settings-modal .n-data-table-empty {
+  color: var(--zpanel-text) !important;
+  background: #111827 !important;
 }
 
 .zpanel-settings-modal .n-data-table-th,

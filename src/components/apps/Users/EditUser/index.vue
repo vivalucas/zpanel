@@ -99,7 +99,7 @@ const handleValidateButtonClick = (e: MouseEvent) => {
 </script>
 
 <template>
-  <RoundCardModal v-model:show="show" size="small" preset="card" style="width: 400px" :title="`${userInfo?.id ? $t('common.edit') : $t('common.add')}`">
+  <RoundCardModal v-model:show="show" class="zpanel-settings-modal" size="small" preset="card" style="width: 400px" :title="`${userInfo?.id ? $t('common.edit') : $t('common.add')}`">
     <NForm ref="formRef" :model="model" :rules="rules">
       <NFormItem path="username" :label="$t('common.username')">
         <NInput v-model:value="model.username" type="text" :placeholder="$t('common.inputPlaceholder')" />

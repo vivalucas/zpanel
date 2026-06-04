@@ -189,7 +189,7 @@ onMounted(() => {
       </VueDraggable>
     </div>
 
-    <RoundCardModal v-model:show="editModalArg.show" size="small" type="small" :title="editModalArg.editStatus === 1 ? $t('apps.itemGroupManage.addGroup') : $t('apps.itemGroupManage.editGroup')" style="width: 400px;">
+    <RoundCardModal v-model:show="editModalArg.show" class="zpanel-settings-modal" size="small" type="small" :title="editModalArg.editStatus === 1 ? $t('apps.itemGroupManage.addGroup') : $t('apps.itemGroupManage.editGroup')" style="width: 400px;">
       <NForm ref="formRef" :model="editModalArg.model" :rules="editModalArg.rules">
         <NFormItem path="title" :label="$t('apps.itemGroupManage.groupName')">
           <NInput v-model:value="editModalArg.model.title" type="text" :maxlength="20" show-count />

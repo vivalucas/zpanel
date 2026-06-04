@@ -4,6 +4,13 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.1.3 - 2026-06-04
+
+### Bug Fixes
+
+- Fixed dark mode coverage across every system application page by moving page-level dark selectors into the global settings modal stylesheet.
+- Fixed dark mode backgrounds for the settings sidebar, page container, Naive layout wrappers, item group list, icon editor, upload grid, Docker error blocks, and About panel.
+
 ## 1.1.2 - 2026-06-04
 
 ### UI Improvements

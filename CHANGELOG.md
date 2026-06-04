@@ -4,6 +4,15 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.0.11 - 2026-06-04
+
+- Fixed password change failing with database error: GORM `Updates(map)` keys must use database column names (`password_hash`), not Go struct field names (`password`).
+- Fixed `GetUserInfoByUsernameAndPassword` using wrong column name in WHERE clause.
+- Removed dead `gender` update code from `UpdateUserInfoByUserId` (column does not exist).
+- Fixed `ReferralCode` field marked as `gorm:"-"` preventing the referral code feature from persisting data.
+- Fixed `ItemIcon` update field list containing `gorm:"-"` field `"Icon"` and non-existent `"GroupId"`.
+- Fixed `ItemIconGroup` update field list being copy-pasted from `ItemIcon` with incorrect fields.
+
 ## 1.0.10 - 2026-06-04
 
 - Preserved custom wallpaper mask behavior while keeping the new default light background clean.

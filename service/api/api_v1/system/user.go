@@ -119,8 +119,8 @@ func (a *UserApi) UpdatePasssword(c *gin.Context) {
 			return
 		}
 	}
-	res := global.Db.Model(&models.User{}).Where("id", userInfo.ID).Updates(map[string]interface{}{
-		"password": cmn.PasswordEncryption(params.NewPassword),
+	res := global.Db.Model(&models.User{}).Where("id=?", userInfo.ID).Updates(map[string]interface{}{
+		"password_hash": cmn.PasswordEncryption(params.NewPassword),
 	})
 	if res.Error != nil {
 		apiReturn.ErrorDatabase(c, res.Error.Error())

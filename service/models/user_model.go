@@ -17,7 +17,7 @@ type User struct {
 	Mail         *string `gorm:"type:varchar(255);uniqueIndex" json:"mail"`              // 邮箱
 	AvatarFileID *uint   `gorm:"index" json:"avatarFileId"`                              // 头像文件
 	Token        string  `gorm:"-" json:"token,omitempty"`
-	ReferralCode string  `gorm:"-" json:"referralCode,omitempty"`
+	ReferralCode string  `gorm:"type:varchar(32);index" json:"referralCode,omitempty"`
 
 	UserId uint `gorm:"-"  json:"userId"`
 }
@@ -32,7 +32,7 @@ func (m *User) GetUserInfoByUid(uid uint) (User, error) {
 // 根据用户名和密码查询用户
 func (m *User) GetUserInfoByUsernameAndPassword(username, password string) (User, error) {
 	userInfo := User{}
-	err := Db.Where("username=?", username).Where("password=?", password).First(&userInfo).Error
+	err := Db.Where("username=?", username).Where("password_hash=?", password).First(&userInfo).Error
 	return userInfo, err
 }
 
@@ -84,9 +84,6 @@ func (m *User) UpdateUserInfoByUserId(user_id uint, updateInfo map[string]interf
 	if v, ok := updateInfo["role"]; ok {
 		data["role"] = v
 	}
-	if v, ok := updateInfo["gender"]; ok {
-		data["gender"] = v
-	}
 
 	if v, ok := updateInfo["mail"]; ok {
 		if mail, ok := normalizeMail(v); ok {
@@ -109,7 +106,7 @@ func (m *User) UpdateUserInfoByUserId(user_id uint, updateInfo map[string]interf
 		data["username"] = v
 	}
 	if v, ok := updateInfo["password"]; ok {
-		data["password"] = v
+		data["password_hash"] = v
 	}
 
 	err := Db.Model(&mUser).Where("id=?", user_id).Updates(data).Error

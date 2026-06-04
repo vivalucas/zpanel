@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import type { UploadFileInfo } from 'naive-ui'
-import { NAlert, NButton, NCheckbox, NCheckboxGroup, NDivider, NInput, NSpace, NUpload, useMessage } from 'naive-ui'
+import { NAlert, NButton, NCheckbox, NCheckboxGroup, NDivider, NSpace, NUpload, useMessage } from 'naive-ui'
 import { RoundCardModal, SvgIcon } from '@/components/common'
 import type { IconGroup, ImportJsonResult } from '@/utils/jsonImportExport'
 import { ConfigVersionLowError, FormatError, exportJson, importJsonString } from '@/utils/jsonImportExport'
@@ -26,15 +26,13 @@ const importRoundModalShow = ref(false)
 const exportRoundModalShow = ref(false)
 const loading = ref(false)
 const uploadLoading = ref(false)
-const version = ref('') // 当前软件版本
-const debug = ref(false)
+const version = ref('')
 
 const importObj = ref<ImportJsonResult | null> (null)
 
-const importItems = ref<string[]>(['icons', 'style']) // 当前软件版本支持导入导出的项目
-const checkedItems = ref<string[]>(['icons', 'style']) // 当前准备导入的项目
+const importItems = ref<string[]>(['icons', 'style'])
+const checkedItems = ref<string[]>(['icons', 'style'])
 
-// 导入图标
 async function importIcons(): Promise<string | null> {
   const groups = importObj.value?.geticons()
   const batchSize = 50
@@ -46,7 +44,6 @@ async function importIcons(): Promise<string | null> {
     for (let i = 0; i < groups.length; i++) {
       const element = groups[i]
 
-      // 创建组得到组id
       const createGroupResponse = await addGroup<Panel.ItemIconGroup>({
         title: element.title,
         sort: element.sort,
@@ -58,7 +55,6 @@ async function importIcons(): Promise<string | null> {
         if (groupId) {
           let addIcons: Panel.ItemInfo[] = []
 
-          // 批量添加子项
           for (let iconI = 0; iconI < element.children.length; iconI++) {
             const iconElement = element.children[iconI]
 
@@ -73,7 +69,6 @@ async function importIcons(): Promise<string | null> {
               itemIconGroupId: groupId,
             })
 
-            // 每 batchSize 个添加一次
             if (addIcons.length === batchSize || iconI === element.children.length - 1) {
               const response = await addMultipleIcons(addIcons)
 
@@ -100,9 +95,7 @@ async function importIcons(): Promise<string | null> {
   }
 }
 
-// 导出图标
 async function exportIcons(): Promise<IconGroup[]> {
-  // 获取组数据
   const { code, data } = await getGroupList<Common.ListResponse<ItemGroup[]>>()
 
   if (code === 0) {
@@ -186,7 +179,6 @@ function handleFileChange(options: { file: UploadFileInfo; fileList: Array<Uploa
   uploadLoading.value = false
 }
 
-// 验证导入文件
 function importCheck() {
   importWarning.value = []
   if (jsonData.value) {
@@ -202,12 +194,7 @@ function importCheck() {
         if (!importObj.value.isPassCheckConfigVersionNew())
           importWarning.value.push(t('apps.exportImport.softwareVersionLow'))
 
-        // （暂时不做）此处可以判断，当前的配置文件是否存在的导入项目（不存在隐藏importItems里面的值）操作变量：importItems
-
-        // 通过了验证,打开弹窗
         importRoundModalShow.value = true
-
-        // console.log(importObj.value.geticons())
       }
     }
     catch (error) {
@@ -224,7 +211,6 @@ function importCheck() {
   }
 }
 
-// 开始导出
 async function handleStartExport() {
   loading.value = true
   try {
@@ -249,7 +235,6 @@ async function handleStartExport() {
   }
 }
 
-// 开始导入
 async function handleStartImport() {
   loading.value = true
   try {
@@ -287,7 +272,7 @@ async function handleStartImport() {
 </script>
 
 <template>
-  <div class="pt-2">
+  <div class="zpanel-settings-page">
     <NAlert type="info" :bordered="false">
       <p>{{ $t('apps.exportImport.tip') }}</p>
     </NAlert>
@@ -317,32 +302,6 @@ async function handleStartImport() {
         </NButton>
       </div>
     </div>
-    <!-- 调试模式 -->
-    <div v-if="debug">
-      <NButton @click="importCheck">
-        检查导入
-      </NButton>
-
-      <!-- <NButton @click="exportJsonS">
-      导出JSON
-    </NButton> -->
-
-      <NButton @click="jsonData = ''">
-        清空导入数据
-      </NButton>
-
-      <NInput
-        v-model:value="jsonData"
-        type="textarea"
-        placeholder="基本的 Textarea"
-      />
-
-      <div v-if="jsonData">
-        <h2>JSON 数据</h2>
-        <pre>{{ jsonData }}</pre>
-      </div>
-    </div>
-
     <RoundCardModal v-model:show="importRoundModalShow" style="max-width: 400px;" :title=" $t('apps.exportImport.import')">
       <div v-if="importWarning.length > 0">
         <NAlert :title="$t('common.warning')" type="warning">

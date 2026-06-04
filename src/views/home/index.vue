@@ -51,11 +51,18 @@ const useDefaultHomeBackground = computed(() => {
   const backgroundImageSrc = panelState.panelConfig.backgroundImageSrc || ''
   return !backgroundImageSrc || backgroundImageSrc.includes('defaultBackground')
 })
+const hasCustomWallpaper = computed(() => !useDefaultHomeBackground.value)
+const homeIconTextColor = computed(() => {
+  const configuredColor = panelState.panelConfig.iconTextColor || '#1f2937'
+  return hasCustomWallpaper.value && configuredColor.toLowerCase() === '#1f2937'
+    ? '#ffffff'
+    : configuredColor
+})
 
 const homeBackgroundStyle = computed(() => {
   const backgroundImageSrc = panelState.panelConfig.backgroundImageSrc || ''
   return {
-    filter: `blur(${panelState.panelConfig.backgroundBlur}px)`,
+    filter: `blur(${panelState.panelConfig.backgroundBlur ?? 0}px)`,
     background: !useDefaultHomeBackground.value
       ? `url(${backgroundImageSrc}) center / cover no-repeat`
       : 'radial-gradient(circle at 16% 10%, rgba(90, 200, 250, 0.22), transparent 30%), radial-gradient(circle at 86% 18%, rgba(0, 122, 255, 0.16), transparent 26%), linear-gradient(135deg, #eef4ff 0%, #f8fbff 46%, #e9f1ff 100%)',
@@ -63,6 +70,14 @@ const homeBackgroundStyle = computed(() => {
 })
 const homeMaskStyle = computed(() => {
   const maskNumber = panelState.panelConfig.backgroundMaskNumber ?? 0
+  if (hasCustomWallpaper.value) {
+    const opacity = Math.min(0.58, 0.22 + maskNumber * 0.36)
+    return {
+      background: `radial-gradient(circle at 50% 12%, rgba(255,255,255,0.16), transparent 34%),
+        linear-gradient(180deg, rgba(6,10,20,${opacity * 0.62}) 0%, rgba(6,10,20,${opacity}) 100%),
+        linear-gradient(90deg, rgba(6,10,20,0.22), transparent 22%, transparent 78%, rgba(6,10,20,0.24))`,
+    }
+  }
   return {
     backgroundColor: useDefaultHomeBackground.value
       ? `rgba(255,255,255,${Math.min(maskNumber, 0.16)})`
@@ -114,7 +129,6 @@ function handWindowIframeIdLoad() {
 }
 
 function getList() {
-  // 获取组数据
   getGroupList<Common.ListResponse<ItemGroup[]>>().then(({ code, data }) => {
     if (code !== 0)
       return
@@ -128,7 +142,6 @@ function getList() {
   }).catch(() => {})
 }
 
-// 从后端获取组下面的图标
 function updateItemIconGroupByNet(itemIconGroupIndex: number, itemIconGroupId: number) {
   getListByGroupId<Common.ListResponse<Panel.ItemInfo[]>>(itemIconGroupId).then((res) => {
     if (res.code === 0 && items.value[itemIconGroupIndex])
@@ -138,7 +151,6 @@ function updateItemIconGroupByNet(itemIconGroupIndex: number, itemIconGroupId: n
 
 function handleRightMenuSelect(key: string | number) {
   dropdownShow.value = false
-  // console.log(currentRightSelectItem, key)
   let jumpUrl = panelState.networkMode === PanelStateNetworkModeEnum.lan ? currentRightSelectItem.value?.lanUrl : currentRightSelectItem.value?.url
   if (currentRightSelectItem.value?.lanUrl === '')
     jumpUrl = currentRightSelectItem.value.url
@@ -156,7 +168,6 @@ function handleRightMenuSelect(key: string | number) {
         openPage(currentRightSelectItem.value?.openMethod, currentRightSelectItem.value.lanUrl, currentRightSelectItem.value?.title)
       break
     case 'edit':
-      // 这里有个奇怪的问题，如果不使用{...}的方式 父组件的值会同步修改 标记一下
       if (currentRightSelectItem.value)
         handleEditItem({ ...currentRightSelectItem.value })
       break
@@ -202,7 +213,6 @@ function handleContextMenu(e: MouseEvent, itemGroupIndex: number, item: Panel.It
 }
 
 function onClickoutside() {
-  // message.info('clickoutside')
   dropdownShow.value = false
 }
 
@@ -218,12 +228,6 @@ function handleChangeNetwork(mode: PanelStateNetworkModeEnum) {
   else
     ms.success(t('panelHome.changeToWanModelSuccess'))
 }
-
-// 结束拖拽
-// function handleEndDrag(event: any, itemIconGroup: Panel.ItemIconGroup) {
-//   // console.log(event)
-//   // console.log(items.value)
-// }
 
 function handleSaveSort(itemGroup: ItemGroup) {
   if (!itemGroup.items || typeof itemGroup.id !== 'number')
@@ -288,19 +292,15 @@ const dropdownMenuOptions = computed(() => {
 })
 
 onMounted(async () => {
-  // 更新用户信息
   await updateLocalUserInfo()
   getList()
 
-  // 更新同步云端配置
   await panelState.updatePanelConfigByCloud()
 
-  // 设置标题
   if (panelState.panelConfig.logoText)
     setTitle(panelState.panelConfig.logoText)
 })
 
-// 前端搜索过滤
 function itemFrontEndSearch(keyword?: string) {
   keyword = keyword?.trim()
   if (keyword !== '' && panelState.panelConfig.searchBoxSearchIcon) {
@@ -332,9 +332,7 @@ function handleSetSortStatus(groupIndex: number, sortStatus: boolean) {
   if (items.value[groupIndex])
     items.value[groupIndex].sortStatus = sortStatus
 
-  // 并未保存排序重新更新数据
   if (!sortStatus) {
-    // 单独更新组
     const itemGroupId = items.value[groupIndex]?.id
     if (typeof itemGroupId === 'number')
       updateItemIconGroupByNet(groupIndex, itemGroupId)
@@ -356,7 +354,7 @@ function handleAddItem(itemIconGroupId?: number) {
 </script>
 
 <template>
-  <div class="w-full h-full zpanel-main">
+  <div class="w-full h-full zpanel-main" :class="{ 'has-custom-wallpaper': hasCustomWallpaper }">
     <div
       class="cover wallpaper" :style="homeBackgroundStyle"
     />
@@ -424,10 +422,10 @@ function handleAddItem(itemIconGroupId?: number) {
                 :class="itemGroup.hoverStatus ? 'opacity-100' : 'opacity-0'"
               >
                 <span class="mr-2 cursor-pointer" :title="t('common.add')" @click="handleAddItem(itemGroup.id)">
-                  <SvgIcon class="text-white font-xl" icon="typcn:plus" />
+                  <SvgIcon class="font-xl" icon="typcn:plus" />
                 </span>
                 <span class="mr-2 cursor-pointer " :title="t('common.sort')" @click="handleSetSortStatus(itemGroupIndex, !itemGroup.sortStatus)">
-                  <SvgIcon class="text-white font-xl" icon="ri:drag-drop-line" />
+                  <SvgIcon class="font-xl" icon="ri:drag-drop-line" />
                 </span>
               </div>
             </div>
@@ -445,7 +443,7 @@ function handleAddItem(itemIconGroupId?: number) {
                     <AppIcon
                       :class="itemGroup.sortStatus ? 'cursor-move' : 'cursor-pointer'"
                       :item-info="item"
-                      :icon-text-color="panelState.panelConfig.iconTextColor"
+                      :icon-text-color="homeIconTextColor"
                       :icon-text-info-hide-description="panelState.panelConfig.iconTextInfoHideDescription || false"
                       :icon-text-icon-hide-title="panelState.panelConfig.iconTextIconHideTitle || false"
                       :style="0"
@@ -455,9 +453,10 @@ function handleAddItem(itemIconGroupId?: number) {
 
                   <div v-if="itemGroup.items.length === 0" class="not-drag">
                     <AppIcon
+                      class="add-placeholder-card"
                       :class="itemGroup.sortStatus ? 'cursor-move' : 'cursor-pointer'"
-                      :item-info="{ icon: { itemType: 3, text: 'subway:add' }, title: t('common.add'), url: '', openMethod: 0 }"
-                      :icon-text-color="panelState.panelConfig.iconTextColor"
+                      :item-info="{ icon: { itemType: 3, text: 'subway:add', backgroundColor: 'rgba(0, 122, 255, 0.10)' }, title: t('common.add'), url: '', openMethod: 0 }"
+                      :icon-text-color="homeIconTextColor"
                       :icon-text-info-hide-description="panelState.panelConfig.iconTextInfoHideDescription || false"
                       :icon-text-icon-hide-title="panelState.panelConfig.iconTextIconHideTitle || false"
                       :style="0"
@@ -482,7 +481,7 @@ function handleAddItem(itemIconGroupId?: number) {
                     <AppIcon
                       :class="itemGroup.sortStatus ? 'cursor-move' : 'cursor-pointer'"
                       :item-info="item"
-                      :icon-text-color="panelState.panelConfig.iconTextColor"
+                      :icon-text-color="homeIconTextColor"
                       :icon-text-info-hide-description="!panelState.panelConfig.iconTextInfoHideDescription"
                       :icon-text-icon-hide-title="panelState.panelConfig.iconTextIconHideTitle || false"
                       :style="1"
@@ -492,9 +491,9 @@ function handleAddItem(itemIconGroupId?: number) {
 
                   <div v-if="itemGroup.items.length === 0" class="not-drag">
                     <AppIcon
-                      class="cursor-pointer"
-                      :item-info="{ icon: { itemType: 3, text: 'subway:add' }, title: $t('common.add'), url: '', openMethod: 0 }"
-                      :icon-text-color="panelState.panelConfig.iconTextColor"
+                      class="cursor-pointer add-placeholder-card"
+                      :item-info="{ icon: { itemType: 3, text: 'subway:add', backgroundColor: 'rgba(0, 122, 255, 0.10)' }, title: $t('common.add'), url: '', openMethod: 0 }"
+                      :icon-text-color="homeIconTextColor"
                       :icon-text-info-hide-description="!panelState.panelConfig.iconTextInfoHideDescription"
                       :icon-text-icon-hide-title="panelState.panelConfig.iconTextIconHideTitle || false"
                       :style="1"
@@ -508,7 +507,7 @@ function handleAddItem(itemIconGroupId?: number) {
             <!-- 编辑栏 -->
             <div v-if="itemGroup.sortStatus" class="flex mt-[10px]">
               <div>
-                <NButton color="#2a2a2a6b" @click="handleSaveSort(itemGroup)">
+                <NButton type="primary" @click="handleSaveSort(itemGroup)">
                   <template #icon>
                     <SvgIcon class="text-white font-xl" icon="material-symbols:save" />
                   </template>
@@ -566,7 +565,6 @@ function handleAddItem(itemIconGroupId?: number) {
       </NButtonGroup>
 
       <AppStarter v-model:visible="settingModalShow" />
-      <!-- <Setting v-model:visible="settingModalShow" /> -->
     </div>
 
     <NBackTop
@@ -642,7 +640,7 @@ html {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 .fixed-element {
@@ -666,6 +664,14 @@ html {
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent 72%);
 }
 
+.has-custom-wallpaper .wallpaper::after {
+  background-image:
+    radial-gradient(circle at 52% 16%, rgba(255, 255, 255, 0.18), transparent 30%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08), transparent 36%);
+  background-size: auto;
+  mask-image: none;
+}
+
 .home-hero {
   color: #111827;
 }
@@ -680,6 +686,21 @@ html {
 
 .group-buttons :deep(svg) {
   color: #475569;
+}
+
+.has-custom-wallpaper .home-hero,
+.has-custom-wallpaper .group-heading {
+  color: #fff;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.34), 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+.has-custom-wallpaper .home-hero .divider {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.has-custom-wallpaper .group-buttons :deep(svg) {
+  color: rgba(255, 255, 255, 0.86);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.28));
 }
 
 .item-list-sorting {
@@ -701,6 +722,13 @@ html {
   backdrop-filter: blur(20px) saturate(1.3);
 }
 
+.has-custom-wallpaper .floating-tools {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
 .floating-tools :deep(.n-button) {
   color: #334155;
 }
@@ -709,10 +737,20 @@ html {
   color: #334155;
 }
 
+.has-custom-wallpaper .floating-tools :deep(.n-button),
+.has-custom-wallpaper .floating-tools :deep(.n-button__content svg) {
+  color: rgba(255, 255, 255, 0.92);
+}
+
 .footer {
   font-size: 13px;
   color: #64748b;
   text-align: center;
+}
+
+.has-custom-wallpaper .footer {
+  color: rgba(255, 255, 255, 0.66);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.28);
 }
 
 .footer :deep(a) {
@@ -720,6 +758,10 @@ html {
   font-weight: 600;
   color: #475569;
   text-decoration: none;
+}
+
+.has-custom-wallpaper .footer :deep(a) {
+  color: rgba(255, 255, 255, 0.76);
 }
 
 .footer :deep(a:hover) {
@@ -740,6 +782,49 @@ html {
   grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
   gap: 18px;
 
+}
+
+.add-placeholder-card :deep(.app-icon-small-icon),
+.add-placeholder-card :deep(.app-icon-info) {
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px) saturate(1.22);
+}
+
+.add-placeholder-card :deep(.n-avatar) {
+  color: #007aff;
+  background: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+}
+
+.add-placeholder-card :deep(.n-avatar svg) {
+  color: #007aff;
+  filter: drop-shadow(0 2px 5px rgba(0, 122, 255, 0.22));
+}
+
+.add-placeholder-card:hover :deep(.app-icon-small-icon),
+.add-placeholder-card:hover :deep(.app-icon-info) {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+}
+
+.has-custom-wallpaper .add-placeholder-card :deep(.app-icon-small-icon),
+.has-custom-wallpaper .add-placeholder-card :deep(.app-icon-info) {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.has-custom-wallpaper .add-placeholder-card :deep(.n-avatar) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.36);
+}
+
+.has-custom-wallpaper .add-placeholder-card :deep(.n-avatar svg) {
+  color: #fff;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.28));
 }
 
 @media (max-width: 500px) {

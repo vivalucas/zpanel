@@ -2,12 +2,12 @@
 
 > **最后更新**：2026-06-04
 > **最后更新人**：Claude
-> **最近开发日志**：`06-dev-log.md` 中的 2026-06-04（v1.1.0 发布：数据库修复 + UI 统一）
+> **最近开发日志**：`06-dev-log.md` 中的 2026-06-04（v1.1.1 发布：前端玻璃风格统一 + 自定义壁纸优化）
 > **当前可信度**：本地 `vue-tsc --noEmit`、`cd service && go test ./...` 通过；Docker 管理实机功能验证仍待补
 
 ## 当前版本
 
-**ZPanel 1.1.0 稳定性与 UI 统一阶段** — 已完成数据库列名全面修复、浮动按钮可见性修复、用户名验证统一、创建账号错误码修复和设置界面按钮颜色统一。
+**ZPanel 1.1.1 前端一致性与部署提示优化阶段** — 已完成数据库列名全面修复、浮动按钮可见性修复、用户名验证统一、创建账号错误码修复、设置 / 添加项目界面玻璃风格统一、自定义壁纸观感优化和 Docker 管理部署提示优化。
 
 ## 当前阶段
 
@@ -23,7 +23,7 @@
 - Go module 从 `sun-panel` 改为 `zpanel`，后端 import 路径同步更新。
 - Dockerfile、docker-compose、build.sh 的二进制名 / 服务名 / 产物名改为 `zpanel`。
 - Node.js 固定为 24.15.0，pnpm 固定为 11.1.3，Go 目标版本提升到 1.26.3。
-- 产品版本已推进到 `1.1.0`：`package.json` 与 `service/assets/version` 同步，版本源为 `1|1.1.0`。
+- 产品版本已推进到 `1.1.1`：`package.json` 与 `service/assets/version` 同步，版本源为 `1|1.1.1`。
 - 默认端口从 `3002` 统一改为 `6521`，已同步 Dockerfile、docker-compose、配置模板、README 和 Vite 开发代理。
 - Docker 默认镜像改为 `vivalucas/zpanel:latest`，容器发布同时推送 Docker Hub 与 GHCR。
 - 关于页改为当前维护者、当前仓库链接和上游归属说明。
@@ -45,6 +45,8 @@
 - 已从 `/Users/lucas/projects/zpanel_副本/project-log` 恢复本地 project-log，并按用户笔记与当前新仓库状态完成第一轮重建。
 - 2026-06-04 已完成数据库列名不匹配全面修复：修正修改密码 `Updates` map key、`GetUserInfoByUsernameAndPassword` Where 条件、删除不存在的 `gender` 更新代码、修复 `ReferralCode` 的 `gorm:"-"` 为正确数据库列、修正 `ItemIcon` 和 `ItemIconGroup` 的 `updateField` 列表。
 - 2026-06-04 已完成 v1.1.0 发布：浮动按钮白色不可见修复、用户名最少字符统一为 3、创建账号返回字段修复、用户名已存在错误码 1009、设置界面按钮颜色统一（save→primary、import/export→default）、全部 11 语言 locale 同步更新。
+- 2026-06-04 已完成设置页和添加项目弹窗风格统一：使用 Apple-like 磨砂半透玻璃风格收口设置应用、添加项目弹窗、图标编辑器、按钮语义和表单 / 表格视觉；Docker 管理页补充 socket 挂载 / group 权限提示。
+- 2026-06-04 已完成自定义壁纸首页观感优化：自定义壁纸下首页标题、分组、页脚、悬浮按钮和添加占位卡片切换为统一的亮色磨砂玻璃模式；上传新壁纸自动给出更合理的模糊、遮罩和图标文字默认值。
 
 ## 进行中
 
@@ -82,7 +84,7 @@
 | 问题 | 影响 | 状态 | 备注 |
 |------|------|------|------|
 | Go 测试覆盖仍很低 | 后端缺少足够回归保护 | 待处理 | 当前已有 `/api/healthz` 测试，仍需补登录、权限、导入导出、Docker 参数校验 |
-| 当前 shell 未找到 Docker | 无法验证 Docker 管理实机操作 | 待处理 | 功能依赖部署环境提供 Docker CLI / socket |
+| 当前环境无法代表用户服务器 Docker socket 权限 | 无法验证 Docker 管理实机操作 | 待处理 | 功能依赖 ZPanel 容器内可访问 Docker CLI / `/var/run/docker.sock`，不是只要求宿主机安装 Docker |
 | 前端主 chunk 偏大 | 首屏加载与长期维护仍可优化 | 待处理 | 当前构建通过，但 Vite 提示 `index` / `home` chunk 偏大 |
 | 后端未启动时前端预览 API 报错 | 预览首页会出现网络错误 | 临时方案 | 前端标题和基础渲染已验证，完整联调需启动 Go 后端 |
 | 旧配置导入兼容已移除 | 旧 `.sunpanel.json` 无法导入 | 已采用 | ZPanel 按全新项目发布 |

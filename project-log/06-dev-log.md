@@ -4,6 +4,118 @@
 
 ---
 
+## 2026-06-04（v1.1.1 发布准备：前端一致性与壁纸优化）
+
+**触发原因**：用户确认自查无明显问题后，要求统一推进版本号并发布全部渠道的新版本。
+
+**修改内容**：
+1. `package.json` — 版本号从 `1.1.0` 推进到 `1.1.1`。
+2. `service/assets/version` — 版本源从 `1|1.1.0` 推进到 `1|1.1.1`。
+3. `CHANGELOG.md` — 新增 `1.1.1` 发布记录，覆盖前端玻璃风格统一、自定义壁纸优化、Docker 管理提示和 locale key 补齐。
+4. `README.md`、`README.zh-CN.md` — 固定版本示例更新为 `vivalucas/zpanel:1.1.1`。
+5. `project-log/05-current-status.md` — 当前状态同步到 `1.1.1`。
+
+**发布渠道**：
+- GitHub Release：由 `v1.1.1` tag 触发 `.github/workflows/release.yml`。
+- GHCR：由 `v1.1.1` tag 触发 `.github/workflows/container-ghcr.yml`，发布 `ghcr.io/vivalucas/zpanel:1.1.1` 与 `latest`。
+- Docker Hub：由 `v1.1.1` tag 触发 `.github/workflows/container-ghcr.yml`，发布 `vivalucas/zpanel:1.1.1` 与 `latest`。
+
+**验证方式**：
+- 版本一致性脚本（`package.json` 与 `service/assets/version`）
+- `corepack pnpm run type-check`
+- `corepack pnpm run lint`
+- `corepack pnpm run build`
+- `cd service && go test ./...`
+
+**验证结果**：
+- 版本一致性通过：`1.1.1`。
+- TypeScript 类型检查通过。
+- ESLint 通过；本地 pnpm 执行时出现一次 `.bin/eslint` chmod 警告，但命令成功退出。
+- Vite 生产构建通过；仍有既有的 `/custom/index.js` 非 module 提示、`/custom/index.css` 运行时解析提示和大 chunk 提示。
+- Go 全量测试通过；当前仍以 `[no test files]` 为主，仅 `router` 包有测试。
+
+**本地产物清理**：
+- 已删除本轮 `pnpm run build` 生成的 `dist/`。
+- `.env` 由构建脚本更新了前端版本号，作为忽略文件保留。
+
+---
+
+## 2026-06-04（自定义壁纸首页观感优化）
+
+**触发原因**：用户反馈上传同一张背景图后，ZPanel 首页比原 Sun-Panel 效果更脏、更暗，标题、分组、添加卡片和页脚与复杂背景融合，整体不够统一。
+
+**修改内容**：
+1. `src/views/home/index.vue` — 增加自定义壁纸模式：检测到非默认背景后自动切换首页标题 / 分组 / 页脚为白色文字、轻阴影、柔和暗色遮罩和边缘渐隐，提升复杂图片背景上的可读性。
+2. `src/views/home/index.vue` — 自定义壁纸下统一标题、分组标题、页脚、悬浮按钮和添加占位卡片为磨砂半透玻璃风格。
+3. `src/views/home/components/AppIcon/index.vue` — 为图标标题恢复克制文本阴影，增强复杂背景上的文字稳定性。
+4. `src/components/apps/Style/index.vue` — 上传新壁纸后自动给出更合理的默认效果：背景模糊至少 8、遮罩至少 0.2、图标文字切换为白色。
+5. `src/components/apps/Style/index.vue`、`src/views/home/components/EditItem/IconEditor.vue` — 收敛文字颜色和图标背景色板，移除绿色 / 橙色 / 紫色残留，保留黑、白、蓝、灰和低饱和危险提示色。
+
+**解决方式**：
+- 不强行覆盖用户已有旧配置；只有“上传新壁纸”时自动设置更适合图片背景的默认参数。
+- 首页运行时根据是否为自定义壁纸自动切换视觉模式；图标文字只在仍为默认深色 `#1f2937` 时兜底为白色，避免覆盖用户手动设置的其他颜色。
+
+**验证方式**：
+- `corepack pnpm run type-check`
+- `corepack pnpm run lint`
+- `corepack pnpm run build`
+- 本地前后端启动后确认首页可渲染；当前本地账号无自定义壁纸配置，内置浏览器截图接口仍有 CDP 超时，因此以 DOM 检查和构建验证为准。
+
+**验证结果**：
+- TypeScript 类型检查通过。
+- ESLint 通过。
+- Vite 生产构建通过；仍有既有的 `/custom/index.js` 非 module 提示、`/custom/index.css` 运行时解析提示和大 chunk 提示。
+
+**本地产物清理**：
+- 已删除本轮 `pnpm run build` 生成的 `dist/`。
+- `.env` 由构建脚本更新了前端版本号，作为忽略文件保留。
+
+---
+
+## 2026-06-04（前端风格统一与 Docker 管理提示优化）
+
+**触发原因**：用户要求全面自查设置页、添加项目弹窗和 Docker 管理页，统一前端残留样式，增强白色背景上的添加按钮可见性，并解释 Docker Hub 镜像部署后 Docker 管理页报错原因。
+
+**修改内容**：
+1. `src/views/home/index.vue` — 增强空分组添加入口的白色十字可见性，并统一排序保存按钮为主按钮风格。
+2. `src/views/home/components/AppStarter/index.vue` — 为设置弹窗建立统一的 `zpanel-settings-modal` / `zpanel-settings-page` 玻璃拟态样式体系，收口按钮、表单、表格、开关、滑块和提示框的视觉表现。
+3. `src/components/apps/*` 多个设置页 — 将用户资料、样式设置、分组管理、文件管理、导入导出、用户管理、用户编辑和 Docker 管理统一为同一套 Apple-like 磨砂半透玻璃界面与按钮语义。
+4. `src/views/home/components/EditItem/index.vue`、`IconEditor.vue` — 重写添加 / 编辑项目弹窗和图标编辑界面，统一标签切换、预览、上传、输入框、取消 / 保存按钮样式。
+5. `src/components/apps/DockerManager/index.vue` — Docker 连接失败时改为页面内提示，说明容器部署需要挂载 `/var/run/docker.sock` 并配置 socket group；刷新逻辑补充网络异常兜底，避免未处理 Promise。
+6. `docker-compose.yml` — 补充 Docker 管理功能的可选 socket 挂载与 `DOCKER_GID` / `group_add` 注释。
+7. 全部 11 个 locale 文件 — 添加 Docker 连接失败提示文案；自查时补齐非中英文语言缺失的 `apiErrorCode.1008`，保证 locale key 完整一致。
+
+**遇到的问题**：
+- Docker Hub 镜像部署在服务器上时，宿主机有 Docker 并不代表 ZPanel 容器内部能访问 Docker。Docker 管理页依赖容器内可访问 Docker socket，通常需要额外挂载 `/var/run/docker.sock`，并处理 socket group 权限。
+- 上游遗留 UI 混用 `primary`、`success`、`warning`、`error`、黑色按钮、不同圆角和不同背景，设置页视觉边界不统一。
+- 非中英文 locale 曾缺少 `apiErrorCode.1008`，会影响登录限流错误的多语言展示。
+
+**解决方式**：
+- 按语义统一按钮：主操作为蓝色 primary，危险操作为红色 error，次要操作为中性玻璃按钮，状态标签保留语义色。
+- 设置页和添加项目弹窗共用同一套玻璃拟态 CSS 变量与组件覆盖，减少分散样式。
+- Docker 管理页不再只弹 toast，而是保留内联部署提示和原始错误，便于服务器排查。
+
+**验证方式**：
+- `node` locale key parity 脚本
+- `corepack pnpm run type-check`
+- `corepack pnpm run lint`
+- `corepack pnpm run build`
+- `cd service && go test ./...`
+
+**验证结果**：
+- Locale key parity 通过：11 个语言文件、265 个 key 完整一致。
+- TypeScript 类型检查通过。
+- ESLint 通过。
+- Vite 生产构建通过；仍有既有的 `/custom/index.js` 非 module 提示、`/custom/index.css` 运行时解析提示和大 chunk 提示。
+- Go 全量测试通过；当前仍以 `[no test files]` 为主，仅 `router` 包有测试。
+- 本地前后端联调可打开首页、设置入口和添加项目弹窗；内置浏览器点击 Docker 菜单时出现 CDP 超时，Docker socket 实机访问仍需在用户服务器容器权限环境验证。
+
+**本地产物清理**：
+- 已删除本轮 `pnpm run build` 生成的 `dist/`。
+- `.env` 由构建脚本更新了前端版本号，作为忽略文件保留。
+
+---
+
 ## 2026-06-04（v1.1.0 发布：UI 统一与 Bug 修复）
 
 **触发原因**：用户反馈浮动按钮在白色背景上不可见、创建账号提示"操作失败"再试提示"账号不存在"、用户名最少 5 字符限制过严、设置界面按钮颜色混乱（蓝绿红橙混用）。

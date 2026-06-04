@@ -145,7 +145,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-slate-200 dark:bg-zinc-900 p-2 h-full">
+  <div class="zpanel-settings-page">
     <NSpin v-show="loading" size="small" />
     <NAlert type="info" :bordered="false">
       {{ $t('apps.uploadsFileManager.alertText') }}
@@ -161,7 +161,7 @@ onMounted(() => {
       <NImageGroup v-else>
         <NGrid cols="2 300:2 600:4 900:6 1100:9" :x-gap="5" :y-gap="5">
           <NGridItem v-for="item in imageList" :key="item.id ?? item.src">
-            <NCard size="small" style="border-radius: 5px;" :bordered="true">
+            <NCard size="small" :bordered="true">
               <template #cover>
                 <div class="card transparent-grid">
                   <NImage :lazy="true" style="object-fit: contain;height: 100%;" :src="item.src" />
@@ -175,22 +175,22 @@ onMounted(() => {
                 </span>
                 <div class="flex justify-center mt-[10px]">
                   <NButtonGroup>
-                    <NButton size="tiny" tertiary style="cursor: pointer;" :title="$t('apps.uploadsFileManager.copyLink')" @click="copyImageUrl(item.src)">
+                    <NButton size="tiny" style="cursor: pointer;" :title="$t('apps.uploadsFileManager.copyLink')" @click="copyImageUrl(item.src)">
                       <template #icon>
                         <SvgIcon icon="ion-copy" />
                       </template>
                     </NButton>
-                    <NButton size="tiny" tertiary style="cursor: pointer;" :title="timeFormat(item.createTime)" @click="handleInfoClick(item)">
+                    <NButton size="tiny" style="cursor: pointer;" :title="timeFormat(item.createTime)" @click="handleInfoClick(item)">
                       <template #icon>
                         <SvgIcon icon="mdi-information-box-outline" />
                       </template>
                     </NButton>
-                    <NButton size="tiny" tertiary style="cursor: pointer;" :title="$t('apps.uploadsFileManager.setWallpaper')" @click="handleSetWallpaper(item.src)">
+                    <NButton size="tiny" style="cursor: pointer;" :title="$t('apps.uploadsFileManager.setWallpaper')" @click="handleSetWallpaper(item.src)">
                       <template #icon>
                         <SvgIcon icon="lucide:wallpaper" />
                       </template>
                     </NButton>
-                    <NButton size="tiny" tertiary type="error" style="cursor: pointer;" :title="$t('common.delete')" @click="item.id !== undefined && handleDelete(item.id)">
+                    <NButton size="tiny" type="error" style="cursor: pointer;" :title="$t('common.delete')" @click="item.id !== undefined && handleDelete(item.id)">
                       <template #icon>
                         <SvgIcon icon="material-symbols-delete" />
                       </template>

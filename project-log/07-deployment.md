@@ -52,6 +52,22 @@ volumes:
   - /var/run/docker.sock:/var/run/docker.sock
 ```
 
+Linux 主机上 Docker socket 通常归属于 `docker` 组。容器内进程如果没有该组权限，页面仍会提示无法连接 Docker。推荐在 `docker-compose.yml` 中同时启用 `group_add`：
+
+```bash
+echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" > .env
+docker compose up -d
+```
+
+```yaml
+services:
+  zpanel:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID}"
+```
+
 > 该挂载权限较高，等同于允许 ZPanel 管理宿主机 Docker。只应在可信部署环境中启用，并确保管理员账号安全。
 
 默认端口：
@@ -133,5 +149,6 @@ go run main.go
 | 日期 | 变更内容 | 原因 |
 |------|----------|------|
 | 2026-05-21 | 更新 1.0.0 Docker Hub / GHCR 发布、健康检查和默认端口 6521 | 仓库已独立发布并完成容器发布 |
+| 2026-06-04 | 补充 Docker 管理页 socket group 配置说明 | 仅宿主机安装 Docker 不代表 ZPanel 容器有权限访问 Docker socket |
 | 2026-05-20 | 补充 Docker 应用管理的部署权限说明 | Docker 管理功能需要访问宿主机 Docker |
 | 2026-05-20 | 初始化部署文档 | fork 后记录当前部署形态 |

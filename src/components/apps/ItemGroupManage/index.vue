@@ -9,7 +9,7 @@ import { t } from '@/locales'
 
 interface EditModalArg {
   show: boolean
-  editStatus: number // 1.添加 2.编辑
+  editStatus: number
   model: Panel.ItemIconGroup
   rules: FormRules
 }
@@ -134,7 +134,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-full">
+  <div class="zpanel-settings-page">
     <div class="p-2">
       <NButton type="primary" size="small" style="margin-right: 10px;" @click="handleAddGroup">
         {{ $t('common.add') }}
@@ -144,12 +144,12 @@ onMounted(() => {
         {{ $t('common.sort') }}
       </NButton>
 
-      <NButton v-else type="warning" size="small" @click="handleSaveSort">
+      <NButton v-else type="primary" size="small" @click="handleSaveSort">
         {{ $t('common.saveSort') }}
       </NButton>
     </div>
 
-    <div class=" overflow-auto w-full mt-[20px]  bg-slate-200 dark:bg-zinc-900 rounded-xl" style="height:calc(100% - 65px)">
+    <div class="item-group-list">
       <VueDraggable
         v-model="groups"
         item-key="id" :animation="300"
@@ -157,12 +157,11 @@ onMounted(() => {
         :disabled="!sortStatus"
       >
         <div v-for="item in groups" :key="item.id" class="w-full">
-          <NCard size="small" style="border-radius:10px;margin-bottom: 10px;">
+          <NCard size="small" class="item-group-card">
             <div class="flex" :class="sortStatus ? 'cursor-move' : ''">
               <div class="flex items-center">
                 <span class="mr-[10px]">
                   <SvgIcon class="text-[20px]" icon="material-symbols:ad-group-outline-rounded" />
-                  <!-- <SvgIcon class="text-[20px]" :icon="item.icon" /> -->
                 </span>
                 <span>
                   {{ item.title }}
@@ -170,14 +169,14 @@ onMounted(() => {
               </div>
               <div class="ml-auto">
                 <span>
-                  <NButton strong secondary type="primary" size="small" @click="handleEditGroup(item)">
+                  <NButton size="small" @click="handleEditGroup(item)">
                     <template #icon>
                       <SvgIcon icon="basil:edit-solid" />
                     </template>
                   </NButton>
                 </span>
                 <span class="ml-[10px]">
-                  <NButton strong secondary type="error" size="small" class="ml-[10px]" @click="handleDelete(item)">
+                  <NButton type="error" size="small" class="ml-[10px]" @click="handleDelete(item)">
                     <template #icon>
                       <SvgIcon icon="material-symbols:delete" />
                     </template>
@@ -195,10 +194,6 @@ onMounted(() => {
         <NFormItem path="title" :label="$t('apps.itemGroupManage.groupName')">
           <NInput v-model:value="editModalArg.model.title" type="text" :maxlength="20" show-count />
         </NFormItem>
-
-        <!-- <NFormItem path="name" label="昵称">
-          <NInput v-model:value="editModalArg.model" type="text" placeholder="请输入昵称" />
-        </NFormItem> -->
       </NForm>
       <template #footer>
         <NButton type="primary" size="small" class="float-right" @click="handleSaveGroup">
@@ -208,3 +203,21 @@ onMounted(() => {
     </RoundCardModal>
   </div>
 </template>
+
+<style scoped>
+.item-group-list {
+  height: calc(100% - 65px);
+  width: 100%;
+  margin-top: 16px;
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
+  backdrop-filter: blur(16px) saturate(1.18);
+}
+
+.item-group-card {
+  margin-bottom: 10px;
+}
+</style>

@@ -155,7 +155,9 @@
       "containerLogs": "容器日志",
       "start": "启动",
       "restart": "重启",
-      "stop": "停止"
+      "stop": "停止",
+      "connectionFailed": "无法连接 Docker",
+      "connectionHelp": "如果 ZPanel 运行在 Docker 容器里，需要把宿主机 Docker socket 挂载到 ZPanel，并把 socket 所在组加入容器。请确认 docker-compose.yml 包含 /var/run/docker.sock 挂载和 group_add。"
     }
   },
   "common": {

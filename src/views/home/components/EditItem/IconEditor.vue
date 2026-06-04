@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NButton, NColorPicker, NInput, NRadio, NUpload } from 'naive-ui'
+import { NButton, NColorPicker, NInput, NUpload } from 'naive-ui'
 import type { UploadFileInfo } from 'naive-ui'
 import { computed } from 'vue'
 import { ItemIcon } from '@/components/common'
@@ -10,20 +10,18 @@ const props = defineProps<{
   itemIcon: Panel.ItemIcon | null
 }>()
 const emit = defineEmits<{
-  (e: 'update:itemIcon', visible: Panel.ItemIcon): void // 定义修改父组件（prop内）的值的事件
+  (e: 'update:itemIcon', visible: Panel.ItemIcon): void
 }>()
 const authStore = useAuthStore()
 
-// 默认图标背景色
-const defautSwatchesBackground = [
+const defaultSwatchesBackground = [
   '#00000000',
   '#000000',
   '#ffffff',
-  '#18A058',
   '#2080F0',
-  '#F0A020',
-  'rgba(208, 48, 80, 1)',
-  '#C418D1FF',
+  '#475569',
+  '#94A3B8',
+  'rgba(255, 59, 48, 0.18)',
 ]
 
 const initData: Panel.ItemIcon = {
@@ -46,7 +44,6 @@ const itemIconInfo = computed({
 })
 
 function handleIconTypeRadioChange(type: number) {
-  // checkedValueRef.value = type
   itemIconInfo.value.itemType = type
   handleChange()
 }
@@ -75,7 +72,6 @@ const handleUploadFinish = ({
   }
   else {
     apiRespErrMsg(res)
-    // ms.error(`${t('common.uploadFail')}:${res.msg}`)
   }
 
   return file
@@ -83,109 +79,154 @@ const handleUploadFinish = ({
 </script>
 
 <template>
-  <div>
-    <div class="mb-[10px]">
-      <NRadio
-        :checked="itemIconInfo.itemType === 1 "
-        :value="1"
-        name="iconType"
-        @change="handleIconTypeRadioChange(1)"
-      >
+  <div class="icon-editor">
+    <div class="icon-type-tabs">
+      <button :class="{ active: itemIconInfo.itemType === 1 }" type="button" @click="handleIconTypeRadioChange(1)">
         {{ $t('common.text') }}
-      </NRadio>
-
-      <NRadio
-        :checked="itemIconInfo.itemType === 2"
-        :value="2"
-        name="iconType"
-        @change="handleIconTypeRadioChange(2)"
-      >
+      </button>
+      <button :class="{ active: itemIconInfo.itemType === 2 }" type="button" @click="handleIconTypeRadioChange(2)">
         {{ $t('common.image') }}
-      </NRadio>
-
-      <NRadio
-        :checked="itemIconInfo.itemType === 3"
-        :value="3"
-        name="iconType"
-        @change="handleIconTypeRadioChange(3)"
-      >
+      </button>
+      <button :class="{ active: itemIconInfo.itemType === 3 }" type="button" @click="handleIconTypeRadioChange(3)">
         {{ $t('iconItem.onlineIcon') }}
-      </NRadio>
+      </button>
     </div>
 
-    <div class=" h-[100px]">
-      <div class="flex">
-        <div>
-          <div class="border rounded-2xl bg-slate-200 overflow-hidden rounded-2xl transparent-grid">
-            <ItemIcon :item-icon="itemIconInfo" />
-          </div>
-        </div>
-        <!-- 文字 -->
-        <div class="ml-[20px]">
-          <!-- <NImage :src="model.icon" preview-disabled /> -->
-          <div v-if="itemIconInfo.itemType === 1">
-            <NInput v-model:value="itemIconInfo.text" class="mb-[5px]" size="small" type="text" @input="handleChange" />
-          </div>
-
-          <div v-if="itemIconInfo.itemType === 3">
-            <div>
-              <NInput v-model:value="itemIconInfo.text" class="mb-[5px]" size="small" type="text" :placeholder="$t('iconItem.inputIconName')" @input="handleChange" />
-
-              <NButton quaternary type="info">
-                <a target="_blank" href="https://icon-sets.iconify.design/">{{ $t('iconItem.onlineIconLibrary') }}</a>
-              </NButton>
-            </div>
-          </div>
-
-          <!-- 图片 -->
-          <div v-if="itemIconInfo.itemType === 2">
-            <NInput v-model:value="itemIconInfo.src" class="mb-[5px] w-full" size="small" type="text" :placeholder="$t('iconItem.inputIconUrlOrUpload')" @input="handleChange" />
-            <NUpload
-              action="/api/file/uploadImg"
-              :show-file-list="false"
-              name="imgfile"
-              :headers="{
-                token: authStore.token as string,
-              }"
-              @finish="handleUploadFinish"
-            >
-              <NButton size="small">
-                {{ $t('iconItem.selectUpload') }}
-              </NButton>
-            </NUpload>
-          </div>
-        </div>
+    <div class="icon-editor-body">
+      <div class="icon-preview transparent-grid">
+        <ItemIcon :item-icon="itemIconInfo" />
       </div>
 
-      <div class="flex items-center mt-[10px]">
-        <div class="w-auto text-slate-500 mr-[10px]">
-          {{ $t('common.backgroundColor') }}
+      <div class="icon-editor-controls">
+        <div v-if="itemIconInfo.itemType === 1">
+          <NInput v-model:value="itemIconInfo.text" size="small" type="text" @input="handleChange" />
         </div>
-        <div class="w-[150px] flex items-center mr-[10px]">
-          <NColorPicker
-            v-model:value="itemIconInfo.backgroundColor"
-            size="small"
-            :modes="['hex']"
-            :swatches="defautSwatchesBackground"
-            @complete="handleChange"
-            @update-value="handleChange"
-          />
-        </div>
-        <div v-if="itemIconInfo.backgroundColor !== initData.backgroundColor" class="w-auto text-slate-500 mr-[10px] cursor-pointer">
-          <NButton quaternary type="info" @click="handleResetBackgroundColor">
-            {{ $t('common.reset') }}
+
+        <div v-if="itemIconInfo.itemType === 3">
+          <NInput v-model:value="itemIconInfo.text" class="mb-[8px]" size="small" type="text" :placeholder="$t('iconItem.inputIconName')" @input="handleChange" />
+          <NButton size="small">
+            <a target="_blank" href="https://icon-sets.iconify.design/" rel="noopener noreferrer">{{ $t('iconItem.onlineIconLibrary') }}</a>
           </NButton>
         </div>
+
+        <div v-if="itemIconInfo.itemType === 2">
+          <NInput v-model:value="itemIconInfo.src" class="mb-[8px] w-full" size="small" type="text" :placeholder="$t('iconItem.inputIconUrlOrUpload')" @input="handleChange" />
+          <NUpload
+            action="/api/file/uploadImg"
+            :show-file-list="false"
+            name="imgfile"
+            :headers="{
+              token: authStore.token as string,
+            }"
+            @finish="handleUploadFinish"
+          >
+            <NButton size="small">
+              {{ $t('iconItem.selectUpload') }}
+            </NButton>
+          </NUpload>
+        </div>
       </div>
+    </div>
+
+    <div class="icon-color-row">
+      <div class="w-auto text-slate-500 mr-[10px]">
+        {{ $t('common.backgroundColor') }}
+      </div>
+      <NColorPicker
+        v-model:value="itemIconInfo.backgroundColor"
+        size="small"
+        :modes="['hex']"
+        :swatches="defaultSwatchesBackground"
+        @complete="handleChange"
+        @update-value="handleChange"
+      />
+      <NButton v-if="itemIconInfo.backgroundColor !== initData.backgroundColor" size="small" @click="handleResetBackgroundColor">
+        {{ $t('common.reset') }}
+      </NButton>
     </div>
   </div>
 </template>
 
 <style scoped>
+.icon-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
+.icon-type-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  background: rgba(241, 245, 249, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+}
+
+.icon-type-tabs button {
+  min-height: 34px;
+  padding: 0 14px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+}
+
+.icon-type-tabs button.active {
+  color: #007aff;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.icon-editor-body {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.icon-preview {
+  display: grid;
+  width: 86px;
+  height: 86px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+}
+
+.icon-editor-controls {
+  min-width: 0;
+}
+
+.icon-color-row {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 220px) auto;
+  gap: 10px;
+  align-items: center;
+}
+
 .transparent-grid {
-    background-image: linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%),
-                      linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%);
-    background-size: 16px 16px;
-    background-position: 0 0, 8px 8px;
+  background-color: rgba(241, 245, 249, 0.72);
+  background-image:
+    linear-gradient(45deg, rgba(255,255,255,0.72) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.72) 75%),
+    linear-gradient(45deg, rgba(255,255,255,0.72) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.72) 75%);
+  background-position: 0 0, 8px 8px;
+  background-size: 16px 16px;
+}
+
+@media (max-width: 620px) {
+  .icon-editor-body,
+  .icon-color-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

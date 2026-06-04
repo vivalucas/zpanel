@@ -209,8 +209,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-slate-200 dark:bg-zinc-900 p-2 h-full">
-    <NCard style="border-radius:10px" size="small">
+  <div class="zpanel-settings-page">
+    <NCard size="small">
       <div>
         <div class="text-slate-500 font-bold">
           {{ $t('common.username') }}
@@ -226,7 +226,7 @@ onMounted(() => {
         <div v-if="!isEditNickNameStatus">
           {{ authStore.userInfo?.name }}
 
-          <NButton size="small" text type="info" @click="isEditNickNameStatus = !isEditNickNameStatus">
+          <NButton size="small" @click="isEditNickNameStatus = !isEditNickNameStatus">
             {{ $t('common.edit') }}
           </NButton>
         </div>
@@ -235,7 +235,7 @@ onMounted(() => {
           <div class="max-w-[150px]">
             <NInput v-model:value="nickName" type="text" :placeholder="$t('common.inputPlaceholder')" />
           </div>
-          <NButton size="small" quaternary type="primary" @click="handleSaveInfo">
+          <NButton size="small" type="primary" @click="handleSaveInfo">
             {{ $t('common.save') }}
           </NButton>
         </div>
@@ -261,13 +261,13 @@ onMounted(() => {
 
       <NDivider style="margin: 10px 0;" dashed />
       <div>
-        <NButton size="small" text type="primary" @click="updatePasswordModalState.show = !updatePasswordModalState.show">
+        <NButton size="small" @click="updatePasswordModalState.show = !updatePasswordModalState.show">
           {{ $t('settingUserInfo.updatePassword') }}
         </NButton>
       </div>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 font-bold mb-2">
         {{ $t('apps.userInfo.quickSwitch') }}
       </div>
@@ -277,7 +277,7 @@ onMounted(() => {
       <div v-for="account in switchAccounts" :key="account.userInfo.id" class="flex items-center justify-between py-1">
         <div>
           <span>{{ account.userInfo.name || account.userInfo.username }}</span>
-          <NTag v-if="account.userInfo.id === authStore.userInfo?.id" size="small" class="ml-2" type="success">
+          <NTag v-if="account.userInfo.id === authStore.userInfo?.id" size="small" class="ml-2" type="info">
             {{ $t('common.current') }}
           </NTag>
           <div class="text-xs text-slate-500">
@@ -288,15 +288,15 @@ onMounted(() => {
           <NButton size="tiny" type="primary" :disabled="account.userInfo.id === authStore.userInfo?.id" @click="switchAccount(account)">
             {{ $t('common.switch') }}
           </NButton>
-          <NButton size="tiny" quaternary type="error" @click="removeSwitchAccount(account.userInfo.id)">
+          <NButton size="tiny" type="error" @click="removeSwitchAccount(account.userInfo.id)">
             {{ $t('common.remove') }}
           </NButton>
         </div>
       </div>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
-      <NButton size="small" text type="error" @click="handleLogout">
+    <NCard class="mt-[10px]" size="small">
+      <NButton size="small" type="error" @click="handleLogout">
         <template #icon>
           <SvgIcon icon="tabler:logout" />
         </template>

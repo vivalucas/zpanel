@@ -5,6 +5,12 @@ services:
     volumes:
       - ./conf:/app/conf
       - ./data:/app/data
+      # Optional: enable Docker management inside ZPanel.
+      # - /var/run/docker.sock:/var/run/docker.sock
+    # Optional: required on most Linux hosts when Docker socket is group-owned.
+    # Create .env with: DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
+    # group_add:
+    #   - "${DOCKER_GID}"
     ports:
       - 127.0.0.1:6521:6521
     healthcheck:

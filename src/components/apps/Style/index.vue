@@ -78,8 +78,12 @@ function handleUploadBackgroundFinish({
 }) {
   try {
     const res = JSON.parse((event?.target as XMLHttpRequest).response)
-    if (res.data?.imageUrl)
+    if (res.data?.imageUrl) {
       panelState.panelConfig.backgroundImageSrc = res.data.imageUrl
+      panelState.panelConfig.backgroundBlur = Math.max(panelState.panelConfig.backgroundBlur ?? 0, 8)
+      panelState.panelConfig.backgroundMaskNumber = Math.max(panelState.panelConfig.backgroundMaskNumber ?? 0, 0.2)
+      panelState.panelConfig.iconTextColor = '#ffffff'
+    }
   }
   catch {
     // ignore parse errors
@@ -131,8 +135,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-slate-200 dark:bg-zinc-900 rounded-[10px] p-[8px] overflow-auto">
-    <NCard style="border-radius:10px" size="small">
+  <div class="zpanel-settings-page">
+    <NCard size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         LOGO
       </div>
@@ -147,7 +151,7 @@ onMounted(() => {
       </div>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         {{ $t('apps.baseSettings.siteAndLogin') }}
       </div>
@@ -166,7 +170,7 @@ onMounted(() => {
       </div>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         {{ $t('apps.baseSettings.customCssJs') }}
       </div>
@@ -177,7 +181,7 @@ onMounted(() => {
       </NButton>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         {{ $t('apps.baseSettings.clock') }}
       </div>
@@ -187,7 +191,7 @@ onMounted(() => {
       </div>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         {{ $t('apps.baseSettings.searchBar') }}
       </div>
@@ -201,7 +205,7 @@ onMounted(() => {
       </div>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         {{ $t('apps.baseSettings.systemMonitorStatus') }}
       </div>
@@ -219,7 +223,7 @@ onMounted(() => {
       </div>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         {{ $t('common.icon') }}
       </div>
@@ -263,15 +267,15 @@ onMounted(() => {
             :swatches="[
               '#000000',
               '#ffffff',
-              '#18A058',
               '#2080F0',
-              '#F0A020',
+              '#475569',
+              '#94A3B8',
             ]"
           />
         </div>
       </div>
     </NCard>
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         {{ $t('apps.baseSettings.wallpaper') }}
       </div>
@@ -287,7 +291,7 @@ onMounted(() => {
       >
         <NUploadDragger style="width: 100%;">
           <div
-            class="h-[200px] w-full border bg-slate-100 flex justify-center items-center cursor-pointer rounded-[10px]"
+            class="wallpaper-drop h-[200px] w-full flex justify-center items-center cursor-pointer"
             :style="{ background: `url(${panelState.panelConfig.backgroundImageSrc}) no-repeat`, backgroundSize: 'cover' }"
           >
             <div class="text-shadow text-white">
@@ -316,7 +320,7 @@ onMounted(() => {
       </div>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         {{ $t('apps.baseSettings.contentArea') }}
       </div>
@@ -361,7 +365,7 @@ onMounted(() => {
       </NGrid>
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <div class="text-slate-500 mb-[5px] font-bold">
         {{ $t('apps.baseSettings.customFooter') }}
       </div>
@@ -373,19 +377,19 @@ onMounted(() => {
       />
     </NCard>
 
-    <NCard style="border-radius:10px" class="mt-[10px]" size="small">
+    <NCard class="mt-[10px]" size="small">
       <NPopconfirm
         @positive-click="resetPanelConfig"
       >
         <template #trigger>
-          <NButton size="small" quaternary type="error">
+          <NButton size="small" type="error">
             {{ $t('common.reset') }}
           </NButton>
         </template>
         {{ $t('apps.baseSettings.resetWarnText') }}
       </NPopconfirm>
 
-      <NButton size="small" quaternary type="primary" class="ml-[10px]" @click="uploadCloud">
+      <NButton size="small" type="primary" class="ml-[10px]" @click="uploadCloud">
         {{ $t('common.save') }}
       </NButton>
     </NCard>
@@ -395,5 +399,15 @@ onMounted(() => {
 <style scoped>
 .text-shadow{
   text-shadow: 0px 0px 5px gray;
+}
+
+.wallpaper-drop {
+  overflow: hidden;
+  color: #334155;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(241, 245, 249, 0.5));
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 </style>

@@ -26,7 +26,8 @@
     "1005": "当前无权限操作",
     "1006": "账号不存在",
     "1007": "旧密码错误",
-    "1009": "Username already exists",
+    "1008": "登入嘗試過於頻繁，請稍後再試",
+    "1009": "使用者名稱已存在",
     "1200": "数据库出错",
     "1201": "请至少保留一个",
     "1202": "未找到数据记录",
@@ -154,7 +155,9 @@
       "containerLogs": "容器日志",
       "start": "启动",
       "restart": "重启",
-      "stop": "停止"
+      "stop": "停止",
+      "connectionFailed": "無法連線 Docker",
+      "connectionHelp": "如果 ZPanel 執行在 Docker 容器中，需要把宿主機 Docker socket 掛載到 ZPanel，並把 socket 所在群組加入容器。請確認 docker-compose.yml 包含 /var/run/docker.sock 掛載和 group_add。"
     }
   },
   "common": {

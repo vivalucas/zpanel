@@ -155,7 +155,9 @@
       "containerLogs": "Container logs",
       "start": "Start",
       "restart": "Restart",
-      "stop": "Stop"
+      "stop": "Stop",
+      "connectionFailed": "Cannot connect to Docker",
+      "connectionHelp": "If ZPanel runs in a Docker container, mount the host Docker socket into ZPanel and add the socket group to the container. Make sure docker-compose.yml includes the /var/run/docker.sock volume and group_add."
     }
   },
   "common": {

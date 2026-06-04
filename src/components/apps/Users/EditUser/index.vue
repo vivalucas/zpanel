@@ -18,7 +18,7 @@ const message = useMessage()
 
 interface Emit {
   (e: 'update:visible', visible: boolean): void
-  (e: 'done', id: number): void// 创建完成
+  (e: 'done', id: number): void
 }
 
 const createFormValue = (): User.Info => ({
@@ -57,12 +57,6 @@ const rules: FormRules = {
     type: 'number',
     message: t('adminSettingUsers.formRules.roleRequired'),
   },
-  // status: {
-  //   required: true,
-  //   trigger: 'blur',
-  //   type: 'number',
-  //   message: '请选择账号状态',
-  // },
   password: {
     trigger: 'blur',
     min: 6,
@@ -71,7 +65,6 @@ const rules: FormRules = {
   },
 }
 
-// 更新值父组件传来的值
 const show = computed({
   get: () => props.visible,
   set: (visible: boolean) => {

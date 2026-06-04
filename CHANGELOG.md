@@ -4,6 +4,25 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.1.1 - 2026-06-04
+
+### UI Improvements
+
+- Unified settings pages, add/edit item dialogs, icon editor controls, buttons, cards, inputs, tables, alerts, and modal surfaces around a cleaner glass-style visual system.
+- Improved custom wallpaper rendering with a dedicated wallpaper mode for readable white foreground text, softer masking, glass-style floating controls, and clearer add placeholders.
+- Improved add-item icon editor styling and normalized text/background color swatches around black, white, blue, gray, and low-saturation destructive accents.
+- Improved empty-group add placeholders and floating homepage controls so icons remain clear on light and image backgrounds.
+
+### Docker
+
+- Improved Docker management failure handling with inline deployment guidance instead of only showing a transient error toast.
+- Documented Docker socket mounting and socket group handling for container deployments.
+
+### Localization
+
+- Added Docker management connection-help strings across all locale files.
+- Fixed locale key parity by adding the missing login-rate-limit error key to non-base locales.
+
 ## 1.1.0 - 2026-06-04
 
 ### Bug Fixes

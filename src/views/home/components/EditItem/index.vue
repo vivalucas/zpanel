@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { FormInst, FormRules } from 'naive-ui'
-import { NButton, NForm, NFormItem, NGrid, NGridItem, NInput, NInputGroup, NModal, NSelect, useMessage } from 'naive-ui'
+import { NButton, NForm, NFormItem, NGrid, NGridItem, NInput, NInputGroup, NSelect, useMessage } from 'naive-ui'
 import IconEditor from './IconEditor.vue'
+import { RoundCardModal } from '@/components/common'
 import { edit, getSiteFavicon } from '@/api/panel/itemIcon'
 import { getList as getGroupList } from '@/api/panel/itemIconGroup'
 import { t } from '@/locales'
@@ -34,7 +35,7 @@ const restoreDefault: Panel.Info = {
 
 interface Emit {
   (e: 'update:visible', visible: boolean): void
-  (e: 'done', item: Panel.Info): void// 创建完成
+  (e: 'done', item: Panel.Info): void
 }
 
 const model = ref<Panel.Info>(props.itemInfo ? { ...props.itemInfo } : { ...restoreDefault })
@@ -52,11 +53,6 @@ const rules: FormRules = {
     type: 'string',
     message: t('form.required'),
   },
-  // itemIconGroupId: {
-  //   required: true,
-  //   trigger: ['blur', 'change'],
-  //   message: t('form.required'),
-  // },
 }
 
 const options = [
@@ -75,7 +71,6 @@ const options = [
   },
 ]
 
-// 更新值父组件传来的值
 const show = computed({
   get: () => props.visible,
   set: (visible: boolean) => {
@@ -167,8 +162,14 @@ function getGroupListOptions() {
 </script>
 
 <template>
-  <NModal v-model:show="show" preset="card" size="small" style="width: 600px;border-radius: 1rem;" :title="itemInfo ? t('iconItem.edit') : t('iconItem.add')">
-    <div class="h-[600px] overflow-auto p-[5px]">
+  <RoundCardModal
+    v-model:show="show"
+    class="zpanel-settings-modal zpanel-item-modal"
+    size="small"
+    style="width: min(920px, calc(100vw - 32px));"
+    :title="itemInfo ? t('iconItem.edit') : t('iconItem.add')"
+  >
+    <div class="item-edit-scroll">
       <NForm ref="formRef" :model="model" :rules="rules">
         <NGrid cols="2" :x-gap="10" item-responsive>
           <NGridItem span="2 500:1">
@@ -187,7 +188,6 @@ function getGroupListOptions() {
           <IconEditor v-model:item-icon="model.icon" />
         </NFormItem>
         <NFormItem path="url" :label="$t('iconItem.url')">
-          <!-- <NSelect :style="{ width: '100px' }" :options="urlProtocolOptions" /> -->
           <NInputGroup>
             <NInput v-model:value="model.url" type="text" :maxlength="1000" placeholder="http(s)://" />
             <NButton :disabled="!model.url" :loading="getIconLoading[0]" @click="getIconByUrl(model.url, 0)">
@@ -213,9 +213,28 @@ function getGroupListOptions() {
     </div>
 
     <template #footer>
-      <NButton type="primary" :loading="submitLoading" style="float: right;" @click="handleValidateButtonClick">
-        {{ $t('common.save') }}
-      </NButton>
+      <div class="item-edit-footer">
+        <NButton @click="show = false">
+          {{ $t('common.cancel') }}
+        </NButton>
+        <NButton type="primary" :loading="submitLoading" @click="handleValidateButtonClick">
+          {{ $t('common.save') }}
+        </NButton>
+      </div>
     </template>
-  </NModal>
+  </RoundCardModal>
 </template>
+
+<style scoped>
+.item-edit-scroll {
+  max-height: min(680px, calc(100vh - 190px));
+  padding: 4px 2px;
+  overflow: auto;
+}
+
+.item-edit-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+</style>

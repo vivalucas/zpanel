@@ -92,9 +92,9 @@ const textColor = computed(() => {
 <style scoped>
 .app-icon-info,
 .app-icon-small-icon {
-  border: 1px solid rgba(255, 255, 255, 0.76);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(18px) saturate(1.25);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(18px) saturate(1.22);
 }
 
 .app-icon-info:hover,
@@ -107,6 +107,6 @@ const textColor = computed(() => {
   margin-top: 8px;
   font-weight: 650;
   line-height: 1.3;
-  text-shadow: none;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 </style>

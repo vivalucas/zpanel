@@ -300,7 +300,7 @@ async function handleStartImport() {
           :show-file-list="false"
           @change="handleFileChange"
         >
-          <NButton type="info" size="large" :loading="uploadLoading">
+          <NButton size="large" :loading="uploadLoading">
             <template #icon>
               <SvgIcon icon="fa6:solid-file-import" />
             </template>
@@ -309,7 +309,7 @@ async function handleStartImport() {
         </NUpload>
       </div>
       <div class="m-[10px]">
-        <NButton type="info" size="large" @click="exportRoundModalShow = !exportRoundModalShow">
+        <NButton size="large" @click="exportRoundModalShow = !exportRoundModalShow">
           <template #icon>
             <SvgIcon icon="fa6:solid-file-export" />
           </template>
@@ -363,7 +363,7 @@ async function handleStartImport() {
       </NSpace>
       <NSpace justify="center">
         <div class="mt-[50px]">
-          <NButton type="success" :disabled="checkedItems.length === 0" :loading="loading" @click="handleStartImport">
+          <NButton type="primary" :disabled="checkedItems.length === 0" :loading="loading" @click="handleStartImport">
             {{ $t('common.continue') }}
           </NButton>
         </div>
@@ -383,7 +383,7 @@ async function handleStartImport() {
       </NSpace>
       <NSpace justify="center">
         <div class="mt-[50px]">
-          <NButton type="success" :disabled="checkedItems.length === 0" :loading="loading" @click="handleStartExport">
+          <NButton type="primary" :disabled="checkedItems.length === 0" :loading="loading" @click="handleStartExport">
             {{ $t('common.continue') }}
           </NButton>
         </div>

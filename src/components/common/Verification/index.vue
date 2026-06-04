@@ -63,7 +63,7 @@ function handleSubmit() {
           <NInput v-model:value="vCode" :placeholder="$t('verification.placeholder')" @keydown.enter="handleSubmit" />
         </div>
         <div class="flex ml-[auto]">
-          <NButton type="info" :loading="loading" :disabled="loading" @click="handleSubmit">
+          <NButton type="primary" :loading="loading" :disabled="loading" @click="handleSubmit">
             {{ $t('common.continue') }}
           </NButton>
         </div>

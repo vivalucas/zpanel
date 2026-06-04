@@ -213,7 +213,7 @@ function getGroupListOptions() {
     </div>
 
     <template #footer>
-      <NButton type="success" :loading="submitLoading" style="float: right;" @click="handleValidateButtonClick">
+      <NButton type="primary" :loading="submitLoading" style="float: right;" @click="handleValidateButtonClick">
         {{ $t('common.save') }}
       </NButton>
     </template>

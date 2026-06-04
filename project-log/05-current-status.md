@@ -1,13 +1,13 @@
 # 当前状态
 
-> **最后更新**：2026-05-24
-> **最后更新人**：Codex
-> **最近开发日志**：`06-dev-log.md` 中的 2026-05-24（文件列表分页与保存失败反馈修复）
-> **当前可信度**：本地 `corepack pnpm run type-check`、`corepack pnpm run lint`、`corepack pnpm run build`、`cd service && go test ./...` 通过；Docker 管理实机功能验证仍待补
+> **最后更新**：2026-06-04
+> **最后更新人**：Claude
+> **最近开发日志**：`06-dev-log.md` 中的 2026-06-04（v1.1.0 发布：数据库修复 + UI 统一）
+> **当前可信度**：本地 `vue-tsc --noEmit`、`cd service && go test ./...` 通过；Docker 管理实机功能验证仍待补
 
 ## 当前版本
 
-**ZPanel 1.0.3 稳定性优化阶段** — 已从 GitHub fork 仓库调整为重新创建的独立仓库，当前已完成 1.0.0 / 1.0.1 发布基线、1.0.2 稳定性修复和 1.0.3 安全渲染 / 类型收敛优化。项目已完成品牌清理、仓库规范化、CI、Docker Hub + GHCR 镜像发布和默认端口统一。
+**ZPanel 1.1.0 稳定性与 UI 统一阶段** — 已完成数据库列名全面修复、浮动按钮可见性修复、用户名验证统一、创建账号错误码修复和设置界面按钮颜色统一。
 
 ## 当前阶段
 
@@ -23,7 +23,7 @@
 - Go module 从 `sun-panel` 改为 `zpanel`，后端 import 路径同步更新。
 - Dockerfile、docker-compose、build.sh 的二进制名 / 服务名 / 产物名改为 `zpanel`。
 - Node.js 固定为 24.15.0，pnpm 固定为 11.1.3，Go 目标版本提升到 1.26.3。
-- 产品版本已推进到 `1.0.3`：`package.json` 与 `service/assets/version` 同步，版本源为 `1|1.0.3`。
+- 产品版本已推进到 `1.1.0`：`package.json` 与 `service/assets/version` 同步，版本源为 `1|1.1.0`。
 - 默认端口从 `3002` 统一改为 `6521`，已同步 Dockerfile、docker-compose、配置模板、README 和 Vite 开发代理。
 - Docker 默认镜像改为 `vivalucas/zpanel:latest`，容器发布同时推送 Docker Hub 与 GHCR。
 - 关于页改为当前维护者、当前仓库链接和上游归属说明。
@@ -43,6 +43,8 @@
 - `UPDATELOG.md` 已改为标准 `CHANGELOG.md`，`add-frontend-version.js` 已移入 `scripts/`。
 - Dockerfile 已优化依赖缓存并修复 Alpine + sqlite3 CGO 构建问题；v1.0.0 tag 移动后容器发布成功。
 - 已从 `/Users/lucas/projects/zpanel_副本/project-log` 恢复本地 project-log，并按用户笔记与当前新仓库状态完成第一轮重建。
+- 2026-06-04 已完成数据库列名不匹配全面修复：修正修改密码 `Updates` map key、`GetUserInfoByUsernameAndPassword` Where 条件、删除不存在的 `gender` 更新代码、修复 `ReferralCode` 的 `gorm:"-"` 为正确数据库列、修正 `ItemIcon` 和 `ItemIconGroup` 的 `updateField` 列表。
+- 2026-06-04 已完成 v1.1.0 发布：浮动按钮白色不可见修复、用户名最少字符统一为 3、创建账号返回字段修复、用户名已存在错误码 1009、设置界面按钮颜色统一（save→primary、import/export→default）、全部 11 语言 locale 同步更新。
 
 ## 进行中
 

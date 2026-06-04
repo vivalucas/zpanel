@@ -48,7 +48,7 @@ const rules: FormRules = {
       required: true,
       trigger: 'blur',
       message: t('adminSettingUsers.formRules.usernameRequired'),
-      min: 5,
+      min: 3,
     },
   ],
   role: {
@@ -130,7 +130,7 @@ const handleValidateButtonClick = (e: MouseEvent) => {
 
     <template #footer>
       <div class="float-right">
-        <NButton type="success" size="small" @click="handleValidateButtonClick">
+        <NButton type="primary" size="small" @click="handleValidateButtonClick">
           {{ $t('common.save') }}
         </NButton>
       </div>

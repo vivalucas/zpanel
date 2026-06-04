@@ -136,7 +136,7 @@ onMounted(() => {
 <template>
   <div class="h-full">
     <div class="p-2">
-      <NButton type="success" size="small" style="margin-right: 10px;" @click="handleAddGroup">
+      <NButton type="primary" size="small" style="margin-right: 10px;" @click="handleAddGroup">
         {{ $t('common.add') }}
       </NButton>
 
@@ -170,7 +170,7 @@ onMounted(() => {
               </div>
               <div class="ml-auto">
                 <span>
-                  <NButton strong secondary type="success" size="small" @click="handleEditGroup(item)">
+                  <NButton strong secondary type="primary" size="small" @click="handleEditGroup(item)">
                     <template #icon>
                       <SvgIcon icon="basil:edit-solid" />
                     </template>
@@ -201,7 +201,7 @@ onMounted(() => {
         </NFormItem> -->
       </NForm>
       <template #footer>
-        <NButton type="success" size="small" class="float-right" @click="handleSaveGroup">
+        <NButton type="primary" size="small" class="float-right" @click="handleSaveGroup">
           {{ $t('common.confirm') }}
         </NButton>
       </template>

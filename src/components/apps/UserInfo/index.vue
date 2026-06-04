@@ -235,7 +235,7 @@ onMounted(() => {
           <div class="max-w-[150px]">
             <NInput v-model:value="nickName" type="text" :placeholder="$t('common.inputPlaceholder')" />
           </div>
-          <NButton size="small" quaternary type="info" @click="handleSaveInfo">
+          <NButton size="small" quaternary type="primary" @click="handleSaveInfo">
             {{ $t('common.save') }}
           </NButton>
         </div>
@@ -261,7 +261,7 @@ onMounted(() => {
 
       <NDivider style="margin: 10px 0;" dashed />
       <div>
-        <NButton size="small" text type="info" @click="updatePasswordModalState.show = !updatePasswordModalState.show">
+        <NButton size="small" text type="primary" @click="updatePasswordModalState.show = !updatePasswordModalState.show">
           {{ $t('settingUserInfo.updatePassword') }}
         </NButton>
       </div>
@@ -321,7 +321,7 @@ onMounted(() => {
 
       <template #footer>
         <div class="float-right">
-          <NButton type="success" size="small" :loading="updatePasswordModalState.loading" @click="handleUpdatePassword">
+          <NButton type="primary" size="small" :loading="updatePasswordModalState.loading" @click="handleUpdatePassword">
             {{ $t('common.save') }}
           </NButton>
         </div>

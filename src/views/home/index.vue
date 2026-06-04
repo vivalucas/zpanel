@@ -539,7 +539,7 @@ function handleAddItem(itemIconGroupId?: number) {
           :title="t('panelHome.changeToWanModel')" @click="handleChangeNetwork(PanelStateNetworkModeEnum.wan)"
         >
           <template #icon>
-            <SvgIcon class="text-white font-xl" icon="material-symbols:lan-outline-rounded" />
+            <SvgIcon class="font-xl" icon="material-symbols:lan-outline-rounded" />
           </template>
         </NButton>
 
@@ -548,19 +548,19 @@ function handleAddItem(itemIconGroupId?: number) {
           :title="t('panelHome.changeToLanModel')" @click="handleChangeNetwork(PanelStateNetworkModeEnum.lan)"
         >
           <template #icon>
-            <SvgIcon class="text-white font-xl" icon="mdi:wan" />
+            <SvgIcon class="font-xl" icon="mdi:wan" />
           </template>
         </NButton>
 
         <NButton v-if="authStore.visitMode === VisitMode.VISIT_MODE_LOGIN" quaternary @click="settingModalShow = !settingModalShow">
           <template #icon>
-            <SvgIcon class="text-white font-xl" icon="majesticons-applications" />
+            <SvgIcon class="font-xl" icon="majesticons-applications" />
           </template>
         </NButton>
 
         <NButton v-if="authStore.visitMode === VisitMode.VISIT_MODE_PUBLIC" quaternary :title="$t('panelHome.goToLogin')" @click="router.push('/login')">
           <template #icon>
-            <SvgIcon class="text-white font-xl" icon="material-symbols:account-circle" />
+            <SvgIcon class="font-xl" icon="material-symbols:account-circle" />
           </template>
         </NButton>
       </NButtonGroup>
@@ -578,7 +578,7 @@ function handleAddItem(itemIconGroupId?: number) {
       <div class="floating-tools">
         <NButton quaternary>
           <template #icon>
-            <SvgIcon class="text-white font-xl" icon="icon-park-outline:to-top" />
+            <SvgIcon class="font-xl" icon="icon-park-outline:to-top" />
           </template>
         </NButton>
       </div>
@@ -694,11 +694,11 @@ html {
 .floating-tools {
   overflow: hidden;
   color: #334155;
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px;
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
-  backdrop-filter: blur(18px) saturate(1.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(20px) saturate(1.3);
 }
 
 .floating-tools :deep(.n-button) {

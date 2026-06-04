@@ -38,8 +38,8 @@ func (a UsersApi) Create(c *gin.Context) {
 	}
 
 	param.Username = strings.TrimSpace(param.Username)
-	if len(param.Username) < 5 {
-		apiReturn.ErrorParamFomat(c, "The account must be no less than 5 characters long")
+	if len(param.Username) < 3 {
+		apiReturn.ErrorParamFomat(c, "The account must be no less than 3 characters long")
 		return
 	}
 
@@ -56,8 +56,7 @@ func (a UsersApi) Create(c *gin.Context) {
 
 	// 验证账号是否存在
 	if _, err := mUser.CheckUsernameExist(param.Username); err != nil {
-		apiReturn.ErrorByCode(c, 1006)
-		// apiReturn.Error(c, global.Lang.Get("register.mail_exist"))
+		apiReturn.ErrorByCode(c, 1009)
 		return
 	}
 
@@ -68,7 +67,7 @@ func (a UsersApi) Create(c *gin.Context) {
 		return
 	}
 
-	apiReturn.SuccessData(c, gin.H{"userId": userInfo.ID})
+	apiReturn.SuccessData(c, gin.H{"id": userInfo.ID, "userId": userInfo.ID})
 }
 
 func (a UsersApi) Deletes(c *gin.Context) {
@@ -176,8 +175,7 @@ func (a UsersApi) Update(c *gin.Context) {
 	if user, err := mUser.CheckUsernameExist(param.Username); err != nil {
 		userInfo = user
 		if user.ID != param.ID {
-			apiReturn.ErrorByCode(c, 1006)
-			// apiReturn.Error(c, global.Lang.Get("register.mail_exist"))
+			apiReturn.ErrorByCode(c, 1009)
 			return
 		}
 	} else {

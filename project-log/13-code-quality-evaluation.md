@@ -10,6 +10,8 @@
 
 > 2026-05-24 补充：1.0.3 已关闭结果组件中的 markdown 原始 HTML 渲染，收紧请求 / 模块配置工具类型，并补充首页和用户管理中的 ID / URL 运行时防御。自定义 CSS / JS 仍属于高权限管理员能力，仍需后续设计安全恢复入口。
 
+> 2026-06-04 补充：全面审计并修复 6 处数据库列名不匹配问题（修改密码 map key、Where 条件、gender 死代码、ReferralCode gorm:"-"、ItemIcon/ItemIconGroup updateField 列表）。GORM `Updates(map)` 的 map key 必须使用数据库列名而非 Go 结构体字段名，当模型通过 `gorm:"column:xxx"` 自定义列名时尤其需要注意。后端整体评级提升至 **C+ / B-**。
+
 ## 2026-05-21 实测状态补充
 
 | 检查项 | 当前结果 | 说明 |

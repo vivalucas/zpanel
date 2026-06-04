@@ -4,6 +4,73 @@
 
 ---
 
+## 2026-06-04（v1.1.0 发布：UI 统一与 Bug 修复）
+
+**触发原因**：用户反馈浮动按钮在白色背景上不可见、创建账号提示"操作失败"再试提示"账号不存在"、用户名最少 5 字符限制过严、设置界面按钮颜色混乱（蓝绿红橙混用）。
+
+**修改内容**：
+1. `src/views/home/index.vue` — 移除所有浮动按钮图标的 `text-white` class，增强 `.floating-tools` CSS 阴影和边框对比度。
+2. `src/components/apps/Users/EditUser/index.vue:51` — 前端用户名验证 `min: 5` → `min: 3`。
+3. `service/api/api_v1/panel/users.go:41` — 后端 Create 用户名验证 `< 5` → `< 3`。
+4. `service/api/api_v1/panel/users.go:71` — Create 响应添加 `id` 字段（前端检查 `res.data.id`）。
+5. `service/api/api_v1/common/apiReturn/error_code.go` — 新增错误码 1009 "Username already exists"。
+6. `service/api/api_v1/panel/users.go:59,178` — 用户名已存在时使用 1009 而非 1006。
+7. 全部 11 个 locale 文件 — 添加 1009 翻译、修正用户名验证提示文本（5→3）。
+8. 8 个 Vue 组件 — 统一按钮颜色：save/confirm/add/continue → `primary`（蓝），import/export → `default`（中性），delete/logout/reset → `error`（红）。
+
+**遇到的问题**：
+- `text-white` Tailwind class 优先级高于 scoped CSS 的 `color` 设置，导致图标颜色无法通过 CSS 覆盖。
+- 前端 `res.data.id` 检查成功但后端只返回 `userId`，导致创建账号即使成功也显示"操作失败"。
+- 错误码 1006 含义为"账号不存在"，被误用于"用户名已存在"场景。
+
+**解决方式**：
+- 直接移除 `text-white` class，配合增强的阴影和边框确保浮动按钮在各种背景下可见。
+- 新增错误码 1009 专门用于"用户名已存在"，Create 和 Update 均使用。
+- 按钮颜色统一方案：primary=主要操作，error=破坏性操作，default=次要操作，warning=谨慎操作。
+
+**验证方式**：
+- `npx vue-tsc --noEmit` 通过
+- `cd service && go build -o /dev/null main.go` 通过
+- `cd service && go test ./...` 通过
+
+---
+
+## 2026-06-04（数据库列名不匹配全面修复）
+
+**触发原因**：用户部署 Docker Hub 镜像后修改密码提示数据库错误。排查发现 GORM `Updates(map[string]interface{}{...})` 中 map key 应为数据库列名而非 Go 结构体字段名，导致 `"password"` 匹配不到实际列 `"password_hash"`。进一步全面审计发现同类问题散布在多个文件中。
+
+**修改内容**：
+1. `service/api/api_v1/system/user.go:122` — 修改密码的 `Updates` map key 从 `"password"` 改为 `"password_hash"`；`Where("id", ...)` 改为 `Where("id=?", ...)` 保持风格一致。
+2. `service/models/user_model.go:35` — `GetUserInfoByUsernameAndPassword` 的 `Where("password=?", ...)` 改为 `Where("password_hash=?", ...)`（该函数当前未被调用，但列名仍需正确）。
+3. `service/models/user_model.go:87-88` — 删除 `gender` 字段更新代码，User 模型无此字段，数据库无此列。
+4. `service/models/user_model.go:19` — `ReferralCode` 的 `gorm:"-"` 改为 `gorm:"type:varchar(32);index"`，使 `GetReferralCode` 功能可正常写入和查询数据库。
+5. `service/api/api_v1/panel/itemIcon.go:48` — `updateField` 列表移除 `gorm:"-"` 的 `"Icon"` 和不存在的 `"GroupId"`。
+6. `service/api/api_v1/panel/item_icon_group.go:32` — `updateField` 列表从 ItemIcon 的字段列表修正为 ItemIconGroup 的实际字段：`"Icon", "Title", "Description", "UserId"`。
+
+**遇到的问题**：
+- 根本原因是 GORM `Updates(map)` 使用 map key 作为数据库列名，而非 Go 结构体字段名。当模型通过 `gorm:"column:xxx"` 自定义列名时，map key 必须使用自定义列名。
+- `ReferralCode` 原为 `gorm:"-"`（不入库），但 `GetReferralCode` 整个函数都在查询和写入 `referral_code` 列，功能从未正常工作过。
+- `ItemIconGroup` 的 `updateField` 是从 `ItemIcon` 复制粘贴而来，从未适配 ItemIconGroup 的实际字段。
+
+**解决方式**：
+- 全面审计所有 `.Where()`、`.Update()`、`.Updates()`、`.Select()`、`.Create()`、`.Delete()` 调用，逐一比对模型字段定义和数据库列名。
+- 修复 6 处列名不匹配，确认其余所有数据库操作正确。
+
+**验证方式**：
+- `cd service && go build -o /dev/null main.go`
+- `cd service && go test ./...`
+- `corepack pnpm run type-check`
+
+**验证结果**：
+- Go 编译通过。
+- Go 全量测试通过。
+- 前端 TypeScript 类型检查通过。
+
+**本地产物清理**：
+- 无
+
+---
+
 ## 2026-05-24（文件列表分页与保存失败反馈修复）
 
 **触发原因**：在复查上一轮改动时，确认 SearchBox 保存失败仍然被静默吞掉，文件删除在物理文件与数据库记录之间仍有不一致窗口，文件列表也需要把“取消 500 条截断”推进成可控分页。

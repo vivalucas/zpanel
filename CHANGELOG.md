@@ -4,7 +4,9 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
-## 1.0.11 - 2026-06-04
+## 1.1.0 - 2026-06-04
+
+### Bug Fixes
 
 - Fixed password change failing with database error: GORM `Updates(map)` keys must use database column names (`password_hash`), not Go struct field names (`password`).
 - Fixed `GetUserInfoByUsernameAndPassword` using wrong column name in WHERE clause.
@@ -12,6 +14,15 @@ All notable changes to ZPanel will be documented in this file.
 - Fixed `ReferralCode` field marked as `gorm:"-"` preventing the referral code feature from persisting data.
 - Fixed `ItemIcon` update field list containing `gorm:"-"` field `"Icon"` and non-existent `"GroupId"`.
 - Fixed `ItemIconGroup` update field list being copy-pasted from `ItemIcon` with incorrect fields.
+- Fixed floating buttons invisible on white background (removed `text-white` class from SvgIcon elements, enhanced shadow/border).
+- Fixed username minimum length validation: unified to 3 characters across frontend and backend (was inconsistent between 3 and 5).
+- Fixed create account returning wrong response field (`userId` only, frontend checked `id`).
+- Fixed "username already exists" error showing "account does not exist" (added error code 1009).
+
+### UI Improvements
+
+- Unified button color scheme across all settings pages: primary (blue) for save/confirm/add, error (red) for delete/logout/reset, default (neutral) for import/export.
+- Updated username validation hint text in all 11 locale files to reflect 3-character minimum.
 
 ## 1.0.10 - 2026-06-04
 

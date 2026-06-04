@@ -152,7 +152,7 @@ async function handleSubmit() {
       {{ t('common.reset') }}
     </NButton>
     <template #footer>
-      <NButton type="success" :loading="submitLoading" style="float: right;" @click="handleSubmit">
+      <NButton type="primary" :loading="submitLoading" style="float: right;" @click="handleSubmit">
         {{ t('common.confirm') }}
       </NButton>
     </template>

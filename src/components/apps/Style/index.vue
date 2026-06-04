@@ -172,7 +172,7 @@ onMounted(() => {
       </div>
       <NInput v-model:value="siteSetting.customCss" type="textarea" :placeholder="$t('apps.baseSettings.customCssPlaceholder')" :autosize="{ minRows: 5 }" />
       <NInput v-model:value="siteSetting.customJs" class="mt-2" type="textarea" :placeholder="$t('apps.baseSettings.customJsPlaceholder')" :autosize="{ minRows: 5 }" />
-      <NButton class="mt-2" size="small" type="success" :loading="siteSettingLoading" @click="saveSiteSetting">
+      <NButton class="mt-2" size="small" type="primary" :loading="siteSettingLoading" @click="saveSiteSetting">
         {{ $t('common.save') }}
       </NButton>
     </NCard>
@@ -385,7 +385,7 @@ onMounted(() => {
         {{ $t('apps.baseSettings.resetWarnText') }}
       </NPopconfirm>
 
-      <NButton size="small" quaternary type="success" class="ml-[10px]" @click="uploadCloud">
+      <NButton size="small" quaternary type="primary" class="ml-[10px]" @click="uploadCloud">
         {{ $t('common.save') }}
       </NButton>
     </NCard>

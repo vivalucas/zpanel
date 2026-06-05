@@ -2,6 +2,7 @@ package panel
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"strings"
 	"zpanel/api/api_v1/common/apiData/commonApiStructs"
@@ -21,6 +22,35 @@ import (
 type ItemIcon struct {
 }
 
+func ensureItemIconGroupsBelongToUser(db *gorm.DB, userId uint, groupIds []int) error {
+	uniqueIds := make([]int, 0, len(groupIds))
+	seen := map[int]bool{}
+	for _, id := range groupIds {
+		if id <= 0 {
+			return fmt.Errorf("invalid group id")
+		}
+		if !seen[id] {
+			seen[id] = true
+			uniqueIds = append(uniqueIds, id)
+		}
+	}
+
+	if len(uniqueIds) == 0 {
+		return fmt.Errorf("group is mandatory")
+	}
+
+	var count int64
+	if err := db.Model(&models.ItemIconGroup{}).
+		Where("user_id=? AND id in ?", userId, uniqueIds).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count != int64(len(uniqueIds)) {
+		return fmt.Errorf("invalid group id")
+	}
+	return nil
+}
+
 func (a *ItemIcon) Edit(c *gin.Context) {
 	userInfo, _ := base.GetCurrentUserInfo(c)
 	req := models.ItemIcon{}
@@ -33,6 +63,10 @@ func (a *ItemIcon) Edit(c *gin.Context) {
 	if req.ItemIconGroupId == 0 {
 		// apiReturn.Error(c, "Group is mandatory")
 		apiReturn.ErrorParamFomat(c, "Group is mandatory")
+		return
+	}
+	if err := ensureItemIconGroupsBelongToUser(global.Db, userInfo.ID, []int{req.ItemIconGroupId}); err != nil {
+		apiReturn.ErrorParamFomat(c, err.Error())
 		return
 	}
 
@@ -100,7 +134,19 @@ func (a *ItemIcon) AddMultiple(c *gin.Context) {
 		}
 	}
 
-	global.Db.Create(&req)
+	groupIds := make([]int, 0, len(req))
+	for _, item := range req {
+		groupIds = append(groupIds, item.ItemIconGroupId)
+	}
+	if err := ensureItemIconGroupsBelongToUser(global.Db, userInfo.ID, groupIds); err != nil {
+		apiReturn.ErrorParamFomat(c, err.Error())
+		return
+	}
+
+	if err := global.Db.Create(&req).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
 
 	apiReturn.SuccessData(c, req)
 }

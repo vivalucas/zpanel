@@ -82,7 +82,6 @@ function http<T = unknown>(
   }
 
   const failHandler = (error: Response<Error>) => {
-    afterRequest?.()
     message.error(t('common.networkError'), {
       duration: 50000,
       closable: true,
@@ -100,7 +99,7 @@ function http<T = unknown>(
 
   headers.token = authStore.token ?? ''
   headers.lang = appStore.language
-  return method === 'GET'
+  const requestPromise = method === 'GET'
     ? request.get(url, {
       params,
       signal,
@@ -108,6 +107,10 @@ function http<T = unknown>(
       headers,
     }).then(successHandler, failHandler)
     : request.post(url, params, { headers, signal, onDownloadProgress }).then(successHandler, failHandler)
+
+  return requestPromise.finally(() => {
+    afterRequest?.()
+  })
 }
 
 export function get<T = unknown>(

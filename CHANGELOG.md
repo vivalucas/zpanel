@@ -4,6 +4,22 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.1.4 - 2026-06-05
+
+### Bug Fixes
+
+- Fixed navigation item create, edit, and batch import validation so items can only target groups owned by the current user.
+- Fixed batch navigation item creation returning success when the database insert failed.
+- Fixed item group deletion protection so invalid IDs cannot bypass the "keep at least one group" rule.
+- Fixed login configuration request failures producing unhandled promise rejections when the backend is unavailable during local preview or startup.
+
+### Improvements
+
+- Added a safe-mode recovery URL for broken custom CSS / JavaScript: `?safeMode=1` or `?zpanelSafeMode=1`.
+- Made request `afterRequest` hooks run after success, handled API errors, and network errors.
+- Added regression tests for panel group ownership checks and group deletion protection.
+- Restored `project-log/` as a local-only development knowledge base by removing it from Git tracking and ignoring it.
+
 ## 1.1.3 - 2026-06-04
 
 ### Bug Fixes

@@ -9,6 +9,22 @@ import { getLoginConfig } from '@/api/openness'
 const { theme, themeOverrides } = useTheme()
 const { language } = useLanguage()
 
+function hasSafeModeParam(value: string) {
+  const params = new URLSearchParams(value)
+  return params.get('safeMode') === '1' || params.get('zpanelSafeMode') === '1'
+}
+
+function isSiteCustomizationSafeMode() {
+  if (hasSafeModeParam(window.location.search))
+    return true
+
+  const hashQueryIndex = window.location.hash.indexOf('?')
+  if (hashQueryIndex >= 0)
+    return hasSafeModeParam(window.location.hash.slice(hashQueryIndex))
+
+  return false
+}
+
 function applySiteSetting(siteSetting?: System.SiteSetting) {
   if (!siteSetting)
     return
@@ -24,6 +40,13 @@ function applySiteSetting(siteSetting?: System.SiteSetting) {
   }
   icon.href = iconHref
 
+  const oldScript = document.getElementById('zpanel-custom-js')
+  if (isSiteCustomizationSafeMode()) {
+    document.getElementById('zpanel-custom-css')?.remove()
+    oldScript?.remove()
+    return
+  }
+
   let customStyle = document.getElementById('zpanel-custom-css')
   if (!customStyle) {
     customStyle = document.createElement('style')
@@ -32,7 +55,6 @@ function applySiteSetting(siteSetting?: System.SiteSetting) {
   }
   customStyle.textContent = siteSetting.customCss || ''
 
-  const oldScript = document.getElementById('zpanel-custom-js')
   oldScript?.remove()
   if (siteSetting.customJs) {
     const script = document.createElement('script')
@@ -46,7 +68,7 @@ onMounted(() => {
   getLoginConfig<Openness.open.LoginVcodeResponse>().then(({ code, data }) => {
     if (code === 0)
       applySiteSetting(data.siteSetting)
-  })
+  }).catch(() => {})
 })
 </script>
 

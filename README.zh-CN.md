@@ -110,7 +110,7 @@ vivalucas/zpanel:latest
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
 
-`latest` 指向最近发布的稳定镜像。若需要可重复回滚，也可以改用固定版本号，例如 `vivalucas/zpanel:1.1.3`。
+`latest` 指向最近发布的稳定镜像。若需要可重复回滚，也可以改用固定版本号，例如 `vivalucas/zpanel:1.1.4`。
 
 健康检查接口：
 
@@ -126,6 +126,14 @@ Password: 12345678
 ```
 
 首次登录后请立即修改默认密码。
+
+自定义 CSS / JS 恢复方式：
+
+```text
+http://你的-zpanel-地址/?safeMode=1
+```
+
+安全模式只在当前页面加载时跳过自定义 CSS 和自定义 JavaScript，方便登录后进入设置页删除错误配置。也支持使用 `?zpanelSafeMode=1`。
 
 如果要在 ZPanel 中管理宿主机 Docker 容器，需要挂载 Docker socket：
 

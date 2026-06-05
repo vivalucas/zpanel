@@ -1,7 +1,6 @@
 package panel
 
 import (
-	"math"
 	"zpanel/api/api_v1/common/apiData/commonApiStructs"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/api/api_v1/common/base"
@@ -113,16 +112,24 @@ func (a *ItemIconGroup) Deletes(c *gin.Context) {
 	}
 	userInfo, _ := base.GetCurrentUserInfo(c)
 
-	var count int64
-	if err := global.Db.Model(&models.ItemIconGroup{}).Where(" user_id=?", userInfo.ID).Count(&count).Error; err != nil {
+	var totalCount int64
+	if err := global.Db.Model(&models.ItemIconGroup{}).Where("user_id=?", userInfo.ID).Count(&totalCount).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
-	} else {
-		if math.Abs(float64(len(req.Ids))-float64(count)) < 1 {
-			apiReturn.ErrorCode(c, 1201, "At least one must be retained", nil)
-			return
-		}
+	}
 
+	var matchedCount int64
+	if err := global.Db.Model(&models.ItemIconGroup{}).Where("user_id=? AND id in ?", userInfo.ID, req.Ids).Count(&matchedCount).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	if matchedCount == 0 {
+		apiReturn.Success(c)
+		return
+	}
+	if totalCount-matchedCount <= 0 {
+		apiReturn.ErrorCode(c, 1201, "At least one must be retained", nil)
+		return
 	}
 
 	txErr := global.Db.Transaction(func(tx *gorm.DB) error {

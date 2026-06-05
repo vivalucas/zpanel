@@ -97,7 +97,7 @@ onMounted(() => {
       if (data.siteSetting)
         siteSetting.value = data.siteSetting
     }
-  })
+  }).catch(() => {})
 })
 </script>
 

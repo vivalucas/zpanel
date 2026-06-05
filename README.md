@@ -133,7 +133,7 @@ Version tags create GitHub Releases with release notes, Linux amd64 deployment p
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
 
-`latest` points to the most recently published stable image. If you need repeatable rollbacks, use an explicit version tag such as `vivalucas/zpanel:1.1.3`.
+`latest` points to the most recently published stable image. If you need repeatable rollbacks, use an explicit version tag such as `vivalucas/zpanel:1.1.4`.
 
 Health check endpoint:
 
@@ -149,6 +149,14 @@ Password: 12345678
 ```
 
 Change the default password after the first login.
+
+Custom CSS / JS recovery:
+
+```text
+http://your-zpanel-host/?safeMode=1
+```
+
+Safe mode skips custom CSS and custom JavaScript for the current page load, so you can sign in and remove a broken customization from settings. `?zpanelSafeMode=1` is also supported.
 
 ### Docker Management
 

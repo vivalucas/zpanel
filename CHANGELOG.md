@@ -4,6 +4,15 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.1.5 - 2026-06-13
+
+### Bug Fixes
+
+- Fixed a Denial of Service (DoS) vulnerability in the login rate limiter where an O(N) map traversal during IP record cleanup could block all login attempts under high concurrency or malicious probing. The cleanup logic has been moved to an asynchronous background task.
+
+### Maintenance
+
+- Completed the sixth round of code review, verifying session consistency, cache stampede mitigations, and network error handling behaviors as acceptable trade-offs for HomeLab environments.
 ## 1.1.4 - 2026-06-05
 
 ### Bug Fixes

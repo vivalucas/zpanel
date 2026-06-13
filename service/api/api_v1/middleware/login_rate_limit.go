@@ -19,18 +19,28 @@ var (
 	maxPerMinute = 10
 )
 
+func init() {
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			now := time.Now()
+			ipRecordsMu.Lock()
+			for key, record := range ipRecords {
+				if now.After(record.resetAt.Add(time.Minute)) {
+					delete(ipRecords, key)
+				}
+			}
+			ipRecordsMu.Unlock()
+		}
+	}()
+}
+
 // LoginRateLimit 限制登录接口的 IP 请求频率
 func LoginRateLimit(c *gin.Context) {
 	ip := c.ClientIP()
 	now := time.Now()
 
 	ipRecordsMu.Lock()
-
-	for key, record := range ipRecords {
-		if now.After(record.resetAt.Add(time.Minute)) {
-			delete(ipRecords, key)
-		}
-	}
 
 	record, ok := ipRecords[ip]
 	if !ok {

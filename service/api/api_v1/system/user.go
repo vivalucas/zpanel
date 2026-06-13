@@ -119,8 +119,13 @@ func (a *UserApi) UpdatePasssword(c *gin.Context) {
 			return
 		}
 	}
+	passwordHash, hashErr := cmn.PasswordEncryption(params.NewPassword)
+	if hashErr != nil {
+		apiReturn.ErrorParamFomat(c, hashErr.Error())
+		return
+	}
 	res := global.Db.Model(&models.User{}).Where("id=?", userInfo.ID).Updates(map[string]interface{}{
-		"password_hash": cmn.PasswordEncryption(params.NewPassword),
+		"password_hash": passwordHash,
 	})
 	if res.Error != nil {
 		apiReturn.ErrorDatabase(c, res.Error.Error())
@@ -128,7 +133,7 @@ func (a *UserApi) UpdatePasssword(c *gin.Context) {
 	}
 	now := time.Now()
 	_ = global.Db.Model(&models.Session{}).Where("user_id=? AND revoked_at IS NULL", userInfo.ID).Update("revoked_at", now).Error
-	global.UserToken.Delete(c.GetHeader("token"))
+	global.UserToken.Flush()
 	apiReturn.Success(c)
 }
 

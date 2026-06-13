@@ -329,5 +329,5 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 }
 
 func allowedFaviconExts() []string {
-	return []string{".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"}
+	return []string{".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico"}
 }

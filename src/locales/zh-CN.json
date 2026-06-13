@@ -202,6 +202,7 @@
       "admin": "管理",
       "regularUser": "普通"
     },
+    "search": "搜索",
     "save": "保存",
     "saveFail": "保存成功",
     "saveSort": "保存排序",

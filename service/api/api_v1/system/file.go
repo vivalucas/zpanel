@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"zpanel/api/api_v1/common/apiData/commonApiStructs"
@@ -18,9 +19,10 @@ import (
 
 type FileApi struct{}
 
-var allowedImageExts = []string{".png", ".jpg", ".gif", ".jpeg", ".webp", ".svg", ".ico"}
+var allowedImageExts = []string{".png", ".jpg", ".gif", ".jpeg", ".webp", ".ico"}
 
 func (a *FileApi) UploadImg(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, storage.DefaultUploadMaxBytes)
 	userInfo, _ := base.GetCurrentUserInfo(c)
 	f, err := c.FormFile("imgfile")
 	if err != nil {
@@ -61,6 +63,7 @@ func (a *FileApi) UploadImg(c *gin.Context) {
 }
 
 func (a *FileApi) UploadFiles(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, storage.DefaultUploadMaxBytes)
 	userInfo, _ := base.GetCurrentUserInfo(c)
 
 	form, err := c.MultipartForm()
@@ -72,7 +75,7 @@ func (a *FileApi) UploadFiles(c *gin.Context) {
 	errFiles := []string{}
 	succMap := map[string]string{}
 	for _, f := range files {
-		stored, storeErr := storage.StoreUpload(f, userInfo.ID, models.FilePurposeAttachment, models.FileVisibilityPublic, nil)
+		stored, storeErr := storage.StoreUpload(f, userInfo.ID, models.FilePurposeAttachment, models.FileVisibilityPublic, allowedImageExts)
 		if storeErr != nil {
 			errFiles = append(errFiles, f.Filename)
 		} else {

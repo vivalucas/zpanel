@@ -42,10 +42,15 @@ func (a UsersApi) Create(c *gin.Context) {
 		apiReturn.ErrorParamFomat(c, "The account must be no less than 3 characters long")
 		return
 	}
+	passwordHash, hashErr := cmn.PasswordEncryption(param.Password)
+	if hashErr != nil {
+		apiReturn.ErrorParamFomat(c, hashErr.Error())
+		return
+	}
 
 	mUser := models.User{
 		Username:     strings.TrimSpace(param.Username),
-		Password:     cmn.PasswordEncryption(param.Password),
+		Password:     passwordHash,
 		PasswordAlgo: "bcrypt",
 		Name:         param.Name,
 		HeadImage:    param.HeadImage,
@@ -130,6 +135,7 @@ func (a UsersApi) Deletes(c *gin.Context) {
 		return
 	}
 
+	global.UserToken.Flush()
 	apiReturn.Success(c)
 }
 
@@ -162,7 +168,12 @@ func (a UsersApi) Update(c *gin.Context) {
 
 	// 密码不为默认“-”空，修改密码
 	if param.Password != "-" {
-		param.Password = cmn.PasswordEncryption(param.Password)
+		passwordHash, hashErr := cmn.PasswordEncryption(param.Password)
+		if hashErr != nil {
+			apiReturn.ErrorParamFomat(c, hashErr.Error())
+			return
+		}
+		param.Password = passwordHash
 		allowField = append(allowField, "Password")
 		param.PasswordAlgo = "bcrypt"
 		allowField = append(allowField, "PasswordAlgo")
@@ -170,16 +181,12 @@ func (a UsersApi) Update(c *gin.Context) {
 
 	mUser := models.User{}
 
-	userInfo := models.User{}
 	// 验证账号是否存在
 	if user, err := mUser.CheckUsernameExist(param.Username); err != nil {
-		userInfo = user
 		if user.ID != param.ID {
 			apiReturn.ErrorByCode(c, 1009)
 			return
 		}
-	} else {
-		userInfo = user
 	}
 
 	if err := global.Db.Select(allowField).Where("id=?", param.ID).Updates(&param).Error; err != nil {
@@ -190,7 +197,7 @@ func (a UsersApi) Update(c *gin.Context) {
 		now := time.Now()
 		_ = global.Db.Model(&models.Session{}).Where("user_id=? AND revoked_at IS NULL", param.ID).Update("revoked_at", now).Error
 	}
-	global.UserToken.Delete(userInfo.Token) // 更新用户信息
+	global.UserToken.Flush() // 更新用户信息并立即清除敏感变更后的缓存
 	// 返回token等基本信息（清除密码字段）
 	param.Password = ""
 	param.PasswordAlgo = ""

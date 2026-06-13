@@ -182,8 +182,14 @@ func CommandRun() {
 
 		newPassword := "12345678"
 
+		passwordHash, hashErr := cmn.PasswordEncryption(newPassword)
+		if hashErr != nil {
+			fmt.Println("ERROR", hashErr.Error())
+			os.Exit(1)
+		}
+
 		updateInfo := models.User{
-			Password:     cmn.PasswordEncryption(newPassword),
+			Password:     passwordHash,
 			PasswordAlgo: "bcrypt",
 		}
 		// 重置第一个管理员的密码

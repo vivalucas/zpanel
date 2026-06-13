@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { h, onMounted, reactive, ref } from 'vue'
-import { NAlert, NButton, NDataTable, NDropdown, NTag, useDialog, useMessage } from 'naive-ui'
+import { NAlert, NButton, NDataTable, NDropdown, NInput, NTag, useDialog, useMessage } from 'naive-ui'
 import type { DataTableColumns, PaginationProps } from 'naive-ui'
 import EditUser from './EditUser/index.vue'
 import { getPublicVisitUser, setPublicVisitUser, deletes as usersDeletes, getList as usersGetList } from '@/api/panel/users'
@@ -13,7 +13,7 @@ const message = useMessage()
 const authStore = useAuthStore()
 const tableIsLoading = ref<boolean>(false)
 const editUserDialogShow = ref<boolean>(false)
-const keyWord = ref<string>()
+const keyword = ref('')
 const editUserUserInfo = ref<User.Info>()
 const dialog = useDialog()
 const publicVisitUserId = ref<number | null>(null)
@@ -47,9 +47,9 @@ const createColumns = ({
       render(row) {
         switch (row.role) {
           case AdminAuthRole.admin:
-            return h(NTag, { type: 'info' }, t('common.role.admin'))
+            return h(NTag, { type: 'info' }, { default: () => t('common.role.admin') })
           case AdminAuthRole.regularUser:
-            return h(NTag, t('common.role.regularUser'))
+            return h(NTag, {}, { default: () => t('common.role.regularUser') })
           default:
             return '-'
         }
@@ -186,18 +186,28 @@ function handleDone() {
 
 async function getList(page: number | null) {
   tableIsLoading.value = true
+  const currentPage = page || pagination.page
   const req: AdminUserManage.GetListRequest = {
-    page: page || pagination.page,
+    page: currentPage,
     limit: pagination.pageSize,
   }
-  if (keyWord.value !== '')
-    req.keyWord = keyWord.value
+  const search = keyword.value.trim()
+  if (search)
+    req.keyword = search
 
-  const { data } = await usersGetList<Common.ListResponse<User.Info[]>>(req)
-  pagination.itemCount = data.count
-  if (data.list)
-    userList.value = data.list
-  tableIsLoading.value = false
+  try {
+    const { data } = await usersGetList<Common.ListResponse<User.Info[]>>(req)
+    pagination.page = currentPage
+    pagination.itemCount = data.count
+    if (data.list)
+      userList.value = data.list
+  }
+  catch {
+    message.error(t('common.networkError'))
+  }
+  finally {
+    tableIsLoading.value = false
+  }
 }
 
 async function deletes(ids: number[]) {
@@ -210,7 +220,9 @@ async function deletes(ids: number[]) {
 
 onMounted(() => {
   getPublicVisitUser<User.Info>().then(({ data }) => {
-    publicVisitUserId.value = data.id || null
+    publicVisitUserId.value = data?.id || null
+  }).catch(() => {
+    publicVisitUserId.value = null
   })
   getList(null)
 })
@@ -221,9 +233,21 @@ onMounted(() => {
     <NAlert type="info" :bordered="false">
       {{ $t('adminSettingUsers.alertText') }}
     </NAlert>
-    <div class="my-[10px]">
+    <div class="my-[10px] users-toolbar">
       <NButton type="primary" size="small" @click="handleAdd">
         {{ $t('common.add') }}
+      </NButton>
+      <NInput
+        v-model:value="keyword"
+        class="users-search"
+        clearable
+        size="small"
+        :placeholder="$t('common.inputPlaceholder')"
+        @keyup.enter="getList(1)"
+        @clear="getList(1)"
+      />
+      <NButton size="small" @click="getList(1)">
+        {{ $t('common.search') }}
       </NButton>
     </div>
 
@@ -240,3 +264,16 @@ onMounted(() => {
     <EditUser v-model:visible="editUserDialogShow" :user-info="editUserUserInfo" @done="handleDone" />
   </div>
 </template>
+
+<style scoped>
+.users-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.users-search {
+  width: min(260px, 100%);
+}
+</style>

@@ -1,3 +1,4 @@
+import fs from 'fs'
 import path from 'path'
 import type { PluginOption } from 'vite'
 import { defineConfig, loadEnv } from 'vite'
@@ -29,6 +30,10 @@ function setupPlugins(env: ImportMetaEnv): PluginOption[] {
 
 export default defineConfig((env) => {
   const viteEnv = loadEnv(env.mode, process.cwd()) as unknown as ImportMetaEnv
+  const versionFile = path.resolve(process.cwd(), '.zpanel-build-version')
+  const appVersion = fs.existsSync(versionFile)
+    ? fs.readFileSync(versionFile, 'utf-8').trim()
+    : viteEnv.VITE_APP_VERSION || 'unknown'
 
   return {
     resolve: {
@@ -37,6 +42,9 @@ export default defineConfig((env) => {
       },
     },
     plugins: setupPlugins(viteEnv),
+    define: {
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+    },
     server: {
       host: '0.0.0.0',
       port: 1002,

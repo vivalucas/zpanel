@@ -13,11 +13,14 @@ import (
 	"strings"
 	"time"
 	"zpanel/global"
+	"zpanel/lib/safehttp"
 
 	"github.com/google/uuid"
 )
 
 const (
+	DefaultUploadMaxBytes = 10 * 1024 * 1024
+
 	VisibilityPrivate = "private"
 	VisibilityPublic  = "public"
 	VisibilitySystem  = "system"
@@ -87,6 +90,9 @@ func StoreUpload(file *multipart.FileHeader, ownerID uint, purpose, visibility s
 	if ext == "" {
 		return StoredFile{}, fmt.Errorf("missing file extension")
 	}
+	if file.Size > DefaultUploadMaxBytes {
+		return StoredFile{}, fmt.Errorf("file too large: %d bytes", file.Size)
+	}
 	if len(allowedExts) > 0 && !contains(allowedExts, ext) {
 		return StoredFile{}, fmt.Errorf("unsupported file extension: %s", ext)
 	}
@@ -111,10 +117,15 @@ func StoreUpload(file *multipart.FileHeader, ownerID uint, purpose, visibility s
 	defer dst.Close()
 
 	hasher := sha256.New()
-	size, err := io.Copy(io.MultiWriter(dst, hasher), src)
+	limited := io.LimitReader(src, DefaultUploadMaxBytes+1)
+	size, err := io.Copy(io.MultiWriter(dst, hasher), limited)
 	if err != nil {
 		_ = os.Remove(absolutePath)
 		return StoredFile{}, err
+	}
+	if size > DefaultUploadMaxBytes {
+		_ = os.Remove(absolutePath)
+		return StoredFile{}, fmt.Errorf("file too large: %d bytes", size)
 	}
 
 	mimeType := file.Header.Get("Content-Type")
@@ -139,7 +150,10 @@ func StoreUpload(file *multipart.FileHeader, ownerID uint, purpose, visibility s
 }
 
 func DownloadRemoteFile(rawURL string, ownerID uint, purpose, visibility string, maxSize int64, allowedExts []string) (StoredFile, error) {
-	client := http.Client{Timeout: 15 * time.Second}
+	if err := safehttp.ValidateURL(rawURL); err != nil {
+		return StoredFile{}, err
+	}
+	client := safehttp.NewClient(15 * time.Second)
 	resp, err := client.Get(rawURL)
 	if err != nil {
 		return StoredFile{}, err

@@ -3,6 +3,7 @@ package cmn
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"math/rand"
 	"os"
 	"path"
@@ -30,6 +31,11 @@ const (
 	RAND_CODE_MODE1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" // 大写，小写，数字
 	RAND_CODE_MODE2 = "abcdefghijklmnopqrstuvwxyz0123456789"                           // 小写，数字
 	RAND_CODE_MODE3 = "0123456789"                                                     // 数字
+)
+
+const (
+	MinPasswordBytes = 6
+	MaxPasswordBytes = 72
 )
 
 type Version_Info struct {
@@ -215,13 +221,27 @@ func AssetsTakeFileToPath(assetsPath, targetPath string) error {
 	return os.WriteFile(targetPath, bytes, 0644)
 }
 
+func ValidatePassword(password string) error {
+	size := len([]byte(password))
+	if size < MinPasswordBytes {
+		return fmt.Errorf("password must be at least %d bytes", MinPasswordBytes)
+	}
+	if size > MaxPasswordBytes {
+		return fmt.Errorf("password must be no more than %d bytes", MaxPasswordBytes)
+	}
+	return nil
+}
+
 // 密码加密（使用 bcrypt）
-func PasswordEncryption(password string) string {
+func PasswordEncryption(password string) (string, error) {
+	if err := ValidatePassword(password); err != nil {
+		return "", err
+	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		panic("bcrypt failed: " + err.Error())
+		return "", err
 	}
-	return string(hash)
+	return string(hash), nil
 }
 
 // 验证密码

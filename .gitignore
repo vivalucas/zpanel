@@ -55,7 +55,6 @@ runtime/
 service/plugins
 
 # Local project knowledge base
-project-log/
 
 # AI development tools
 .claude/

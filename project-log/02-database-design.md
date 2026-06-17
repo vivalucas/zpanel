@@ -263,6 +263,7 @@ System
 - 前端保存明文 token，服务端只保存 hash。
 - 支持多设备登录和单个会话撤销。
 - 多账号快速切换可以基于多个 session 实现，而不是只有 localStorage 里堆 token。
+- 会话恢复时必须同时复查关联用户状态；`users.status != 1` 的账号即使 session 未过期，也不能继续通过认证中间件访问。
 
 ### `nav_groups`
 

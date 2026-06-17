@@ -2,6 +2,66 @@
 
 ---
 
+### ADR-007 [2026-06-17] 第七轮安全边界与可用性回归修复
+
+**状态**：已采用
+
+**替代关系**：补充 ADR-006 的 favicon、上传、会话缓存和登录限流安全边界。
+
+**背景与需求**：第七轮全项目审查发现，v1.1.5 已修复登录限流 O(N) 清理瓶颈，但登录限流仍依赖 Gin `ClientIP()` 的默认代理信任策略；同时，favicon 获取在移除 SVG 保存后可能因为第一个候选图标是 SVG 而放弃后续可用 PNG / ICO；用户停用后的既有 session、用户列表认证字段和文件管理公共图库删除体验仍有边界问题。用户确认按审查建议修复，并推进一个 patch 版本发布。
+
+**采用的方案**：
+
+- 路由初始化时显式关闭 Gin 默认可信代理，避免公网部署下客户端伪造 `X-Forwarded-For` 绕过按 IP 登录限流。
+- favicon 抓取从“只取第一个候选”调整为遍历候选 URL，跳过不支持的 SVG 等格式，继续尝试后续 PNG / JPG / ICO / WebP / GIF。
+- 登录态中间件从缓存或数据库 session 恢复用户时复查 `status == 1`，停用或未激活用户不能继续依赖旧 token 访问。
+- 用户列表响应移除 `passwordAlgo` 等认证实现细节，避免后续 API 路径重复出现敏感认证字段泄露风险。
+- 账号管理前端分页选项与后端最大 `limit=100` 对齐，避免选择 200 时 UI 与实际返回数据不一致。
+- 公共图库中非当前用户文件不显示删除按钮，避免“显示可删但后端实际不删”的误导。
+- 版本推进到 `1.1.6`，通过 tag 触发 GitHub Release、GHCR 和 Docker Hub 发布流程。
+
+**备选方案**：
+
+1. 继续使用 Gin 默认可信代理
+   - 优点：反向代理部署时可自动读取 `X-Forwarded-For`。
+   - 缺点：默认信任所有来源，公网直连时可被伪造 IP 绕过登录限流。
+   - 放弃原因：ZPanel 面向自托管公网/内网混合场景，默认应优先安全；后续如需反向代理真实 IP，可增加显式配置。
+
+2. 允许保存远程 SVG favicon
+   - 优点：兼容更多现代站点图标。
+   - 缺点：`/uploads` 同源公开服务下 SVG 会扩大脚本执行和钓鱼面。
+   - 放弃原因：继续禁止 SVG 保存，通过候选回退保留常见站点可用性。
+
+3. 只依赖管理员敏感变更时 `UserToken.Flush()`
+   - 优点：实现简单。
+   - 缺点：已有 session 重新入缓存后仍可能带着停用状态继续访问。
+   - 放弃原因：中间件是认证入口，必须复查账号启用状态。
+
+**决策依据**：
+
+- 登录限流必须建立在可信客户端 IP 上，否则 O(N) 优化只能解决性能，不能保证限流有效性。
+- 上传与 favicon 安全边界已收紧，后续应通过格式回退和 UI 约束补齐可用性，而不是放宽危险类型。
+- API 返回应优先使用最小字段集，避免直接序列化数据库模型造成认证实现细节外泄。
+
+**改动范围**：
+
+- `project-log/10-planning-log.md`
+- `project-log/05-current-status.md`
+- `project-log/06-dev-log.md`
+- `CHANGELOG.md`
+- `package.json`
+- `service/assets/version`
+- `service/router/router.go`
+- `service/api/api_v1/middleware/login_interceptor.go`
+- `service/api/api_v1/middleware/public_mode_interceptor.go`
+- `service/lib/siteFavicon/favico.go`
+- `service/api/api_v1/panel/itemIcon.go`
+- `service/api/api_v1/panel/users.go`
+- `src/components/apps/Users/index.vue`
+- `src/components/apps/UploadFileManager/index.vue`
+
+---
+
 ### ADR-006 [2026-06-08] 第五轮安全加固与构建副作用治理
 
 **状态**：已采用

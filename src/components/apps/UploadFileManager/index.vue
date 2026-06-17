@@ -6,7 +6,7 @@ import { set as savePanelConfig } from '@/api/panel/userConfig'
 import { RoundCardModal, SvgIcon } from '@/components/common'
 import { copyToClipboard, timeFormat } from '@/utils/cmn'
 import { t } from '@/locales'
-import { usePanelState } from '@/store'
+import { useAuthStore, usePanelState } from '@/store'
 
 interface InfoModalState {
   title: string
@@ -17,6 +17,7 @@ const imageList = ref<File.Info[]>([])
 const ms = useMessage()
 const dialog = useDialog()
 const panelStore = usePanelState()
+const authStore = useAuthStore()
 const loading = ref(false)
 const publicGallery = ref(false)
 const pagination = ref({
@@ -190,7 +191,7 @@ onMounted(() => {
                         <SvgIcon icon="lucide:wallpaper" />
                       </template>
                     </NButton>
-                    <NButton size="tiny" type="error" style="cursor: pointer;" :title="$t('common.delete')" @click="item.id !== undefined && handleDelete(item.id)">
+                    <NButton v-if="item.ownerId === authStore.userInfo?.id" size="tiny" type="error" style="cursor: pointer;" :title="$t('common.delete')" @click="item.id !== undefined && handleDelete(item.id)">
                       <template #icon>
                         <SvgIcon icon="material-symbols-delete" />
                       </template>

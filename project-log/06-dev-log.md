@@ -4,6 +4,50 @@
 
 ---
 
+## 2026-06-17（v1.1.6 安全边界与可用性回归修复）
+
+**触发原因**：用户要求按第七轮全项目审查建议修复确认问题，先更新 project-log 文档，再修改代码，并推进 patch 版本发布到 GitHub Release、GHCR 和 Docker Hub。
+
+**修改内容**：
+1. `project-log/10-planning-log.md`、`project-log/05-current-status.md`、`project-log/01-function-design.md`、`project-log/02-database-design.md`、`project-log/03-api-design.md` — 记录本轮修复方案、会话状态复查、favicon 候选回退、公共图库删除权限和用户列表最小字段原则。
+2. `service/router/router.go`、`service/router/router_test.go` — 显式关闭 Gin 默认可信代理，并增加 `X-Forwarded-For` 不被默认信任的回归测试，避免登录限流被伪造来源 IP 绕过。
+3. `service/api/api_v1/middleware/login_interceptor.go`、`service/api/api_v1/middleware/public_mode_interceptor.go` — token 缓存、数据库 session 和公开访问用户恢复时复查 `status == 1`，停用或未激活账号立即拒绝。
+4. `service/lib/siteFavicon/favico.go`、`service/api/api_v1/panel/itemIcon.go` — favicon 获取改为返回并遍历候选 URL；下载时跳过 SVG 等不支持格式，继续尝试后续可保存图标。
+5. `service/api/api_v1/panel/users.go` — 用户列表改用显式响应 DTO，避免返回密码 hash 或 `passwordAlgo` 等认证实现细节。
+6. `src/components/apps/Users/index.vue` — 账号管理分页选项移除 200，与后端 `limit <= 100` 保持一致。
+7. `src/components/apps/UploadFileManager/index.vue` — 公共图库中仅当前用户拥有的文件显示删除按钮。
+8. `package.json`、`service/assets/version`、`CHANGELOG.md` — 版本推进到 `1.1.6` 并记录发布说明。
+
+**遇到的问题**：
+- 当前 Windows 环境默认 `CGO_ENABLED=0`，`go test ./...` 中依赖 sqlite 的 panel 测试会失败，错误为 `go-sqlite3 requires cgo to work`；此前尝试开启 CGO 时本机缺少 `gcc`。该问题属于本机工具链限制，GitHub Actions 的 Ubuntu 环境仍会在发布流程中执行完整后端测试。
+- Vite 生产构建继续输出既有 `/custom/index.js` 非 module、`/custom/index.css` 运行时解析和大 chunk 提示。
+
+**解决方式**：
+- 本地先运行不依赖 sqlite 的 `go test ./router` 覆盖本轮新增代理信任测试，并保留完整 `go test ./...` 的环境失败记录。
+- 继续通过 GitHub Actions 的 Linux 环境执行完整后端测试、发布包构建和容器构建。
+
+**验证方式**：
+- `go test ./router`
+- `pnpm run type-check`
+- `pnpm run lint`
+- `pnpm run build`
+- `cd service && gofmt -l .`
+- `cd service && go test ./...`
+
+**验证结果**：
+- `go test ./router` 通过。
+- TypeScript 类型检查通过。
+- ESLint 通过。
+- Vite 生产构建通过；保留既有 `/custom` 和大 chunk 提示。
+- `gofmt -l .` 无输出。
+- `go test ./...` 未通过，失败原因是当前 Windows 本机 sqlite CGO 工具链不可用，不是业务断言失败；需由 CI/Linux 环境完成完整复核。
+
+**本地产物清理**：
+- 已删除 `pnpm run build` 生成的 `dist/`。
+- 已删除 `pnpm run build` 生成的 `.zpanel-build-version` 临时文件。
+
+---
+
 ## 2026-06-08（第五轮安全与可用性优化）
 
 **触发原因**：用户要求先整体评审项目，再按确认结论修复真实影响功能、稳定性、安全性、性能和用户体验的问题。

@@ -21,11 +21,17 @@ func PublicModeInterceptor(c *gin.Context) {
 	// 没有token信息视为未登录
 	if rawToken != "" {
 		if userInfo, success := global.UserToken.Get(rawToken); success {
+			if rejectInactiveUser(c, rawToken, userInfo) {
+				return
+			}
 			c.Set("userInfo", userInfo)
 			return
 		}
 		if session, err := models.GetActiveSessionByToken(global.Db, rawToken); err == nil && session.User.ID != 0 {
 			info := session.User
+			if rejectInactiveUser(c, rawToken, info) {
+				return
+			}
 			info.Token = rawToken
 			now := time.Now()
 			_ = global.Db.Model(&models.Session{}).Where("id=?", session.ID).Update("last_seen_at", now).Error
@@ -46,6 +52,9 @@ func PublicModeInterceptor(c *gin.Context) {
 		if err := global.Db.First(&userInfo, "id=?", userId).Error; err != nil {
 			apiReturn.ErrorCode(c, 1001, global.Lang.Get("login.err_token_expire"), nil)
 			c.Abort()
+			return
+		}
+		if rejectInactiveUser(c, rawToken, userInfo) {
 			return
 		}
 		global.Logger.Debug("访客用户ID:", userInfo.ID)

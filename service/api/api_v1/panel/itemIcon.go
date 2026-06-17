@@ -263,12 +263,10 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 		return
 	}
 	resp := panelApiStructs.ItemIconGetSiteFaviconResp{}
-	fullUrl := ""
-	if iconUrl, err := siteFavicon.GetOneFaviconURL(req.Url); err != nil {
+	iconURLs, err := siteFavicon.GetFaviconURLs(req.Url)
+	if err != nil {
 		apiReturn.Error(c, "acquisition failed: get ico error:"+err.Error())
 		return
-	} else {
-		fullUrl = iconUrl
 	}
 
 	parsedURL, err := url.Parse(req.Url)
@@ -279,30 +277,47 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 
 	protocol := parsedURL.Scheme
 	global.Logger.Debug("protocol:", protocol)
-	global.Logger.Debug("fullUrl:", fullUrl)
 
-	// 如果URL以双斜杠（//）开头，则使用当前页面协议
-	if strings.HasPrefix(fullUrl, "//") {
-		fullUrl = protocol + "://" + fullUrl[2:]
-	} else if !strings.HasPrefix(fullUrl, "http://") && !strings.HasPrefix(fullUrl, "https://") {
-		// 如果URL既不以http://开头也不以https://开头，则默认为http协议
-		fullUrl = "http://" + fullUrl
-	}
-	global.Logger.Debug("fullUrl:", fullUrl)
-	// 去除图标的get参数
-	{
-		parsedIcoURL, err := url.Parse(fullUrl)
-		if err != nil {
-			apiReturn.Error(c, "acquisition failed: parsed ico URL :"+err.Error())
-			return
+	var (
+		stored  storage.StoredFile
+		fullUrl string
+		lastErr error
+	)
+	for _, iconUrl := range iconURLs {
+		candidateUrl := iconUrl
+		global.Logger.Debug("fullUrl:", candidateUrl)
+
+		// 如果URL以双斜杠（//）开头，则使用当前页面协议
+		if strings.HasPrefix(candidateUrl, "//") {
+			candidateUrl = protocol + "://" + candidateUrl[2:]
+		} else if !strings.HasPrefix(candidateUrl, "http://") && !strings.HasPrefix(candidateUrl, "https://") {
+			// 如果URL既不以http://开头也不以https://开头，则默认为http协议
+			candidateUrl = "http://" + candidateUrl
 		}
-		fullUrl = parsedIcoURL.Scheme + "://" + parsedIcoURL.Host + parsedIcoURL.Path
-	}
-	global.Logger.Debug("fullUrl:", fullUrl)
+		global.Logger.Debug("fullUrl:", candidateUrl)
+		// 去除图标的get参数
+		parsedIcoURL, err := url.Parse(candidateUrl)
+		if err != nil {
+			lastErr = fmt.Errorf("parsed ico URL: %w", err)
+			continue
+		}
+		candidateUrl = parsedIcoURL.Scheme + "://" + parsedIcoURL.Host + parsedIcoURL.Path
+		global.Logger.Debug("fullUrl:", candidateUrl)
 
-	stored, err := storage.DownloadRemoteFile(fullUrl, userInfo.ID, models.FilePurposeIcon, models.FileVisibilityPublic, 1024*1024, allowedFaviconExts())
-	if err != nil {
-		apiReturn.Error(c, "acquisition failed: download"+err.Error())
+		stored, err = storage.DownloadRemoteFile(candidateUrl, userInfo.ID, models.FilePurposeIcon, models.FileVisibilityPublic, 1024*1024, allowedFaviconExts())
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		fullUrl = candidateUrl
+		break
+	}
+
+	if fullUrl == "" {
+		if lastErr == nil {
+			lastErr = fmt.Errorf("not found supported ico")
+		}
+		apiReturn.Error(c, "acquisition failed: download"+lastErr.Error())
 		return
 	}
 

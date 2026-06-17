@@ -1,13 +1,13 @@
 # 当前状态
 
-> **最后更新**：2026-06-13
+> **最后更新**：2026-06-17
 > **最后更新人**：Codex
-> **最近开发日志**：`11-code-review-log.md` 中的 2026-06-13（第六轮评审记录）
-> **当前可信度**：本地 `pnpm run type-check`、`pnpm run lint`、`pnpm run build`、`cd service && go test ./...` 通过；Docker 管理实机功能验证仍待补
+> **最近开发日志**：`06-dev-log.md` 中的 2026-06-17（v1.1.6 安全边界与可用性回归修复）
+> **当前可信度**：本地 `go test ./router`、`pnpm run type-check`、`pnpm run lint`、`pnpm run build`、`cd service && gofmt -l .` 通过；当前 Windows 环境因 sqlite CGO 依赖缺少可用 gcc，`cd service && go test ./...` 需要在 CI/Linux 或本地 CGO 工具链齐全环境复核；Docker 管理实机功能验证仍待补。
 
 ## 当前版本
 
-**ZPanel 1.1.5 第六轮性能与并发优化阶段** — 已完成数据库列名全面修复、浮动按钮可见性修复、用户名验证统一、创建账号错误码修复、设置 / 添加项目界面玻璃风格统一、自定义壁纸观感优化、Docker 管理部署提示优化、系统应用弹窗浅 / 深色一致性修复、第四轮评审确认的数据完整性 / 入口稳定性 / 安全恢复路径修复，以及第五轮评审确认的 SSRF、上传同源脚本面、会话缓存失效、密码校验、用户搜索和构建副作用治理。本阶段追加修复了登录限流器中 O(N) 遍历造成的拒绝服务 (DoS) 性能瓶颈。
+**ZPanel 1.1.6 第七轮安全边界与可用性回归修复发布准备中** — 本轮在 v1.1.5 登录限流 O(N) 修复基础上，继续补齐 Gin 默认可信代理导致的限流绕过风险、favicon SVG 候选回退问题、既有 session 对停用用户状态的复查、用户列表认证字段最小化、账号管理分页一致性和公共图库删除按钮误导问题。
 
 ## 当前阶段
 
@@ -23,7 +23,7 @@
 - Go module 从 `sun-panel` 改为 `zpanel`，后端 import 路径同步更新。
 - Dockerfile、docker-compose、build.sh 的二进制名 / 服务名 / 产物名改为 `zpanel`。
 - Node.js 固定为 24.15.0，pnpm 固定为 11.1.3，Go 目标版本提升到 1.26.3。
-- 产品版本已推进到 `1.1.5`：`package.json` 与 `service/assets/version` 同步，版本源为 `1|1.1.5`。
+- 产品版本已推进到 `1.1.6`：`package.json`、`service/assets/version`、`CHANGELOG.md` 已同步，版本源为 `1|1.1.6`；后续通过 `v1.1.6` tag 触发 GitHub Release、GHCR 和 Docker Hub 发布流程。
 - 默认端口从 `3002` 统一改为 `6521`，已同步 Dockerfile、docker-compose、配置模板、README 和 Vite 开发代理。
 - Docker 默认镜像改为 `vivalucas/zpanel:latest`，容器发布同时推送 Docker Hub 与 GHCR。
 - 关于页改为当前维护者、当前仓库链接和上游归属说明。
@@ -51,6 +51,7 @@
 - 2026-06-05 已完成 v1.1.4 发布准备：版本号、后端版本源、CHANGELOG、README 固定镜像示例和 project-log 状态已同步到 `1.1.4`。
 - 2026-06-08 已完成第五轮安全与可用性优化：favicon 后端抓取增加安全 URL / DNS / 重定向校验，上传文件收紧图片类型并移除 SVG 直传，敏感用户变更后清空 token 缓存，密码哈希改为返回错误并增加长度校验，用户列表补搜索入口，构建版本号改为 `.zpanel-build-version` 临时文件。
 - 2026-06-13 已完成第六轮性能优化与 v1.1.5 发布：移除了登录限流器中的 O(N) 性能瓶颈，改为后台异步定时清理，修复了暴露公网可能遭遇的 DoS 风险。
+- 2026-06-17 已完成第七轮安全边界与可用性回归修复：关闭 Gin 默认全网可信代理、补充 session 恢复状态复查、favicon 多候选回退、用户列表最小字段、账号分页一致性和公共图库删除按钮权限展示。
 
 ## 进行中
 

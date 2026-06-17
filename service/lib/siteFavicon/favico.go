@@ -24,40 +24,48 @@ func IsHTTPURL(url string) bool {
 }
 
 func GetOneFaviconURL(urlStr string) (string, error) {
-	iconURLs, err := getFaviconURL(urlStr)
+	iconURLs, err := GetFaviconURLs(urlStr)
 	if err != nil {
 		return "", err
 	}
 
 	for _, v := range iconURLs {
-		// 标准的路径地址
-		if IsHTTPURL(v) {
-			return v, nil
-		} else {
-			urlInfo, _ := url.Parse(urlStr)
-			fullUrl := urlInfo.Scheme + "://" + urlInfo.Host + "/" + strings.TrimPrefix(v, "/")
-			return fullUrl, nil
-		}
+		return v, nil
 	}
 	return "", fmt.Errorf("not found ico")
 }
 
+func GetFaviconURLs(urlStr string) ([]string, error) {
+	iconURLs, err := getFaviconURL(urlStr)
+	if err != nil {
+		return nil, err
+	}
+
+	urlInfo, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, err
+	}
+
+	fullURLs := make([]string, 0, len(iconURLs))
+	for _, v := range iconURLs {
+		if IsHTTPURL(v) {
+			fullURLs = append(fullURLs, v)
+			continue
+		}
+		fullURLs = append(fullURLs, urlInfo.Scheme+"://"+urlInfo.Host+"/"+strings.TrimPrefix(v, "/"))
+	}
+	return fullURLs, nil
+}
+
 func GetOneFaviconURLAndUpload(urlStr string) (string, bool) {
 	//www.iqiyipic.com/pcwimg/128-128-logo.png
-	iconURLs, err := getFaviconURL(urlStr)
+	iconURLs, err := GetFaviconURLs(urlStr)
 	if err != nil {
 		return "", false
 	}
 
 	for _, v := range iconURLs {
-		// 标准的路径地址
-		if IsHTTPURL(v) {
-			return v, true
-		} else {
-			urlInfo, _ := url.Parse(urlStr)
-			fullUrl := urlInfo.Scheme + "://" + urlInfo.Host + "/" + strings.TrimPrefix(v, "/")
-			return fullUrl, true
-		}
+		return v, true
 	}
 	return "", false
 }

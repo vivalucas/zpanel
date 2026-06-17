@@ -16,6 +16,7 @@ import (
 
 func NewRouter() *gin.Engine {
 	router := gin.Default()
+	_ = router.SetTrustedProxies(nil)
 	router.Use(middleware.SecurityHeaders)
 	rootRouter := router.Group("/")
 	routerGroup := rootRouter.Group("api")

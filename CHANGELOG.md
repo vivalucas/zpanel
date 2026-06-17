@@ -4,6 +4,20 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.1.6 - 2026-06-17
+
+### Security
+
+- Disabled Gin's default all-proxy trust so login rate limiting cannot be bypassed by spoofed `X-Forwarded-For` headers on direct public deployments.
+- Rechecked user account status when restoring sessions from token cache or database sessions, preventing disabled or inactive accounts from continuing to use existing tokens.
+- Reduced user-list responses to explicit profile fields so password hashes and password algorithm metadata are not serialized from the database model.
+
+### Bug Fixes
+
+- Fixed favicon fetching so unsupported first-choice SVG icons no longer prevent fallback to later PNG, JPG, WebP, GIF, or ICO candidates.
+- Aligned the account-management page-size selector with the backend maximum of 100 users per page.
+- Hid delete actions for files owned by other users in the public gallery to avoid misleading successful no-op deletes.
+
 ## 1.1.5 - 2026-06-13
 
 ### Bug Fixes

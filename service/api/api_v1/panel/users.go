@@ -25,6 +25,19 @@ var (
 	ErrUsersApiAtLeastKeepOne = errors.New("at least keep one")
 )
 
+type userListItem struct {
+	ID        uint      `json:"id"`
+	CreatedAt time.Time `json:"createTime"`
+	UpdatedAt time.Time `json:"updateTime"`
+	Username  string    `json:"username"`
+	Name      string    `json:"name"`
+	HeadImage string    `json:"headImage"`
+	Status    int       `json:"status"`
+	Role      int       `json:"role"`
+	Mail      *string   `json:"mail"`
+	UserId    uint      `json:"userId"`
+}
+
 func (a UsersApi) Create(c *gin.Context) {
 	param := models.User{}
 	if err := c.ShouldBindBodyWith(&param, binding.JSON); err != nil {
@@ -231,17 +244,26 @@ func (a UsersApi) GetList(c *gin.Context) {
 	}
 
 	var (
-		list  []models.User
+		list  []userListItem
 		count int64
 	)
-	db := global.Db
+	db := global.Db.Model(&models.User{})
 
 	// 查询条件
 	if param.Keyword != "" {
 		db = db.Where("name LIKE ? OR username LIKE ?", "%"+param.Keyword+"%", "%"+param.Keyword+"%")
 	}
 
-	if err := db.Omit("Password").Limit(param.Limit).Offset((param.Page - 1) * param.Limit).Find(&list).Limit(-1).Offset(-1).Count(&count).Error; err != nil {
+	if err := db.Count(&count).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+
+	if err := db.
+		Select("id", "created_at", "updated_at", "username", "name", "head_image", "status", "role", "mail", "id AS user_id").
+		Limit(param.Limit).
+		Offset((param.Page - 1) * param.Limit).
+		Find(&list).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}

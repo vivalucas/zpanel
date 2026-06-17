@@ -9,6 +9,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func rejectInactiveUser(c *gin.Context, rawToken string, userInfo models.User) bool {
+	if userInfo.Status == 1 {
+		return false
+	}
+	if rawToken != "" {
+		global.UserToken.Delete(rawToken)
+	}
+	apiReturn.ErrorByCode(c, 1004)
+	c.Abort()
+	return true
+}
+
 func LoginInterceptor(c *gin.Context) {
 
 	// 继续执行后续的操作，再回来
@@ -26,6 +38,9 @@ func LoginInterceptor(c *gin.Context) {
 
 	// 直接返回缓存的用户信息
 	if userInfo, success := global.UserToken.Get(rawToken); success {
+		if rejectInactiveUser(c, rawToken, userInfo) {
+			return
+		}
 		c.Set("userInfo", userInfo)
 		return
 	}
@@ -40,6 +55,9 @@ func LoginInterceptor(c *gin.Context) {
 	} else {
 		// 通过 设置当前用户信息
 		info := session.User
+		if rejectInactiveUser(c, rawToken, info) {
+			return
+		}
 		info.Token = rawToken
 		now := time.Now()
 		_ = global.Db.Model(&models.Session{}).Where("id=?", session.ID).Update("last_seen_at", now).Error
@@ -64,6 +82,9 @@ func LoginInterceptorDev(c *gin.Context) {
 		// 通过
 		// 设置当前用户信息
 		info := session.User
+		if rejectInactiveUser(c, rawToken, info) {
+			return
+		}
 		info.Token = rawToken
 		c.Set("userInfo", info)
 	}

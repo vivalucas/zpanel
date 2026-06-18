@@ -4,6 +4,13 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.1.7 - 2026-06-18
+
+### Bug Fixes
+
+- Fixed Docker-built frontend assets defaulting to an empty API base URL when `.env` is not present in the build context, which caused deployed pages to call non-API paths such as `/openness/loginConfig` and show repeated network errors.
+- Fixed Docker build context exclusions so runtime database directories are ignored only at the repository root, without excluding backend source packages such as `service/initialize/database`.
+
 ## 1.1.6 - 2026-06-17
 
 ### Security

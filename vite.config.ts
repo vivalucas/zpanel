@@ -30,6 +30,7 @@ function setupPlugins(env: ImportMetaEnv): PluginOption[] {
 
 export default defineConfig((env) => {
   const viteEnv = loadEnv(env.mode, process.cwd()) as unknown as ImportMetaEnv
+  const apiProxyTarget = viteEnv.VITE_APP_API_BASE_URL || 'http://127.0.0.1:6521/'
   const versionFile = path.resolve(process.cwd(), '.zpanel-build-version')
   const appVersion = fs.existsSync(versionFile)
     ? fs.readFileSync(versionFile, 'utf-8').trim()
@@ -51,12 +52,12 @@ export default defineConfig((env) => {
       open: false,
       proxy: {
         '/api': {
-          target: viteEnv.VITE_APP_API_BASE_URL,
+          target: apiProxyTarget,
           changeOrigin: true, // 允许跨域
           rewrite: path => path.replace('/api/', '/api/'),
         },
         '/uploads': {
-          target: viteEnv.VITE_APP_API_BASE_URL,
+          target: apiProxyTarget,
           changeOrigin: true, // 允许跨域
           rewrite: path => path.replace('/uploads/', '/uploads/'),
         },

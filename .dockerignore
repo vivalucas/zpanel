@@ -4,10 +4,10 @@ node_modules
 dist
 release
 coverage
-data
-uploads
-database
-runtime
+/data
+/uploads
+/database
+/runtime
 Dockerfile
 .*
 */.*

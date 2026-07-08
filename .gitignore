@@ -83,3 +83,7 @@ CODEX.md
 GEMINI.md
 .mcp.json
 mcp.json
+
+# Additional AI tools
+.mimocode/
+.agents/

@@ -83,6 +83,10 @@ ZPanel is still refreshing its own branding, screenshots, and documentation asse
 
 ### Docker Compose
 
+For a complete, copy-and-paste Ubuntu LAN deployment walkthrough—including Docker installation, choosing the correct LAN IP, firewall caveats, verification, upgrades, backups, password recovery, and troubleshooting—see [Ubuntu 局域网部署（简体中文）](README.zh-CN.md#ubuntu-局域网部署推荐).
+
+The example below is intentionally bound to `127.0.0.1` for reverse-proxy deployments. It is **not reachable from another device on your LAN**. For direct LAN access, bind the published port to the Ubuntu host's actual LAN IP, for example `192.168.1.50:6521:6521`; replace that address with your own.
+
 Create a `docker-compose.yml` file:
 
 ```yaml
@@ -124,7 +128,7 @@ Default persistent directories:
 ./data
 ```
 
-If you want direct LAN access without a reverse proxy, change the port mapping to `6521:6521`. For public internet access, keep the service bound to `127.0.0.1` and put HTTPS in front of it with Nginx, Caddy, Traefik, or a similar reverse proxy.
+For direct LAN access, prefer a specific host mapping such as `192.168.1.50:6521:6521`. Using `6521:6521` listens on all host interfaces, which may include interfaces outside your trusted LAN. For public internet access, keep the service bound to `127.0.0.1` and put HTTPS and access controls in front of it with Nginx, Caddy, Traefik, or a similar reverse proxy.
 
 ### Releases
 

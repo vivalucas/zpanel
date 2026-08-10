@@ -69,99 +69,326 @@ ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放�
 - GitHub Actions 前后端质量检查
 - Dependabot、Issue 模板、PR 模板、贡献指南和安全策略
 
-## 快速开始
+## Ubuntu 局域网部署（推荐）
 
-创建 `docker-compose.yml`：
+下面是一套可以直接照着操作的部署流程。目标是把 ZPanel 部署到一台局域网内的 Ubuntu 设备，并让手机、电脑等同一局域网设备通过 `http://Ubuntu设备IP:6521` 访问。
+
+本文使用 Docker Compose 部署，默认使用内置 SQLite，不需要另外安装数据库。Docker 镜像同时提供 Linux `amd64`（常见 PC、迷你主机）和 `arm64`（部分 ARM 开发板、NAS）版本。
+
+> 如果 Ubuntu 设备有公网 IP 或路由器做了端口转发，请不要把 `6521` 端口直接暴露到互联网。公网访问应使用反向代理、HTTPS 和额外的访问控制；本文只讲可信局域网内的直接访问。
+
+### 1. 确认设备和网络
+
+在 Ubuntu 终端执行：
+
+```bash
+uname -m
+ip -br -4 addr show scope global
+```
+
+- `uname -m` 显示 `x86_64` 或 `aarch64` 均可使用官方镜像。
+- 在第二条命令的结果中找到 Ubuntu 的局域网 IPv4 地址，例如 `192.168.1.50`。不要选择 `docker0`、`br-*` 等 Docker 虚拟网卡地址。
+- 建议在路由器中给这台 Ubuntu 设备设置 DHCP 静态租约，避免设备重启后 IP 变化。
+- 下文统一用 `192.168.1.50` 举例，请务必替换成你自己的实际地址。
+
+### 2. 安装 Docker Engine 和 Compose
+
+先检查是否已经安装：
+
+```bash
+sudo docker --version
+sudo docker compose version
+```
+
+两条命令都能正常显示版本号时，直接跳到第 3 步。全新 Ubuntu 可按 [Docker 官方 Ubuntu 安装文档](https://docs.docker.com/engine/install/ubuntu/) 添加官方软件源并安装：
+
+```bash
+sudo apt update
+sudo apt install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+```
+
+添加 Docker apt 软件源：
+
+```bash
+sudo tee /etc/apt/sources.list.d/docker.sources >/dev/null <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+```
+
+安装并验证：
+
+```bash
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+sudo docker run --rm hello-world
+sudo docker compose version
+```
+
+本文后续命令统一使用 `sudo docker ...`，不要求把当前用户加入 `docker` 组。Docker 官方提示：`docker` 组本身拥有接近 root 的权限，不应把它当作普通的无特权用户组。
+
+### 3. 创建部署目录
+
+```bash
+mkdir -p ~/zpanel/conf ~/zpanel/data
+cd ~/zpanel
+```
+
+目录用途：
+
+- `~/zpanel/compose.yaml`：容器部署配置。
+- `~/zpanel/.env`：Ubuntu 局域网 IP 和时区。
+- `~/zpanel/conf`：ZPanel 运行配置，首次启动时自动生成 `conf.ini`。
+- `~/zpanel/data`：SQLite 数据库、上传文件、日志、缓存和备份数据。
+
+删除或覆盖 `conf`、`data` 会丢失配置或业务数据；重新创建容器不会丢失这两个目录中的数据。
+
+### 4. 写入局域网 IP
+
+创建环境文件：
+
+```bash
+nano .env
+```
+
+写入以下内容，把示例 IP 换成第 1 步查到的实际 IP：
+
+```dotenv
+ZPANEL_BIND_IP=192.168.1.50
+TZ=Asia/Shanghai
+```
+
+在 nano 中按 `Ctrl+O`、回车保存，再按 `Ctrl+X` 退出。
+
+这里绑定的是 Ubuntu 的具体局域网 IP。不要写 `127.0.0.1`，否则只有 Ubuntu 本机能访问。也可以写 `0.0.0.0` 监听所有 IPv4 网卡，但如果设备还有公网或其他不可信网卡，暴露范围会更大。
+
+### 5. 创建 Compose 配置
+
+```bash
+nano compose.yaml
+```
+
+完整粘贴以下内容：
 
 ```yaml
 services:
   zpanel:
     image: vivalucas/zpanel:latest
     container_name: zpanel
+    environment:
+      TZ: "${TZ:-Asia/Shanghai}"
     volumes:
       - ./conf:/app/conf
       - ./data:/app/data
     ports:
-      - "127.0.0.1:6521:6521"
-    restart: always
+      - "${ZPANEL_BIND_IP}:6521:6521"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:6521/api/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
 ```
 
-启动服务：
+保存退出后先检查配置。输出中不应出现 `ZPANEL_BIND_IP` 为空的警告：
 
 ```bash
-docker compose pull
-docker compose up -d
+sudo docker compose config
 ```
 
-默认镜像：
+### 6. 启动 ZPanel
+
+```bash
+sudo docker compose pull
+sudo docker compose up -d
+sudo docker compose ps
+```
+
+第一次拉取镜像可能需要几分钟。`docker compose ps` 中 ZPanel 应显示为 `Up`，健康检查完成后会显示 `healthy`。查看实时日志可执行：
+
+```bash
+sudo docker compose logs -f --tail=100 zpanel
+```
+
+看到服务正常启动后按 `Ctrl+C` 退出日志，不会停止容器。
+
+### 7. 验证局域网访问
+
+先在 Ubuntu 本机验证健康接口，注意仍要替换 IP：
+
+```bash
+curl http://192.168.1.50:6521/api/healthz
+```
+
+再在同一局域网内的电脑或手机浏览器打开：
 
 ```text
-vivalucas/zpanel:latest
+http://192.168.1.50:6521
 ```
 
-默认端口：`6521`
-
-如果只在局域网直接访问，可以把端口映射改成 `6521:6521`。如果要公网访问，建议保持 `127.0.0.1:6521:6521`，再用 Nginx、Caddy、Traefik 等反向代理提供域名和 HTTPS。
-
-### Release
-
-版本 tag 会创建 GitHub Release，包含发布说明、Linux amd64 部署包和 `SHA256SUMS` 校验文件。多数用户仍然建议优先使用 Docker 镜像部署：
-
-- `ghcr.io/vivalucas/zpanel:<version>`
-- `vivalucas/zpanel:<version>`
-
-`latest` 指向最近发布的稳定镜像。若需要可重复回滚，也可以改用固定版本号，例如 `vivalucas/zpanel:1.1.4`。
-
-健康检查接口：
+默认管理员账号：
 
 ```text
-GET /api/healthz
+用户名：admin@zpanel.local
+密码：12345678
 ```
 
-默认账号：
+首次登录后请立即修改默认密码。即使只在局域网使用，也不应长期保留默认密码。
 
-```text
-Username: admin@zpanel.local
-Password: 12345678
+### 8. 防火墙和“本机能开、其他设备打不开”
+
+依次检查：
+
+```bash
+cd ~/zpanel
+sudo docker compose ps
+sudo docker compose logs --tail=200 zpanel
+sudo ss -lntp | grep 6521
+ip -br -4 addr show scope global
 ```
 
-首次登录后请立即修改默认密码。
+常见原因：
 
-自定义 CSS / JS 恢复方式：
+- `.env` 中写成了 `127.0.0.1`、写错了 IP，或 Ubuntu 的 DHCP 地址已经变化。修改后执行 `sudo docker compose up -d` 重新创建容器。
+- 访问设备和 Ubuntu 不在同一网段，或无线路由器启用了 AP / 客户端隔离、访客网络隔离。
+- 路由器、云安全组或宿主机的额外防火墙拦截了 TCP `6521`。
+- 端口已被其他程序占用。用 `sudo ss -lntp | grep 6521` 检查；必要时把 Compose 中左侧端口改成其他端口，例如 `"${ZPANEL_BIND_IP}:8080:6521"`，然后访问 `http://IP:8080`。
 
-```text
-http://你的-zpanel-地址/?safeMode=1
+特别注意：[Docker 官方防火墙文档](https://docs.docker.com/engine/network/packet-filtering-firewalls/#docker-and-ufw)说明，Docker 发布的容器端口可能绕过 UFW 的常规规则。因此，不要只依赖 `sudo ufw allow/deny 6521` 判断暴露范围。本文通过绑定具体局域网 IP 来缩小监听范围；有更严格隔离需求时，请在路由器、防火墙或 Docker 的 `DOCKER-USER` 链中设置来源网段规则。
+
+### 日常管理
+
+以下命令都在 `~/zpanel` 目录执行：
+
+```bash
+cd ~/zpanel
+
+# 查看状态
+sudo docker compose ps
+
+# 查看最近 200 行日志
+sudo docker compose logs --tail=200 zpanel
+
+# 重启
+sudo docker compose restart zpanel
+
+# 停止
+sudo docker compose down
+
+# 再次启动
+sudo docker compose up -d
 ```
 
-安全模式只在当前页面加载时跳过自定义 CSS 和自定义 JavaScript，方便登录后进入设置页删除错误配置。也支持使用 `?zpanelSafeMode=1`。
+`docker compose down` 只删除容器和 Compose 网络，不会删除 `./conf`、`./data`。不要使用 `rm -rf ~/zpanel`，也不要在不了解影响时额外添加 `--volumes`。
 
-如果要在 ZPanel 中管理宿主机 Docker 容器，需要挂载 Docker socket：
+### 升级和固定版本
+
+升级到最新稳定镜像：
+
+```bash
+cd ~/zpanel
+sudo docker compose pull
+sudo docker compose up -d
+sudo docker image prune -f
+```
+
+`latest` 会跟随最新稳定版本。生产或重要环境建议把镜像改成明确版本，例如：
 
 ```yaml
-services:
-  zpanel:
+image: vivalucas/zpanel:1.1.7
+```
+
+需要回滚时，把版本号改回升级前的版本，再执行：
+
+```bash
+sudo docker compose pull
+sudo docker compose up -d
+```
+
+镜像也会发布到 `ghcr.io/vivalucas/zpanel:<version>`。GitHub Release 另有 Linux `amd64` 压缩包和 `SHA256SUMS`，但大多数 Ubuntu 用户仍推荐使用 Docker 镜像。
+
+### 备份和恢复
+
+ZPanel 默认使用 SQLite。为避免复制数据库时仍有写入，建议短暂停机后备份整个 `conf` 和 `data`：
+
+```bash
+cd ~/zpanel
+sudo docker compose stop zpanel
+sudo tar -czf "$HOME/zpanel-backup-$(date +%F-%H%M%S).tar.gz" conf data compose.yaml .env
+sudo docker compose start zpanel
+```
+
+恢复前先停止容器，并先保留当前目录副本。确认备份文件可信后，在 `~/zpanel` 中解压覆盖，再启动：
+
+```bash
+cd ~/zpanel
+sudo docker compose down
+sudo tar -xzf /你的备份文件路径/zpanel-backup-日期.tar.gz -C ~/zpanel
+sudo docker compose up -d
+```
+
+升级前、修改 `conf/conf.ini` 前都建议先备份。
+
+### 忘记管理员密码
+
+下面的命令会把第一个管理员账号的密码重置为 `12345678`：
+
+```bash
+cd ~/zpanel
+sudo docker compose stop zpanel
+sudo docker compose run --rm zpanel ./zpanel -password-reset
+sudo docker compose up -d
+```
+
+登录后立即改成新密码。
+
+### 自定义 CSS / JavaScript 导致页面打不开
+
+使用安全模式打开：
+
+```text
+http://192.168.1.50:6521/?safeMode=1
+```
+
+安全模式只在当前页面加载时跳过自定义 CSS 和 JavaScript，方便登录后删除错误配置。也支持 `?zpanelSafeMode=1`。
+
+### 可选：让 ZPanel 管理宿主机 Docker
+
+普通导航面板不需要这一步。只有明确需要在 ZPanel 页面中启动、停止或查看宿主机容器时，才应挂载 Docker socket。这个 socket 基本等同于宿主机 root 权限，只应在可信环境启用。
+
+先把 Docker socket 的组 ID 追加到现有 `.env`：
+
+```bash
+cd ~/zpanel
+echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" | sudo tee -a .env
+```
+
+然后在 `compose.yaml` 的 `zpanel` 服务中增加 `group_add`，并在原有 `volumes` 下增加 socket 挂载：
+
+```yaml
     group_add:
       - "${DOCKER_GID}"
     volumes:
+      - ./conf:/app/conf
+      - ./data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-多数 Linux 主机上，Docker socket 属于宿主机 Docker 用户组。启动前先写入 `DOCKER_GID`：
+应用并检查日志：
 
 ```bash
-echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" > .env
-docker compose up -d
+sudo docker compose up -d
+sudo docker compose logs --tail=100 zpanel
 ```
-
-如果你的环境不能使用 `group_add`，可以用下面这个隔离性更低的兜底方式让容器以 root 运行：
-
-```yaml
-services:
-  zpanel:
-    user: "0:0"
-```
-
-官方镜像已包含 `docker-cli`，Docker 管理功能会在容器内执行 `docker` 命令并通过挂载的宿主机 socket 操作 Docker。这个权限很高，只建议在可信环境启用，并务必保护好管理员账号。
 
 ## 适用场景
 

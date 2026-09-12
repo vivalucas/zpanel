@@ -195,3 +195,25 @@
 | 2026-05-21 | 更新默认后端地址 6521 并补充 `/api/healthz` | 1.0.0 发布整理已统一端口并加入健康检查 |
 | 2026-05-20 | 补充站点设置、验证码、公共图库和 Docker 管理 API | PRO 功能开源化第一版已实现 |
 | 2026-05-20 | 初始化 API 设计文档 | fork 后建立接口维护基线 |
+
+## 2026-09-12 API 增补
+
+### POST /api/panel/userConfig/import（登录）
+
+请求：`requestId`（16–64 字符，重试必须复用）、`mode`（append/replace）、可选 `icons`（分组数组：title/sort/children）、可选 `panel`（样式对象）。至少选择一种数据。最大请求 5 MiB，500 分组、10000 图标；覆盖图标时至少一组。接口忽略导入的实体 ID、所属用户及 ORM 关联，统一归属当前账号。成功 code=0，失败不保留部分写入；同 ID 不同内容拒绝。
+
+### POST /api/file/usage（登录）
+
+请求 `{id}`。仅可查询本人或公共活动文件。返回 `{kind,id,title}[]`；他人记录的 id/title 为空，避免共享图库泄露私有名称。kind 为 icon/wallpaper/avatar/module/site/reference。
+
+### POST /api/file/replace（登录）
+
+请求 `{id,replacementId}`。源文件须属于调用者，目标须为本人或公共活动文件，两 ID 不同。事务内替换本人引用；管理员额外替换站点配置。原文件保留；跨用户引用不变。
+
+### 既有接口行为修正
+
+- 验证码 width 限 80–320、height 限 30–120，越界回落 120×40 对应维度；独立每 IP 每分钟 30 次限流。
+- 用户角色编辑/删除无法移除最后一个启用管理员（1201）。
+- 密码更新/登出不得在 session 撤销失败时报告成功。
+- Docker 请求最长 30 秒，输出最多 2 MiB；超时需刷新核实状态，不自动重试变更。
+- 导航编辑/批量新增拒绝脚本、data、file 等非 HTTP(S) 协议。

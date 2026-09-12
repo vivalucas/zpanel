@@ -152,3 +152,11 @@ go run main.go
 | 2026-06-04 | 补充 Docker 管理页 socket group 配置说明 | 仅宿主机安装 Docker 不代表 ZPanel 容器有权限访问 Docker socket |
 | 2026-05-20 | 补充 Docker 应用管理的部署权限说明 | Docker 管理功能需要访问宿主机 Docker |
 | 2026-05-20 | 初始化部署文档 | fork 后记录当前部署形态 |
+
+## 2026-09-12 代理与验收补充
+
+反代部署需在 `conf/conf.ini` 的 `[base]` 设置 `trusted_proxies`，填实际受控代理的 IP/CIDR，逗号分隔；留空不信任 X-Forwarded-For。不要使用全网 CIDR。修改后重启，并从两个客户端核查登录限流不会共用代理 IP。代理自身必须正确覆盖转发头，避免让客户端控制可信链。
+
+本轮新增 import_receipt 表由 AutoMigrate 创建；升级前仍应备份 conf/data。`.zpanel.json` 只保存配置，不替代完整目录备份。
+
+资源写入互斥目前针对一个 ZPanel 进程，未宣称支持多副本共享数据库/上传目录的强一致性。真实 Docker、MySQL 和 Redis 部署仍需实机验收。

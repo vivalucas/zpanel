@@ -70,4 +70,4 @@ ZPanel fork 自 [Sun-Panel](https://github.com/hslr-s/sun-panel)。原项目采�
 - 优先保障 ZPanel 新版本可部署、可回滚；旧 Sun-Panel 数据迁移不作为初期目标。
 - 任何涉及数据库结构、API 行为、认证权限的改动，都必须同步更新 project-log 对应文档。
 - Docker 管理功能只面向管理员，并且必须明确提示部署环境需要 Docker CLI / Docker socket 权限。
-- `project-log/` 是本地开发知识库，必须整体保持在 Git 忽略范围内，不随 GitHub 仓库发布。
+- `project-log/` 是开发知识库，当前已经由 Git 跟踪。早期仅本地忽略的要求属于历史方案；2026-09-12 按实际仓库状态修正文档，本轮不改变跟踪规则。

@@ -4,6 +4,28 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.1.8 - 2026-09-12
+
+### Security and Reliability
+
+- Bound captcha dimensions and request rates; added explicit trusted reverse-proxy configuration.
+- Preserve an active administrator and make password updates and session revocation atomic.
+- Protect referenced uploads from deletion, reject deleted local image references, and allow private usage inspection and replacement of the current user's references.
+- Import configuration in one transaction with request idempotency and validation; abort incomplete exports.
+- Reject unsafe navigation URLs, bound Docker command time/output, and improve favicon resolution after redirects.
+
+### User Experience
+
+- Added import previews, conflict notices and safe retry behavior; preserved unsaved wallpaper and search settings after failures.
+- Added Docker operation confirmations and per-container pending states.
+
+### Deployment
+
+- Clarified configuration sources, persistent data, proxy setup, upgrades and complete backup/restore procedures in Chinese and English.
+- Removed misleading Docker root fallback and destructive environment-file replacement instructions.
+- Default deployment remains one instance with SQLite. Ubuntu hardware deployment and recovery, real Docker operations, and MySQL/Redis integration were not revalidated for this release.
+- Back up configuration and data before upgrading; configuration JSON exports do not include uploaded files.
+
 ## 1.1.7 - 2026-06-18
 
 ### Bug Fixes

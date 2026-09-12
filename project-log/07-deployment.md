@@ -10,105 +10,16 @@
 
 ## 部署步骤
 
-### 前置条件
+用户操作以 [中文安装指南](../README.zh-CN.md#ubuntu-局域网部署推荐)、[中文配置与运维参考](../docs/deployment.zh-CN.md) 和 [English operations](../docs/deployment.md) 为准，避免复制多份已失配的命令。
 
-- Node.js 24.15.0 与 pnpm 11.1.3，用于构建前端。
-- Go 1.26.3，用于构建后端。
-- SQLite 默认无需额外服务；如使用 MySQL / Redis，需要提前准备对应服务。
-- Docker 部署需要 Docker / Docker Compose。
-- 如果启用 Docker 应用管理，需要后端运行环境能够执行 `docker` 命令；容器部署时通常还需要挂载 `/var/run/docker.sock`。
-
-### Docker 部署流程
-
-当前默认镜像：
-
-```text
-vivalucas/zpanel:latest
-ghcr.io/vivalucas/zpanel:latest
-```
-
-1.0.0 发布镜像：
-
-```text
-vivalucas/zpanel:1.0.0
-ghcr.io/vivalucas/zpanel:1.0.0
-```
-
-```bash
-docker compose up -d
-```
-
-默认挂载目录：
-
-```text
-./conf     → /app/conf
-./data     → /app/data
-```
-
-如需在 ZPanel 内管理宿主机 Docker 容器，需要额外挂载 Docker socket：
-
-```yaml
-volumes:
-  - /var/run/docker.sock:/var/run/docker.sock
-```
-
-Linux 主机上 Docker socket 通常归属于 `docker` 组。容器内进程如果没有该组权限，页面仍会提示无法连接 Docker。推荐在 `docker-compose.yml` 中同时启用 `group_add`：
-
-```bash
-echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" > .env
-docker compose up -d
-```
-
-```yaml
-services:
-  zpanel:
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    group_add:
-      - "${DOCKER_GID}"
-```
-
-> 该挂载权限较高，等同于允许 ZPanel 管理宿主机 Docker。只应在可信部署环境中启用，并确保管理员账号安全。
-
-默认端口：
-
-```text
-6521:6521
-```
-
-健康检查：
-
-```text
-GET /api/healthz
-```
-
-### 二进制部署流程
-
-```bash
-pnpm install
-pnpm run build
-
-cd service
-go build -o zpanel --ldflags="-X zpanel/global.RUNCODE=release" main.go
-```
-
-部署时需要保证：
-
-- 前端构建产物放在后端运行目录的 `web/` 下。
-- 配置文件在 `conf/` 下。
-- 上传目录、数据库目录有写权限。
-
-### 回滚方案
-
-```bash
-# Docker 场景：切回上一镜像 tag
-docker compose down
-docker compose up -d
-
-# 二进制场景：恢复上一版 zpanel 二进制、web 目录和数据库备份
-```
-
-> 回滚前必须备份 `database/`、`uploads/` 和 `conf/`。
+- 发布目标：`vivalucas/zpanel:1.1.8`、`ghcr.io/vivalucas/zpanel:1.1.8`，以及两处 `latest`；具体发布状态以工作流结果为准。
+- 默认 Docker 挂载 `./conf:/app/conf`、`./data:/app/data`，使用 SQLite 与 memory 缓存/队列；不需要安装前端或 Go 工具链。
+- 仓库 Compose 默认绑定 `127.0.0.1:6521:6521`，适合宿主机反代；中文指南明确绑定局域网 IP，且要求变量非空。
+- Compose 与 `.env` 修改用 `up -d` 重新创建；INI 修改用 `restart`；前端环境变量是构建配置，不是容器运行时 INI 覆盖。
+- Docker socket 可选，保留数据挂载，设置实际 GID 的 `group_add`；不要覆盖 `.env` 或用 `user: 0:0` 规避入口降权。
+- 完整备份需停机归档 conf/data 与部署配置；恢复到干净目录并匹配旧镜像。启动会 AutoMigrate，不能宣称任意降级兼容。
+- 自定义路径需要额外持久化和权限；MySQL 独立备份。backups_path 只预留目录，不代表已有自动备份任务。
+- 二进制包只提供 Linux amd64，需匹配运行库、固定工作目录和可写 conf/data/lang；默认推荐容器。
 
 ## CI/CD
 

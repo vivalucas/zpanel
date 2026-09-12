@@ -594,3 +594,11 @@ A 评审（发现） → B 验证 + 修复确认项 + 评审（发现）
 验证通过：全量 Go 测试、相关包 race、前端回归脚本、type-check、lint、build、隔离 API 与浏览器联调。前端回归脚本已接入 CI。证据和清理见 06-dev-log.md 本日记录。
 
 仍待实机确认：Docker 权限与容器操作、MySQL/Redis 多实例行为。资源用途按需扫描与单进程写入互斥是当前明确取舍，非多副本一致性承诺。保留大 chunk 和非中英基线文案的长期待办。
+
+## 2026-09-12 部署文档专项复核
+
+**已确认并修订**：英文 root 备用方案不符合入口降权行为；覆盖 .env 会丢失配置；升级自动 prune 不利于回滚；旧镜像不保证兼容已迁移数据库；反代缺少 trusted_proxies；绑定变量需强制必填。补充默认持久化、自定义路径、外部数据库、备份目录不等于自动备份及浏览器本地数据边界。
+
+**自检依据**：Dockerfile、docker-entrypoint.sh、配置模板、storage 路径读取、AutoMigrate、router 与 Docker 官方安装/Compose 插值/镜像清理文档。
+
+**待确认**：Ubuntu 实机重建与恢复、Docker socket、MySQL/Redis 集成；用户明确本轮不做实机。发布流水线结果单独记录，不能等同于运行时验收。

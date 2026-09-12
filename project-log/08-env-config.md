@@ -58,7 +58,7 @@
 | `storage.cache_path` | `./data/runtime/cache` | favicon、缩略图等可再生成缓存 |
 | `storage.logs_path` | `./data/runtime/logs` | 运行日志 |
 | `sqlite.file_path` | `./data/database/zpanel.db` | SQLite 数据库 |
-| `backup.path` | `./data/backups` | 手动 / 定时备份 |
+| `storage.backups_path` | `./data/backups` | 备份目录预留，未实现自动定时任务 |
 
 目录原则：
 
@@ -87,8 +87,8 @@
 
 | 项目 | 当前值 | 来源 |
 |------|--------|------|
-| 产品版本 | `1.1.4` | `service/assets/version` 与 `package.json` |
-| 后端版本源 | `1|1.1.4` | `service/assets/version` |
+| 产品版本 | `1.1.8` | `service/assets/version` 与 `package.json` |
+| 后端版本源 | `1|1.1.8` | `service/assets/version` |
 | 健康检查 | `GET /api/healthz` | `service/router/router.go` |
 | 默认 HTTP 端口 | `6521` | `service/assets/conf.example.ini` |
 
@@ -136,3 +136,7 @@ go run main.go
 `[base] trusted_proxies`：逗号分隔受控反向代理的 IP/CIDR；默认空。示例仅用于说明：`127.0.0.1,192.0.2.10/32`，应替换为真实代理地址。无效值启动时明确报错，不回退到信任所有代理。生效需重启。
 
 Docker 操作固定 30 秒上下文超时、2 MiB 输出限制；验证码固定安全尺寸范围和独立 IP 限额，本轮未增加额外环境变量。
+
+## 2026-09-12 部署配置边界
+
+完整用户说明见 docs/deployment.zh-CN.md 与 docs/deployment.md。运行时 `conf/conf.ini` 与 Compose `.env` 分工独立；INI 修改重启，Compose 修改重建。data_path 不覆盖已显式配置的子路径，sqlite.file_path 独立；容器外路径需新增挂载和写权限。默认 conf/data 挂载覆盖 SQLite 与上传文件；外部 MySQL、浏览器本地存储不在此备份内。

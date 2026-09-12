@@ -87,7 +87,7 @@ For a complete, copy-and-paste Ubuntu LAN deployment walkthrough—including Doc
 
 The example below is intentionally bound to `127.0.0.1` for reverse-proxy deployments. It is **not reachable from another device on your LAN**. For direct LAN access, bind the published port to the Ubuntu host's actual LAN IP, for example `192.168.1.50:6521:6521`; replace that address with your own.
 
-Create a `docker-compose.yml` file:
+Create an empty deployment directory, enter it, and create a `docker-compose.yml` file. Run all following Compose commands from that directory:
 
 ```yaml
 services:
@@ -137,7 +137,7 @@ Version tags create GitHub Releases with release notes, Linux amd64 deployment p
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
 
-`latest` points to the most recently published stable image. If you need repeatable rollbacks, use an explicit version tag such as `vivalucas/zpanel:1.1.4`.
+`latest` points to the most recently published stable image. If you need repeatable rollbacks, use an explicit version tag such as `vivalucas/zpanel:1.1.8`.
 
 Health check endpoint:
 
@@ -162,9 +162,11 @@ http://your-zpanel-host/?safeMode=1
 
 Safe mode skips custom CSS and custom JavaScript for the current page load, so you can sign in and remove a broken customization from settings. `?zpanelSafeMode=1` is also supported.
 
+See [Configuration, persistence, upgrades and recovery](docs/deployment.md) before customizing paths or upgrading. Pushing `main` does not publish images; check the [container workflow](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml) for completion.
+
 ### Docker Management
 
-Docker management is optional. If ZPanel runs inside a container and you want it to manage host containers, mount the Docker socket:
+Docker management is optional. If ZPanel runs inside a container and you want it to manage host containers, edit the existing service as follows. Keep both persistent directory mounts:
 
 ```yaml
 services:
@@ -172,23 +174,19 @@ services:
     group_add:
       - "${DOCKER_GID}"
     volumes:
+      - ./conf:/app/conf
+      - ./data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
 ```
 
 On most Linux hosts, the socket is owned by the host Docker group. Set `DOCKER_GID` before starting the container:
 
 ```bash
-echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" > .env
-docker compose up -d
+stat -c '%g' /var/run/docker.sock
+nano .env
 ```
 
-If your environment cannot use `group_add`, the less isolated fallback is to run the container as root:
-
-```yaml
-services:
-  zpanel:
-    user: "0:0"
-```
+Add or update `DOCKER_GID=<the number printed above>` in `.env`, preserving other settings. Then run `docker compose up -d`. Use `sudo` for Docker commands if required on your host. Do not use `user: "0:0"` as a workaround: the image entrypoint always drops privileges to the `zpanel` user.
 
 The official image includes `docker-cli`, and Docker management works by running `docker` commands inside the container against the mounted host socket. This gives ZPanel high-level control over Docker on the host. Only enable it in a trusted environment and keep the administrator account secure.
 

@@ -73,6 +73,8 @@ ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放�
 
 下面是一套可以直接照着操作的部署流程。目标是把 ZPanel 部署到一台局域网内的 Ubuntu 设备，并让手机、电脑等同一局域网设备通过 `http://Ubuntu设备IP:6521` 访问。
 
+配置与持久化的完整说明见 [部署配置与运维参考](docs/deployment.zh-CN.md)。
+
 本文使用 Docker Compose 部署，默认使用内置 SQLite，不需要另外安装数据库。Docker 镜像同时提供 Linux `amd64`（常见 PC、迷你主机）和 `arm64`（部分 ARM 开发板、NAS）版本。
 
 > 如果 Ubuntu 设备有公网 IP 或路由器做了端口转发，请不要把 `6521` 端口直接暴露到互联网。公网访问应使用反向代理、HTTPS 和额外的访问控制；本文只讲可信局域网内的直接访问。
@@ -100,7 +102,7 @@ sudo docker --version
 sudo docker compose version
 ```
 
-两条命令都能正常显示版本号时，直接跳到第 3 步。全新 Ubuntu 可按 [Docker 官方 Ubuntu 安装文档](https://docs.docker.com/engine/install/ubuntu/) 添加官方软件源并安装：
+两条命令都能正常显示版本号时，再用 `sudo docker info` 确认服务可连接，然后跳到第 3 步。若只有 Docker 而没有 Compose，先按官方文档补装 Compose 插件，不要直接混装已有发行版 Docker 软件包。最小化系统还需安装编辑器：`sudo apt install -y nano`。全新 Ubuntu 可按 [Docker 官方 Ubuntu 安装文档](https://docs.docker.com/engine/install/ubuntu/) 添加官方软件源并安装：
 
 ```bash
 sudo apt update
@@ -189,7 +191,7 @@ services:
       - ./conf:/app/conf
       - ./data:/app/data
     ports:
-      - "${ZPANEL_BIND_IP}:6521:6521"
+      - "${ZPANEL_BIND_IP:?请先在.env设置局域网IP}:6521:6521"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:6521/api/healthz"]
       interval: 30s
@@ -226,8 +228,10 @@ sudo docker compose logs -f --tail=100 zpanel
 先在 Ubuntu 本机验证健康接口，注意仍要替换 IP：
 
 ```bash
-curl http://192.168.1.50:6521/api/healthz
+curl --fail --show-error --connect-timeout 5 --max-time 10 http://192.168.1.50:6521/api/healthz
 ```
+
+应返回 `{"status":"ok"}`。这只验证 HTTP 服务；还需登录、创建导航项、上传图片，再重建容器确认数据保留。
 
 再在同一局域网内的电脑或手机浏览器打开：
 
@@ -261,7 +265,7 @@ ip -br -4 addr show scope global
 - `.env` 中写成了 `127.0.0.1`、写错了 IP，或 Ubuntu 的 DHCP 地址已经变化。修改后执行 `sudo docker compose up -d` 重新创建容器。
 - 访问设备和 Ubuntu 不在同一网段，或无线路由器启用了 AP / 客户端隔离、访客网络隔离。
 - 路由器、云安全组或宿主机的额外防火墙拦截了 TCP `6521`。
-- 端口已被其他程序占用。用 `sudo ss -lntp | grep 6521` 检查；必要时把 Compose 中左侧端口改成其他端口，例如 `"${ZPANEL_BIND_IP}:8080:6521"`，然后访问 `http://IP:8080`。
+- 端口已被其他程序占用。用 `sudo ss -lntp | grep 6521` 检查；必要时把 Compose 中左侧端口改成其他端口，例如 `"${ZPANEL_BIND_IP:?请先在.env设置局域网IP}:8080:6521"`，然后访问 `http://IP:8080`。
 
 特别注意：[Docker 官方防火墙文档](https://docs.docker.com/engine/network/packet-filtering-firewalls/#docker-and-ufw)说明，Docker 发布的容器端口可能绕过 UFW 的常规规则。因此，不要只依赖 `sudo ufw allow/deny 6521` 判断暴露范围。本文通过绑定具体局域网 IP 来缩小监听范围；有更严格隔离需求时，请在路由器、防火墙或 Docker 的 `DOCKER-USER` 链中设置来源网段规则。
 
@@ -292,51 +296,71 @@ sudo docker compose up -d
 
 ### 升级和固定版本
 
-升级到最新稳定镜像：
+重要环境建议固定版本：
+
+```yaml
+image: vivalucas/zpanel:1.1.8
+```
+
+`latest` 跟随最近一次成功发布的镜像；推送 GitHub `main` 不会自动更新镜像。发布是否完成请查看 [Releases](https://github.com/vivalucas/zpanel/releases) 和 [容器发布任务](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml)。GHCR 可作为另一个官方拉取渠道：`ghcr.io/vivalucas/zpanel:1.1.8`。
+
+升级按以下顺序操作：
+
+1. 在原部署目录记录当前版本、镜像 ID 和摘要，并保留旧镜像：`sudo docker inspect zpanel --format '{{.Config.Image}} {{.Image}}'`；`sudo docker image inspect "$(sudo docker inspect zpanel --format '{{.Image}}')" --format '{{json .RepoDigests}}'`。可用 `sudo docker image tag "$(sudo docker inspect zpanel --format '{{.Image}}')" zpanel:before-upgrade` 保存本次升级前的本地镜像；下一次升级会覆盖这个本地标签，应同时留存版本/摘要记录。
+2. 按下一节停机备份，确认归档能列出内容，再修改 Compose 的镜像版本。
+3. 执行以下命令：
 
 ```bash
 cd ~/zpanel
-sudo docker compose pull
-sudo docker compose up -d
-sudo docker image prune -f
+sudo docker compose config --quiet && sudo docker compose pull && sudo docker compose up -d
+sudo docker compose ps
+sudo docker compose logs --tail=100 zpanel
 ```
 
-`latest` 会跟随最新稳定版本。生产或重要环境建议把镜像改成明确版本，例如：
+4. 等待 `healthy`，检查健康接口，登录确认导航、图片和配置。确认稳定前保留旧镜像及备份，不把宿主机级镜像清理加入自动升级步骤。
 
-```yaml
-image: vivalucas/zpanel:1.1.7
-```
+**回滚**：只在数据库兼容已确认时，仅切回旧镜像版本并重新启动。后端启动会自动迁移数据库，不能保证任意版本直接降级。需要完整回退时，使用升级前备份还原配置、数据库和图片，并指定记录下的旧镜像版本/摘要（或保留的 `zpanel:before-upgrade`），然后启动。完整恢复会丢失备份时间点之后的改动。
 
-需要回滚时，把版本号改回升级前的版本，再执行：
-
-```bash
-sudo docker compose pull
-sudo docker compose up -d
-```
-
-镜像也会发布到 `ghcr.io/vivalucas/zpanel:<version>`。GitHub Release 另有 Linux `amd64` 压缩包和 `SHA256SUMS`，但大多数 Ubuntu 用户仍推荐使用 Docker 镜像。
+GitHub Release 还提供 Linux `amd64` 压缩包和 `SHA256SUMS`；多数 Ubuntu 用户推荐 Docker。二进制包使用说明见 [运维参考](docs/deployment.zh-CN.md#二进制包)。
 
 ### 备份和恢复
 
-ZPanel 默认使用 SQLite。为避免复制数据库时仍有写入，建议短暂停机后备份整个 `conf` 和 `data`：
+以下适用于默认 SQLite 和默认存储路径。外部 MySQL、改到挂载之外的文件不在这个归档中，需单独备份。页面导出的 `.zpanel.json` 不包含上传图片，也不等同于全量备份。
+
+先停止服务，备份全部运行数据与部署配置；归档成功并检查后再启动：
 
 ```bash
 cd ~/zpanel
-sudo docker compose stop zpanel
-sudo tar -czf "$HOME/zpanel-backup-$(date +%F-%H%M%S).tar.gz" conf data compose.yaml .env
-sudo docker compose start zpanel
+backup_file="$HOME/zpanel-backup-$(date +%F-%H%M%S).tar.gz"
+sudo docker compose stop zpanel && \
+  sudo tar -czf "$backup_file" conf data compose.yaml .env && \
+  sudo tar -tzf "$backup_file" >/dev/null && \
+  sudo docker compose start zpanel
 ```
 
-恢复前先停止容器，并先保留当前目录副本。确认备份文件可信后，在 `~/zpanel` 中解压覆盖，再启动：
+若归档失败，服务可能保持停止；先查看磁盘空间和报错，修复后重新备份，或手动 `sudo docker compose start zpanel` 恢复服务。列出归档只验证可读性，不能替代恢复演练。备份包含账号数据库和可能的连接密码，应限制访问并复制到另一台设备；`data/backups` 目录本身不会自动生成定时备份。
+
+恢复时使用可信归档，先确认旧目录已停止服务，再保留整个旧目录，在干净目录还原：
 
 ```bash
 cd ~/zpanel
-sudo docker compose down
-sudo tar -xzf /你的备份文件路径/zpanel-backup-日期.tar.gz -C ~/zpanel
-sudo docker compose up -d
+sudo docker compose down && \
+  cd "$HOME" && \
+  mv zpanel "zpanel-before-restore-$(date +%F-%H%M%S)" && \
+  mkdir zpanel && \
+  sudo tar -xzf /你的备份文件路径/zpanel-backup-日期.tar.gz -C "$HOME/zpanel"
+cd ~/zpanel
 ```
 
-升级前、修改 `conf/conf.ini` 前都建议先备份。
+启动前用 `nano .env` 确认绑定 IP 在当前服务器存在，并编辑 `compose.yaml` 指定与备份匹配的旧镜像版本/摘要，尤其不要让备份中的 `latest` 自动选择新版本。然后执行：
+
+```bash
+sudo docker compose config --quiet && sudo docker compose up -d
+sudo docker compose ps
+sudo docker compose logs --tail=100 zpanel
+```
+
+验证登录、导航和图片后再处理保留的旧目录。升级前、修改 `conf/conf.ini` 前都应备份。
 
 ### 忘记管理员密码
 
@@ -369,8 +393,11 @@ http://192.168.1.50:6521/?safeMode=1
 
 ```bash
 cd ~/zpanel
-echo "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" | sudo tee -a .env
+stat -c '%g' /var/run/docker.sock
+nano .env
 ```
+
+在 `.env` 中新增或更新一行 `DOCKER_GID=上面输出的数字`，保留原有 IP 和时区配置，不重复添加同名键。
 
 然后在 `compose.yaml` 的 `zpanel` 服务中增加 `group_add`，并在原有 `volumes` 下增加 socket 挂载：
 

@@ -11,7 +11,8 @@ func InitUserConfig(router *gin.RouterGroup) {
 	api := api_v1.ApiGroupApp.ApiPanel.UserConfig
 	r := router.Group("", middleware.LoginInterceptor)
 	{
-		r.POST("/panel/userConfig/set", api.Set)
+		r.POST("/panel/userConfig/set", middleware.ResourceMutation, api.Set)
+		r.POST("/panel/userConfig/import", middleware.ResourceMutation, api.Import)
 	}
 
 	// 公开模式

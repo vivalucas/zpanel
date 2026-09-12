@@ -10,7 +10,7 @@ import (
 func InitModuleConfigRouter(router *gin.RouterGroup) {
 	api := api_v1.ApiGroupApp.ApiSystem.ModuleConfigApi
 	r := router.Group("", middleware.LoginInterceptor)
-	r.POST("/system/moduleConfig/save", api.Save)
+	r.POST("/system/moduleConfig/save", middleware.ResourceMutation, api.Save)
 
 	// 公开模式
 	rPublic := router.Group("", middleware.PublicModeInterceptor)

@@ -3,6 +3,7 @@ package siteFavicon
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -52,7 +53,11 @@ func GetFaviconURLs(urlStr string) ([]string, error) {
 			fullURLs = append(fullURLs, v)
 			continue
 		}
-		fullURLs = append(fullURLs, urlInfo.Scheme+"://"+urlInfo.Host+"/"+strings.TrimPrefix(v, "/"))
+		reference, err := url.Parse(v)
+		if err != nil {
+			continue
+		}
+		fullURLs = append(fullURLs, urlInfo.ResolveReference(reference).String())
 	}
 	return fullURLs, nil
 }
@@ -96,7 +101,19 @@ func getFaviconURL(url string) ([]string, error) {
 		return icons, errors.New("HTTP request failed with status code " + strconv.Itoa(resp.StatusCode))
 	}
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 2*1024*1024+1))
+	if err != nil {
+		return icons, err
+	}
+	if len(body) > 2*1024*1024 {
+		return icons, errors.New("page too large")
+	}
+	return parseIcons(resp.Request.URL, body)
+}
+
+func parseIcons(baseURL *url.URL, body []byte) ([]string, error) {
+	icons := []string{}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 	if err != nil {
 		return icons, err
 	}
@@ -108,7 +125,10 @@ func getFaviconURL(url string) ([]string, error) {
 
 		if strings.Contains(rel, "icon") && href != "" {
 			// fmt.Println(href)
-			icons = append(icons, href)
+			ref, parseErr := baseURL.Parse(href)
+			if parseErr == nil && len(icons) < 20 {
+				icons = append(icons, ref.String())
+			}
 		}
 	})
 

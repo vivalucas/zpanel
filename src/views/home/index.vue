@@ -8,6 +8,7 @@ import { SvgIcon } from '@/components/common'
 import { deletes, getListByGroupId, saveSort } from '@/api/panel/itemIcon'
 import { getList as getGroupList } from '@/api/panel/itemIconGroup'
 
+import { isSafeNavigationUrl } from '@/utils/navigation'
 import { openExternalUrl, setTitle, updateLocalUserInfo } from '@/utils/cmn'
 import { useAuthStore, usePanelState } from '@/store'
 import { PanelPanelConfigStyleEnum, PanelStateNetworkModeEnum } from '@/enums'
@@ -90,6 +91,11 @@ function backTopListenTarget() {
 }
 
 function openPage(openMethod: number, url: string, title?: string) {
+  if (!isSafeNavigationUrl(url)) {
+    ms.error(t('review.invalidUrl'))
+    return
+  }
+
   switch (openMethod) {
     case 1:
       window.location.href = url

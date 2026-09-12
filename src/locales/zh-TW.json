@@ -109,7 +109,7 @@
       "selectExportData": "请选择要导出的配置数据",
       "selectImportData": "请选择要导入的配置数据",
       "softwareVersionLow": "当前软件版本可能过旧，很有可能无法兼容该配置文件，请谨慎导入。推荐将软件更新到新版后再次导入",
-      "tip": "导入图标配置数据不会清空现有图标数据",
+      "tip": "导入前查看预览，并选择追加或覆盖现有图标。",
       "warnConfigFileLow": "配置文件版本过低，但是兼容"
     },
     "itemGroupManage": {
@@ -320,5 +320,33 @@
   "debug": {
     "exportJson": "导出 JSON",
     "jsonData": "JSON 数据"
+  },
+  "review": {
+    "importSize": "配置文件不能超过 5 MiB。",
+    "importRetry": "请求未完成。可重试本次导入，不会重复创建已提交的数据。",
+    "configOnly": "这是配置导出，不包含上传图片。跨服务器迁移时请同时备份 conf 和 data。",
+    "backupGuide": "完整备份与恢复说明",
+    "importPreview": "待导入 {groups} 个分组、{items} 个图标；与现有分组重名 {conflicts} 个。",
+    "importModeHelp": "追加会新建分组（包括重名分组）；覆盖会替换当前账号的所有分组和图标。样式仅在勾选时更新。",
+    "append": "追加",
+    "replace": "覆盖",
+    "replaceWarning": "覆盖会删除当前账号已有的全部分组和图标。请先导出备份。",
+    "dockerVerify": "请求未完成，请刷新核实容器实际状态后再操作。",
+    "dockerConfirm": "确认对容器“{name}”执行“{action}”？服务会中断；操作 ZPanel 自身会使当前页面断开。",
+    "unsaved": "有尚未保存的更改，请重试。",
+    "retry": "重试保存",
+    "invalidUrl": "请输入有效的 HTTP(S) 地址，不支持脚本或 data 地址。",
+    "usage": "正在使用此图片的位置",
+    "unused": "未发现引用，可以删除。",
+    "privateUsage": "账号配置（不显示私有详情）",
+    "replaceHelp": "选择当前页的另一张图片，替换当前账号的引用；其他账号的引用保持不变。管理员也会替换站点设置中的引用。",
+    "replaceUsage": "替换我的引用",
+    "replaced": "引用已替换，请刷新页面查看。原图片仍保留。",
+    "usage_icon": "导航图标",
+    "usage_wallpaper": "面板配置",
+    "usage_avatar": "头像",
+    "usage_module": "组件配置",
+    "usage_site": "站点配置",
+    "usage_reference": "资源引用"
   }
 }

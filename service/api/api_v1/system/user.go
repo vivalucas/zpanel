@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"gorm.io/gorm"
 )
 
 type UserApi struct{}
@@ -124,15 +125,17 @@ func (a *UserApi) UpdatePasssword(c *gin.Context) {
 		apiReturn.ErrorParamFomat(c, hashErr.Error())
 		return
 	}
-	res := global.Db.Model(&models.User{}).Where("id=?", userInfo.ID).Updates(map[string]interface{}{
-		"password_hash": passwordHash,
+	err = global.Db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.User{}).Where("id=?", userInfo.ID).Update("password_hash", passwordHash).Error; err != nil {
+			return err
+		}
+		return tx.Model(&models.Session{}).Where("user_id=? AND revoked_at IS NULL", userInfo.ID).Update("revoked_at", time.Now()).Error
 	})
-	if res.Error != nil {
-		apiReturn.ErrorDatabase(c, res.Error.Error())
+	if err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
-	now := time.Now()
-	_ = global.Db.Model(&models.Session{}).Where("user_id=? AND revoked_at IS NULL", userInfo.ID).Update("revoked_at", now).Error
+
 	global.UserToken.Flush()
 	apiReturn.Success(c)
 }

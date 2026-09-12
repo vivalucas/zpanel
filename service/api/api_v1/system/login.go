@@ -108,10 +108,10 @@ func (l LoginApi) CaptchaImage(c *gin.Context) {
 		apiReturn.ErrorParamFomat(c, "captcha id is required")
 		return
 	}
-	if width <= 0 {
+	if width < 80 || width > 320 {
 		width = 120
 	}
-	if height <= 0 {
+	if height < 30 || height > 120 {
 		height = 40
 	}
 	imageData := captcha.GenerateCaptchaHandler(id, width, height)
@@ -129,9 +129,12 @@ func (l *LoginApi) Logout(c *gin.Context) {
 	rawToken := c.GetHeader("token")
 	if rawToken != "" {
 		now := time.Now()
-		_ = global.Db.Model(&models.Session{}).
+		if err := global.Db.Model(&models.Session{}).
 			Where("token_hash = ? AND revoked_at IS NULL", models.HashToken(rawToken)).
-			Update("revoked_at", now).Error
+			Update("revoked_at", now).Error; err != nil {
+			apiReturn.ErrorDatabase(c, err.Error())
+			return
+		}
 		global.UserToken.Delete(rawToken)
 	}
 	apiReturn.Success(c)

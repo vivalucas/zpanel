@@ -20,7 +20,8 @@
     "lint:fix": "eslint . --fix",
     "bootstrap": "pnpm install --frozen-lockfile && pnpm run common:prepare",
     "common:cleanup": "rimraf node_modules && rimraf pnpm-lock.yaml",
-    "common:prepare": "husky install"
+    "common:prepare": "husky install",
+    "test:review": "node scripts/review-tests.mjs"
   },
   "dependencies": {
     "@traptitech/markdown-it-katex": "^3.6.0",

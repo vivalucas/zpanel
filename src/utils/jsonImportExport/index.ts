@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js'
 import dayjs from 'dayjs'
+import { isSafeNavigationUrl } from '../navigation'
 
 const VERSION = 1 // 当前配置文件版本
 const ALLOW_LOW_VERSION = 1 // 最小支持的配置文件版本号
@@ -123,6 +124,8 @@ export function importJsonString(jsonString: string): ImportJsonResult | null {
     throw new FormatError('file format error')
   }
 
+  if (!data || typeof data !== 'object' || Array.isArray(data))
+    throw new FormatError('file format error')
   const jsonStruct = transformJson(data)
   const md5 = generateMD5(jsonString)
 
@@ -159,6 +162,31 @@ function transformJson(jsonData: Record<string, unknown>): JsonStructure | null 
       return null
   }
 
+  if (jsonData.appName !== APPNAME || !Number.isInteger(jsonData.version) || typeof jsonData.md5 !== 'string')
+    return null
+  if ('icons' in jsonData) {
+    if (!Array.isArray(jsonData.icons) || jsonData.icons.length > 500)
+      return null
+    let count = 0
+    for (const group of jsonData.icons) {
+      if (!group || typeof group.title !== 'string' || !group.title.trim() || !Number.isInteger(group.sort) || !Array.isArray(group.children))
+        return null
+      count += group.children.length
+      for (const item of group.children) {
+        if (!item || typeof item.title !== 'string' || !item.title.trim() || !Number.isInteger(item.sort)
+          || typeof item.url !== 'string' || !isSafeNavigationUrl(item.url)
+          || typeof item.lanUrl !== 'string' || (item.lanUrl && !isSafeNavigationUrl(item.lanUrl))
+          || ![1, 2, 3].includes(item.openMethod) || typeof item.description !== 'string'
+          || (item.icon !== null && (typeof item.icon !== 'object' || Array.isArray(item.icon))))
+          return null
+      }
+    }
+    if (count > 10000)
+      return null
+  }
+  if ('styleConfig' in jsonData && (!jsonData.styleConfig || typeof jsonData.styleConfig !== 'object' || Array.isArray(jsonData.styleConfig)))
+    return null
+
   // 使用类型断言将 JSON 数据转换为指定类型
   const transformedData: JsonStructure = jsonData as unknown as JsonStructure
 
@@ -191,4 +219,38 @@ function removeMD5Field(obj: Record<string, unknown>): void {
       return
     }
   }
+}
+
+interface ListResult<T> {
+  code: number
+  msg: string
+  data: { list: T[] }
+}
+
+// A backup is only successful when every selected group was read successfully.
+export async function collectIconGroups(
+  fetchGroups: () => Promise<ListResult<Panel.ItemIconGroup>>,
+  fetchItems: (id: number | undefined) => Promise<ListResult<Panel.ItemInfo>>,
+): Promise<IconGroup[]> {
+  const groups = await fetchGroups()
+  if (groups.code !== 0)
+    throw new Error(groups.msg)
+  return Promise.all(groups.data.list.map(async (group) => {
+    const items = await fetchItems(group.id)
+    if (items.code !== 0)
+      throw new Error(items.msg)
+    return {
+      title: group.title || '',
+      sort: group.sort ?? 99999,
+      children: items.data.list.map(item => ({
+        icon: item.icon,
+        sort: item.sort ?? 99999,
+        title: item.title,
+        url: item.url,
+        lanUrl: item.lanUrl || '',
+        description: item.description || '',
+        openMethod: item.openMethod || 1,
+      })),
+    }
+  }))
 }

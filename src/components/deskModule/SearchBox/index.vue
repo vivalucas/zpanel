@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NAvatar, NButton, NCheckbox, NInput, useMessage } from 'naive-ui'
+import { NAlert, NAvatar, NButton, NCheckbox, NInput, useMessage } from 'naive-ui'
 import { SvgIcon } from '@/components/common'
 import { useModuleConfig } from '@/store/modules'
 import { useAuthStore } from '@/store'
 import { VisitMode } from '@/enums/auth'
 import { openExternalUrl } from '@/utils/cmn'
 import { t } from '@/locales'
+import { isSafeNavigationUrl } from '@/utils/navigation'
 
 import SvgSrcBaidu from '@/assets/search_engine_svg/baidu.svg'
 import SvgSrcBing from '@/assets/search_engine_svg/bing.svg'
@@ -33,6 +34,8 @@ const moduleConfig = useModuleConfig()
 const authStore = useAuthStore()
 const ms = useMessage()
 const searchTerm = ref('')
+const unsaved = ref(false)
+const saving = ref(false)
 const isFocused = ref(false)
 const searchSelectListShow = ref(false)
 const newEngine = ref<DeskModule.SearchBox.SearchEngine>({
@@ -111,10 +114,24 @@ function handleEngineUpdate(engine: DeskModule.SearchBox.SearchEngine) {
   searchSelectListShow.value = false
 }
 
-function saveSearchState() {
-  moduleConfig.saveToCloud(moduleConfigName, state.value).catch(() => {
-    ms.error(t('common.serverError'))
-  })
+async function saveSearchState() {
+  unsaved.value = true
+  if (saving.value)
+    return
+  saving.value = true
+  const snapshot = JSON.stringify(state.value)
+  try {
+    const res = await moduleConfig.saveToCloud(moduleConfigName, JSON.parse(snapshot))
+    if (res.code !== 0)
+      throw new Error(res.msg)
+    unsaved.value = JSON.stringify(state.value) !== snapshot
+  }
+  catch {
+    ms.error(t('review.unsaved'))
+  }
+  finally {
+    saving.value = false
+  }
 }
 
 function addSearchEngine() {
@@ -122,6 +139,10 @@ function addSearchEngine() {
   const url = newEngine.value.url.trim()
   if (!title || !url)
     return
+  if (!/^https?:\/\//i.test(url) || !isSafeNavigationUrl(url)) {
+    ms.error(t('review.invalidUrl'))
+    return
+  }
   state.value.searchEngineList.push({
     iconSrc: newEngine.value.iconSrc.trim(),
     title,
@@ -145,6 +166,10 @@ function handleSearchClick() {
   const keyword = searchTerm
   // 如果网址中存在 %s，则直接替换为关键字
   const fullUrl = replaceOrAppendKeywordToUrl(url, keyword.value)
+  if (!isSafeNavigationUrl(fullUrl)) {
+    ms.error(t('review.invalidUrl'))
+    return
+  }
   handleClearSearchTerm()
   if (state.value.newWindowOpen)
     openExternalUrl(fullUrl)
@@ -183,7 +208,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="search-box w-full" @keydown.enter="handleSearchClick" @keydown.esc="handleClearSearchTerm">
+  <div class="search-box w-full" @keydown.enter="!$event.isComposing && handleSearchClick()" @keydown.esc="handleClearSearchTerm">
     <div class="search-container flex rounded-2xl items-center justify-center text-white w-full" :style="{ background, color: textColor }" :class="{ focused: isFocused }">
       <div class="search-box-btn-engine w-[40px] flex justify-center cursor-pointer" @click="handleEngineClick">
         <NAvatar :src="state.currentSearchEngine.iconSrc" style="background-color: transparent;" :size="20" />
@@ -199,8 +224,15 @@ onMounted(() => {
       </div>
     </div>
 
+    <NAlert v-if="unsaved" type="warning" class="mt-2">
+      {{ $t('review.unsaved') }}
+      <NButton size="tiny" :loading="saving" @click="saveSearchState">
+        {{ $t('review.retry') }}
+      </NButton>
+    </NAlert>
+
     <!-- 搜索引擎选择 -->
-    <div v-if="searchSelectListShow" class="w-full mt-[10px] rounded-xl p-[10px]" :style="{ background }">
+    <div v-if="searchSelectListShow" class="w-full mt-[10px] rounded-xl p-[10px]" :style="{ background }" @keydown.enter.stop>
       <div class="flex items-center">
         <div class="flex items-center">
           <div
@@ -228,6 +260,7 @@ onMounted(() => {
           </span>
         </NCheckbox>
       </div>
+
       <div class="mt-[10px] grid grid-cols-1 gap-2">
         <NInput v-model:value="newEngine.title" size="small" :placeholder="$t('deskModule.searchBox.engineNamePlaceholder')" />
         <NInput v-model:value="newEngine.url" size="small" :placeholder="$t('deskModule.searchBox.engineUrlPlaceholder')" />

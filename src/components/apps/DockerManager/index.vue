@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { h, onMounted, ref } from 'vue'
-import { NAlert, NButton, NButtonGroup, NDataTable, NInput, NModal, NTag, useMessage } from 'naive-ui'
+import { NAlert, NButton, NButtonGroup, NDataTable, NInput, NModal, NTag, useDialog, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { dockerAction, getDockerContainers, getDockerLogs, getDockerStats } from '@/api/system/systemMonitor'
 import { t } from '@/locales'
 
 const ms = useMessage()
+const dialog = useDialog()
+const pending = ref<string[]>([])
 const loading = ref(false)
 const containers = ref<System.DockerContainer[]>([])
 const stats = ref<Record<string, System.DockerStats>>({})
@@ -47,14 +49,35 @@ async function refresh() {
 }
 
 async function runAction(id: string, action: string) {
-  const res = await dockerAction(id, action)
-  if (res.code === 0) {
-    ms.success(t('common.success'))
-    refresh()
+  if (pending.value.includes(id))
+    return
+  pending.value.push(id)
+  try {
+    const res = await dockerAction(id, action)
+    if (res.code === 0) {
+      ms.success(t('common.success'))
+      await refresh()
+    }
+    else {
+      ms.error(res.msg)
+    }
   }
-  else {
-    ms.error(res.msg)
+  catch {
+    ms.error(t('review.dockerVerify'))
   }
+  finally {
+    pending.value = pending.value.filter(value => value !== id)
+  }
+}
+
+function confirmAction(row: System.DockerContainer, action: string) {
+  dialog.warning({
+    title: t('common.warning'),
+    content: t('review.dockerConfirm', { name: row.names, action: t(`apps.dockerManager.${action}`) }),
+    positiveText: t('common.confirm'),
+    negativeText: t('common.cancel'),
+    onPositiveClick: () => runAction(row.id, action),
+  })
 }
 
 async function openLogs(id: string) {
@@ -109,9 +132,9 @@ const columns: DataTableColumns<System.DockerContainer> = [
     render(row) {
       return h(NButtonGroup, {}, {
         default: () => [
-          h(NButton, { size: 'tiny', onClick: () => runAction(row.id, 'start') }, { default: () => t('apps.dockerManager.start') }),
-          h(NButton, { size: 'tiny', onClick: () => runAction(row.id, 'restart') }, { default: () => t('apps.dockerManager.restart') }),
-          h(NButton, { size: 'tiny', type: 'error', onClick: () => runAction(row.id, 'stop') }, { default: () => t('apps.dockerManager.stop') }),
+          h(NButton, { size: 'tiny', disabled: pending.value.includes(row.id) || row.state === 'running', onClick: () => runAction(row.id, 'start') }, { default: () => t('apps.dockerManager.start') }),
+          h(NButton, { size: 'tiny', loading: pending.value.includes(row.id), disabled: pending.value.includes(row.id), onClick: () => confirmAction(row, 'restart') }, { default: () => t('apps.dockerManager.restart') }),
+          h(NButton, { size: 'tiny', type: 'error', disabled: pending.value.includes(row.id) || row.state !== 'running', onClick: () => confirmAction(row, 'stop') }, { default: () => t('apps.dockerManager.stop') }),
           h(NButton, { size: 'tiny', onClick: () => openLogs(row.id) }, { default: () => t('apps.dockerManager.logs') }),
         ],
       })

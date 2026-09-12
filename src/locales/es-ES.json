@@ -109,7 +109,7 @@
       "selectExportData": "Select the configuration data to export",
       "selectImportData": "Select the configuration data to import",
       "softwareVersionLow": "The current software version may be too old and may not be compatible with this configuration file. It is recommended to update the software to the latest version before importing again.",
-      "tip": "Importing icon configuration data will not clear existing icon data",
+      "tip": "Preview the import and choose whether to append or replace existing items.",
       "warnConfigFileLow": "The configuration file version is too low but compatible"
     },
     "itemGroupManage": {
@@ -320,5 +320,33 @@
   "debug": {
     "exportJson": "Export JSON",
     "jsonData": "JSON data"
+  },
+  "review": {
+    "importSize": "Configuration files must be 5 MiB or smaller.",
+    "importRetry": "The request did not complete. Retry this import safely without duplicating committed data.",
+    "configOnly": "Configuration export does not include uploaded images. Back up conf and data when moving to another server.",
+    "backupGuide": "Full backup and restore guide",
+    "importPreview": "Import {groups} groups and {items} items; {conflicts} group names already exist.",
+    "importModeHelp": "Append creates new groups, including duplicate names. Replace replaces all your groups and items. Style changes only when selected.",
+    "append": "Append",
+    "replace": "Replace",
+    "replaceWarning": "Replace deletes all your existing groups and items. Export a backup first.",
+    "dockerVerify": "Request did not complete. Refresh to check container state before trying again.",
+    "dockerConfirm": "Run {action} on container “{name}”? Service will be interrupted. Operating on ZPanel itself disconnects this page.",
+    "unsaved": "Changes have not been saved. Please retry.",
+    "retry": "Retry save",
+    "invalidUrl": "Enter a valid HTTP(S) address. Script and data URLs are not supported.",
+    "usage": "Where this image is used",
+    "unused": "No references found. This image can be deleted.",
+    "privateUsage": "Account configuration (private details hidden)",
+    "replaceHelp": "Choose another image on this page to replace your references. Other accounts keep theirs. Administrators also replace site settings references.",
+    "replaceUsage": "Replace my references",
+    "replaced": "References replaced. Refresh to view changes. The original image is retained.",
+    "usage_icon": "Navigation icon",
+    "usage_wallpaper": "Panel settings",
+    "usage_avatar": "Avatar",
+    "usage_module": "Module settings",
+    "usage_site": "Site settings",
+    "usage_reference": "Resource reference"
   }
 }

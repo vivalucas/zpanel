@@ -1,7 +1,10 @@
 package system
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -28,14 +31,45 @@ type dockerContainer struct {
 	State   string `json:"state"`
 }
 
-func dockerCmd(args ...string) ([]byte, error) {
-	cmd := exec.Command("docker", args...)
+type boundedOutput struct {
+	bytes.Buffer
+	truncated bool
+}
+
+func (b *boundedOutput) Write(p []byte) (int, error) {
+	n := len(p)
+	remaining := 2*1024*1024 - b.Len()
+	if len(p) > remaining {
+		p = p[:remaining]
+		b.truncated = true
+	}
+	_, _ = b.Buffer.Write(p)
+	return n, nil
+}
+
+func dockerCmd(parent context.Context, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Env = append(cmd.Environ(), "LC_ALL=C")
-	return cmd.CombinedOutput()
+	cmd.WaitDelay = time.Second
+	output := &boundedOutput{}
+	cmd.Stdout, cmd.Stderr = output, output
+	err := cmd.Run()
+	if ctx.Err() != nil {
+		return []byte("Docker operation timed out or was cancelled; refresh to verify container state"), ctx.Err()
+	}
+	if output.truncated {
+		return []byte("Docker output exceeds 2 MiB; request fewer log lines"), fmt.Errorf("output too large")
+	}
+	if err != nil && output.Len() == 0 {
+		return []byte(err.Error()), err
+	}
+	return output.Bytes(), err
 }
 
 func (a *DockerApi) Containers(c *gin.Context) {
-	out, err := dockerCmd("ps", "-a", "--format", "{{json .}}")
+	out, err := dockerCmd(c.Request.Context(), "ps", "-a", "--format", "{{json .}}")
 	if err != nil {
 		apiReturn.Error(c, strings.TrimSpace(string(out)))
 		return
@@ -57,7 +91,7 @@ func (a *DockerApi) Containers(c *gin.Context) {
 }
 
 func (a *DockerApi) Stats(c *gin.Context) {
-	out, err := dockerCmd("stats", "--no-stream", "--format", "{{json .}}")
+	out, err := dockerCmd(c.Request.Context(), "stats", "--no-stream", "--format", "{{json .}}")
 	if err != nil {
 		apiReturn.Error(c, strings.TrimSpace(string(out)))
 		return
@@ -103,7 +137,7 @@ func (a *DockerApi) Action(c *gin.Context) {
 	if req.Action == "stop" {
 		args = []string{"stop", "--time", "10", req.ID}
 	}
-	out, err := dockerCmd(args...)
+	out, err := dockerCmd(c.Request.Context(), args...)
 	if err != nil {
 		apiReturn.Error(c, strings.TrimSpace(string(out)))
 		return
@@ -129,7 +163,7 @@ func (a *DockerApi) Logs(c *gin.Context) {
 		return
 	}
 
-	out, err := dockerCmd("logs", "--tail", strconv.Itoa(req.Lines), "--timestamps", req.ID)
+	out, err := dockerCmd(c.Request.Context(), "logs", "--tail", strconv.Itoa(req.Lines), "--timestamps", req.ID)
 	if err != nil {
 		apiReturn.Error(c, strings.TrimSpace(string(out)))
 		return

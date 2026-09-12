@@ -17,8 +17,10 @@ func InitFileRouter(router *gin.RouterGroup) {
 		private.POST("/file/uploadFiles", FileApi.UploadFiles)
 
 		private.POST("/file/getList", FileApi.GetList)
+		private.POST("/file/usage", FileApi.Usage)
+		private.POST("/file/replace", middleware.ResourceMutation, FileApi.Replace)
 		private.POST("/file/getPublicList", FileApi.GetPublicList)
-		private.POST("/file/deletes", FileApi.Deletes)
+		private.POST("/file/deletes", middleware.ResourceMutation, FileApi.Deletes)
 
 	}
 

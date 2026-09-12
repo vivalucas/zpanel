@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 
 	"zpanel/api/api_v1/middleware"
 	"zpanel/global"
@@ -16,7 +17,17 @@ import (
 
 func NewRouter() *gin.Engine {
 	router := gin.Default()
-	_ = router.SetTrustedProxies(nil)
+	var proxies []string
+	if global.Config != nil {
+		for _, value := range strings.Split(global.Config.GetValueString("base", "trusted_proxies"), ",") {
+			if value = strings.TrimSpace(value); value != "" {
+				proxies = append(proxies, value)
+			}
+		}
+	}
+	if err := router.SetTrustedProxies(proxies); err != nil {
+		panic("invalid trusted_proxies configuration: " + err.Error())
+	}
 	router.Use(middleware.SecurityHeaders)
 	rootRouter := router.Group("/")
 	routerGroup := rootRouter.Group("api")

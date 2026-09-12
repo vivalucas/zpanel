@@ -3,6 +3,7 @@ package panel
 import (
 	"encoding/json"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"net/url"
 	"strings"
 	"zpanel/api/api_v1/common/apiData/commonApiStructs"
@@ -10,6 +11,7 @@ import (
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/api/api_v1/common/base"
 	"zpanel/global"
+	"zpanel/lib/navigation"
 	"zpanel/lib/siteFavicon"
 	"zpanel/lib/storage"
 	"zpanel/models"
@@ -70,6 +72,14 @@ func (a *ItemIcon) Edit(c *gin.Context) {
 		return
 	}
 
+	if err := navigation.Validate(req.Url); err != nil {
+		apiReturn.Error(c, err.Error())
+		return
+	}
+	if err := navigation.Validate(req.LanUrl); err != nil {
+		apiReturn.Error(c, err.Error())
+		return
+	}
 	req.UserId = userInfo.ID
 
 	// json转字符串
@@ -102,7 +112,7 @@ func (a *ItemIcon) Edit(c *gin.Context) {
 	} else {
 		req.Sort = 9999
 		// 创建
-		if err := global.Db.Create(&req).Error; err != nil {
+		if err := global.Db.Omit(clause.Associations).Create(&req).Error; err != nil {
 			apiReturn.ErrorDatabase(c, err.Error())
 			return
 		}
@@ -127,6 +137,16 @@ func (a *ItemIcon) AddMultiple(c *gin.Context) {
 			apiReturn.ErrorParamFomat(c, "Group is mandatory")
 			return
 		}
+		if err := navigation.Validate(req[i].Url); err != nil {
+			apiReturn.Error(c, err.Error())
+			return
+		}
+		if err := navigation.Validate(req[i].LanUrl); err != nil {
+			apiReturn.Error(c, err.Error())
+			return
+		}
+		req[i].ID = 0
+		req[i].User = models.User{}
 		req[i].UserId = userInfo.ID
 		// json转字符串
 		if j, err := json.Marshal(req[i].Icon); err == nil {
@@ -143,7 +163,7 @@ func (a *ItemIcon) AddMultiple(c *gin.Context) {
 		return
 	}
 
-	if err := global.Db.Create(&req).Error; err != nil {
+	if err := global.Db.Omit(clause.Associations).Create(&req).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
@@ -295,13 +315,14 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 			candidateUrl = "http://" + candidateUrl
 		}
 		global.Logger.Debug("fullUrl:", candidateUrl)
-		// 去除图标的get参数
+		// 保留图片接口或签名 URL 必需的查询参数
 		parsedIcoURL, err := url.Parse(candidateUrl)
 		if err != nil {
 			lastErr = fmt.Errorf("parsed ico URL: %w", err)
 			continue
 		}
-		candidateUrl = parsedIcoURL.Scheme + "://" + parsedIcoURL.Host + parsedIcoURL.Path
+		parsedIcoURL.Fragment = ""
+		candidateUrl = parsedIcoURL.String()
 		global.Logger.Debug("fullUrl:", candidateUrl)
 
 		stored, err = storage.DownloadRemoteFile(candidateUrl, userInfo.ID, models.FilePurposeIcon, models.FileVisibilityPublic, 1024*1024, allowedFaviconExts())

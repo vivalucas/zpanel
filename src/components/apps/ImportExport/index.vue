@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { UploadFileInfo } from 'naive-ui'
-import { NAlert, NButton, NCheckbox, NCheckboxGroup, NDivider, NSpace, NUpload, useMessage } from 'naive-ui'
+import { NAlert, NButton, NCheckbox, NCheckboxGroup, NDivider, NRadioButton, NRadioGroup, NSpace, NUpload, useMessage } from 'naive-ui'
 import { RoundCardModal, SvgIcon } from '@/components/common'
 import type { IconGroup, ImportJsonResult } from '@/utils/jsonImportExport'
-import { ConfigVersionLowError, FormatError, exportJson, importJsonString } from '@/utils/jsonImportExport'
+import { ConfigVersionLowError, FormatError, collectIconGroups, exportJson, importJsonString } from '@/utils/jsonImportExport'
 import { get as getAbout } from '@/api/system/about'
-import { edit as addGroup, getList as getGroupList } from '@/api/panel/itemIconGroup'
-import { addMultiple as addMultipleIcons, getListByGroupId } from '@/api/panel/itemIcon'
-import { set as savePanelConfig } from '@/api/panel/userConfig'
+import { getList as getGroupList } from '@/api/panel/itemIconGroup'
+import { getListByGroupId } from '@/api/panel/itemIcon'
+import { post } from '@/utils/request'
+import { randomCode } from '@/utils/cmn'
 import { usePanelState } from '@/store'
 
 import { t } from '@/locales'
@@ -33,114 +34,19 @@ const importObj = ref<ImportJsonResult | null> (null)
 const importItems = ref<string[]>(['icons', 'style'])
 const checkedItems = ref<string[]>(['icons', 'style'])
 
-async function importIcons(): Promise<string | null> {
-  const groups = importObj.value?.geticons()
-  const batchSize = 50
-
-  if (!groups)
-    return null
-
-  try {
-    for (let i = 0; i < groups.length; i++) {
-      const element = groups[i]
-
-      const createGroupResponse = await addGroup<Panel.ItemIconGroup>({
-        title: element.title,
-        sort: element.sort,
-      })
-
-      if (createGroupResponse.code === 0) {
-        const groupId = createGroupResponse.data?.id
-
-        if (groupId) {
-          let addIcons: Panel.ItemInfo[] = []
-
-          for (let iconI = 0; iconI < element.children.length; iconI++) {
-            const iconElement = element.children[iconI]
-
-            addIcons.push({
-              title: iconElement.title,
-              sort: iconElement.sort,
-              icon: iconElement.icon,
-              url: iconElement.url,
-              lanUrl: iconElement.lanUrl,
-              description: iconElement.description,
-              openMethod: iconElement.openMethod,
-              itemIconGroupId: groupId,
-            })
-
-            if (addIcons.length === batchSize || iconI === element.children.length - 1) {
-              const response = await addMultipleIcons(addIcons)
-
-              if (response.code !== 0)
-                return response.msg
-
-              addIcons = []
-            }
-          }
-        }
-      }
-      else {
-        return createGroupResponse.msg
-      }
-    }
-
-    return null
-  }
-  catch (error) {
-    if (error instanceof Error)
-      return `${t('common.failed')}: ${error.message}`
-    else
-      return t('common.unknownError')
-  }
-}
+const importMode = ref('append')
+const importRequestId = ref('')
+const importAttempted = ref(false)
+const existingTitles = ref<string[]>([])
+const importGroups = computed(() => importObj.value?.geticons() || [])
+const importCount = computed(() => importGroups.value.reduce((count, group) => count + group.children.length, 0))
+const conflictCount = computed(() => importGroups.value.filter(group => existingTitles.value.includes(group.title)).length)
 
 async function exportIcons(): Promise<IconGroup[]> {
-  const { code, data } = await getGroupList<Common.ListResponse<ItemGroup[]>>()
-
-  if (code === 0) {
-    return Promise.all(data.list.map(async (element) => {
-      const group: IconGroup = {
-        title: element.title as string,
-        sort: element.sort ?? 99999,
-        children: [],
-      }
-
-      const res = await getListByGroupId<Common.ListResponse<Panel.ItemInfo[]>>(element.id)
-
-      if (res.code === 0) {
-        for (const iconElement of res.data.list) {
-          group.children.push({
-            icon: iconElement.icon,
-            sort: iconElement.sort || 99999,
-            title: iconElement.title,
-            url: iconElement.url,
-            lanUrl: iconElement.lanUrl || '',
-            description: iconElement.description || '',
-            openMethod: iconElement.openMethod || 1,
-          })
-        }
-      }
-
-      return group
-    }))
-  }
-  return []
-}
-
-async function importStyle(): Promise<string | null> {
-  const styleConfig = importObj.value?.getStyleConfig()
-  if (!styleConfig)
-    return null
-  try {
-    panelState.panelConfig = { ...panelState.panelConfig, ...styleConfig }
-    panelState.recordState()
-    const res = await savePanelConfig({ panel: panelState.panelConfig })
-    return res.code === 0 ? null : res.msg
-  }
-  catch {
-    return t('common.serverError')
-  }
+  return collectIconGroups(
+    () => getGroupList<Common.ListResponse<ItemGroup[]>>(),
+    id => getListByGroupId<Common.ListResponse<Panel.ItemInfo[]>>(id),
+  )
 }
 
 onMounted(() => {
@@ -173,6 +79,11 @@ function handleFileChange(options: { file: UploadFileInfo; fileList: Array<Uploa
       uploadLoading.value = false
       ms.error(`${t('common.failed')}: ${t('common.repeatLater')}`)
     }
+    if (options.file.file.size > 5 * 1024 * 1024) {
+      uploadLoading.value = false
+      ms.error(t('review.importSize'))
+      return
+    }
     reader.readAsText(options.file.file)
     return
   }
@@ -194,6 +105,16 @@ function importCheck() {
         if (!importObj.value.isPassCheckConfigVersionNew())
           importWarning.value.push(t('apps.exportImport.softwareVersionLow'))
 
+        importItems.value = ['icons', 'style'].filter(key => importObj.value?.hasProperty(key === 'style' ? 'styleConfig' : key))
+        checkedItems.value = [...importItems.value]
+        importRequestId.value = randomCode(32)
+        importAttempted.value = false
+        importMode.value = 'append'
+        existingTitles.value = []
+        getGroupList<Common.ListResponse<ItemGroup[]>>().then((res) => {
+          if (res.code === 0)
+            existingTitles.value = res.data.list.map(group => group.title || '')
+        }).catch(() => {})
         importRoundModalShow.value = true
       }
     }
@@ -237,44 +158,41 @@ async function handleStartExport() {
 
 async function handleStartImport() {
   loading.value = true
+  importAttempted.value = true
   try {
-    let hasError = false
-    if (checkedItems.value.includes('icons')) {
-      const errMsg = await importIcons()
-      if (errMsg !== null) {
-        hasError = true
-        ms.error(`${t('common.failed')}:${errMsg}`)
-      }
+    const res = await post({
+      url: '/panel/userConfig/import',
+      data: {
+        requestId: importRequestId.value,
+        mode: importMode.value,
+        ...(checkedItems.value.includes('icons') ? { icons: importGroups.value } : {}),
+        ...(checkedItems.value.includes('style') ? { panel: importObj.value?.getStyleConfig() } : {}),
+      },
+    })
+    if (res.code !== 0) {
+      ms.error(res.msg)
+      return
     }
-    if (checkedItems.value.includes('style')) {
-      const errMsg = await importStyle()
-      if (errMsg !== null) {
-        hasError = true
-        ms.error(`${t('common.failed')}:${errMsg}`)
-      }
-    }
-
-    if (!hasError) {
-      importRoundModalShow.value = false
-      ms.success(`${t('common.success')}, ${t('common.refreshPage')}`)
-    }
-    else {
-      ms.warning(`${t('common.failed')}: ${t('common.repeatLater')}`)
-    }
+    await panelState.updatePanelConfigByCloud()
+    importRoundModalShow.value = false
+    ms.success(`${t('common.success')}, ${t('common.refreshPage')}`)
   }
   catch {
-    ms.error(t('common.serverError'))
+    ms.error(t('review.importRetry'))
   }
   finally {
     loading.value = false
   }
 }
+
 </script>
 
 <template>
   <div class="zpanel-settings-page">
     <NAlert type="info" :bordered="false">
       <p>{{ $t('apps.exportImport.tip') }}</p>
+      <p>{{ $t('review.configOnly') }}</p>
+      <a href="https://github.com/vivalucas/zpanel/blob/main/README.zh-CN.md#备份和恢复" target="_blank" rel="noopener noreferrer">{{ $t('review.backupGuide') }}</a>
     </NAlert>
     <div class="flex justify-center m-[50px]">
       <div class="m-[10px]">
@@ -294,7 +212,7 @@ async function handleStartImport() {
         </NUpload>
       </div>
       <div class="m-[10px]">
-        <NButton size="large" @click="exportRoundModalShow = !exportRoundModalShow">
+        <NButton size="large" @click="importItems = ['icons', 'style']; checkedItems = [...importItems]; exportRoundModalShow = true">
           <template #icon>
             <SvgIcon icon="fa6:solid-file-export" />
           </template>
@@ -314,8 +232,23 @@ async function handleStartImport() {
         {{ $t('apps.exportImport.selectImportData') }}
       </NDivider>
 
+      <NAlert type="info" :bordered="false">
+        {{ $t('review.importPreview', { groups: importGroups.length, items: importCount, conflicts: conflictCount }) }}
+        <p>{{ $t('review.importModeHelp') }}</p>
+      </NAlert>
+      <NRadioGroup v-model:value="importMode" :disabled="importAttempted" class="mt-3">
+        <NRadioButton value="append">
+          {{ $t('review.append') }}
+        </NRadioButton>
+        <NRadioButton value="replace">
+          {{ $t('review.replace') }}
+        </NRadioButton>
+      </NRadioGroup>
+      <NAlert v-if="importMode === 'replace' && checkedItems.includes('icons')" type="warning" class="mt-3">
+        {{ $t('review.replaceWarning') }}
+      </NAlert>
       <NSpace justify="center" style="margin-top: 20px;">
-        <NCheckboxGroup v-model:value="checkedItems">
+        <NCheckboxGroup v-model:value="checkedItems" :disabled="importAttempted">
           <NCheckbox v-if="importItems.includes('icons')" value="icons" :label="$t('apps.exportImport.moduleIcon')" />
           <NCheckbox v-if="importItems.includes('style')" value="style" :label="$t('apps.exportImport.moduleStyle')" />
         </NCheckboxGroup>

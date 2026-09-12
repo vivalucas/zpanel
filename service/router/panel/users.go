@@ -12,10 +12,10 @@ func InitUsersRouter(router *gin.RouterGroup) {
 
 	rAdmin := router.Group("", middleware.LoginInterceptor, middleware.AdminInterceptor)
 	{
-		rAdmin.POST("panel/users/create", userApi.Create)
-		rAdmin.POST("panel/users/update", userApi.Update)
+		rAdmin.POST("panel/users/create", middleware.ResourceMutation, userApi.Create)
+		rAdmin.POST("panel/users/update", middleware.ResourceMutation, userApi.Update)
 		rAdmin.POST("panel/users/getList", userApi.GetList)
-		rAdmin.POST("panel/users/deletes", userApi.Deletes)
+		rAdmin.POST("panel/users/deletes", middleware.ResourceMutation, userApi.Deletes)
 		rAdmin.POST("panel/users/getPublicVisitUser", userApi.GetPublicVisitUser)
 		rAdmin.POST("panel/users/setPublicVisitUser", userApi.SetPublicVisitUser)
 	}

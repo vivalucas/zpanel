@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // 此API 临时使用，后期带有管理功能，将废除！！！
@@ -100,6 +101,10 @@ func (a UsersApi) Deletes(c *gin.Context) {
 	}
 
 	txErr := global.Db.Transaction(func(tx *gorm.DB) error {
+		var admins []models.User
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("role=?", 1).Order("id").Find(&admins).Error; err != nil {
+			return err
+		}
 		mitemIconGroup := models.ItemIconGroup{}
 
 		for _, v := range param.UserIds {
@@ -132,7 +137,7 @@ func (a UsersApi) Deletes(c *gin.Context) {
 
 		// 验证是否还存在管理员
 		var count int64
-		if err := tx.Model(&models.User{}).Where("role=?", 1).Count(&count).Error; err != nil {
+		if err := tx.Model(&models.User{}).Where("role=? AND status=?", 1, 1).Count(&count).Error; err != nil {
 			return err
 		} else if count == 0 {
 			return ErrUsersApiAtLeastKeepOne
@@ -202,13 +207,32 @@ func (a UsersApi) Update(c *gin.Context) {
 		}
 	}
 
-	if err := global.Db.Select(allowField).Where("id=?", param.ID).Updates(&param).Error; err != nil {
+	if err := global.Db.Transaction(func(tx *gorm.DB) error {
+		var admins []models.User
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("role=?", 1).Order("id").Find(&admins).Error; err != nil {
+			return err
+		}
+		if err := tx.Select(allowField).Where("id=?", param.ID).Updates(&param).Error; err != nil {
+			return err
+		}
+		var count int64
+		if err := tx.Model(&models.User{}).Where("role=? AND status=?", 1, 1).Count(&count).Error; err != nil {
+			return err
+		}
+		if count == 0 {
+			return ErrUsersApiAtLeastKeepOne
+		}
+		if param.Password != "-" {
+			return tx.Model(&models.Session{}).Where("user_id=? AND revoked_at IS NULL", param.ID).Update("revoked_at", time.Now()).Error
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, ErrUsersApiAtLeastKeepOne) {
+			apiReturn.ErrorByCode(c, 1201)
+			return
+		}
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
-	}
-	if param.Password != "-" {
-		now := time.Now()
-		_ = global.Db.Model(&models.Session{}).Where("user_id=? AND revoked_at IS NULL", param.ID).Update("revoked_at", now).Error
 	}
 	global.UserToken.Flush() // 更新用户信息并立即清除敏感变更后的缓存
 	// 返回token等基本信息（清除密码字段）

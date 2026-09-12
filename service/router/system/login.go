@@ -12,6 +12,6 @@ func InitLogin(router *gin.RouterGroup) {
 
 	router.POST("/login", middleware.LoginRateLimit, loginApi.Login)
 	router.POST("/logout", middleware.LoginInterceptor, loginApi.Logout)
-	router.GET("/captcha/getImageByCaptchaId/:id/:width/:height", loginApi.CaptchaImage)
+	router.GET("/captcha/getImageByCaptchaId/:id/:width/:height", middleware.CaptchaRateLimit, loginApi.CaptchaImage)
 
 }

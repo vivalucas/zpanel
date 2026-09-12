@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { NAlert, NButton, NButtonGroup, NCard, NEllipsis, NGrid, NGridItem, NImage, NImageGroup, NPagination, NSwitch, NSpin, useDialog, useMessage } from 'naive-ui'
+import { NAlert, NButton, NButtonGroup, NCard, NEllipsis, NGrid, NGridItem, NImage, NImageGroup, NPagination, NSelect, NSwitch, NSpin, useDialog, useMessage } from 'naive-ui'
 import { onMounted, ref } from 'vue'
 import { deletes, getList, getPublicList } from '@/api/system/file'
 import { set as savePanelConfig } from '@/api/panel/userConfig'
 import { RoundCardModal, SvgIcon } from '@/components/common'
 import { copyToClipboard, timeFormat } from '@/utils/cmn'
 import { t } from '@/locales'
+import { post } from '@/utils/request'
 import { useAuthStore, usePanelState } from '@/store'
 
 interface InfoModalState {
@@ -19,6 +20,13 @@ const dialog = useDialog()
 const panelStore = usePanelState()
 const authStore = useAuthStore()
 const loading = ref(false)
+const wallpaperDraft = ref<string | null>(null)
+const wallpaperSaving = ref(false)
+const usage = ref<Array<{ kind: string; title: string; id: string }>>([])
+const usageLoading = ref(false)
+const usageFailed = ref(false)
+const replacementID = ref<number | null>(null)
+const replacing = ref(false)
 const publicGallery = ref(false)
 const pagination = ref({
   page: 1,
@@ -104,23 +112,67 @@ async function deletesImges(id: number) {
   }
 }
 
-function handleInfoClick(fileInfo: File.Info) {
+async function handleInfoClick(fileInfo: File.Info) {
+  usage.value = []
+  usageFailed.value = false
+  replacementID.value = null
+  usageLoading.value = true
   infoModalState.value.fileInfo = fileInfo
   infoModalState.value.show = true
+  try {
+    const res = await post<Array<{ kind: string; title: string; id: string }>>({ url: '/file/usage', data: { id: fileInfo.id } })
+    if (res.code === 0)
+      usage.value = res.data
+    else {
+      usageFailed.value = true
+      ms.error(res.msg)
+    }
+  }
+  catch {
+    usageFailed.value = true
+  }
+  finally {
+    usageLoading.value = false
+  }
+}
+
+async function replaceUsage() {
+  if (!replacementID.value || !infoModalState.value.fileInfo?.id)
+    return
+  replacing.value = true
+  try {
+    const res = await post({ url: '/file/replace', data: { id: infoModalState.value.fileInfo.id, replacementId: replacementID.value } })
+    if (res.code !== 0) { ms.error(res.msg); return }
+    await panelStore.updatePanelConfigByCloud()
+    ms.success(t('review.replaced'))
+    await handleInfoClick(infoModalState.value.fileInfo)
+  }
+  finally {
+    replacing.value = false
+  }
 }
 
 async function handleSetWallpaper(imgSrc: string) {
+  wallpaperDraft.value = imgSrc
+  if (wallpaperSaving.value)
+    return
+  wallpaperSaving.value = true
   try {
-    panelStore.panelConfig.backgroundImageSrc = imgSrc
-    const { code, msg } = await savePanelConfig({ panel: panelStore.panelConfig })
-    if (code === 0)
+    const panel = { ...panelStore.panelConfig, backgroundImageSrc: imgSrc }
+    const { code, msg } = await savePanelConfig({ panel })
+    if (code === 0) {
+      panelStore.panelConfig = panel
+      panelStore.recordState()
+      if (wallpaperDraft.value === imgSrc)
+        wallpaperDraft.value = null
       ms.success(t('apps.baseSettings.configSaved'))
-    else
-      ms.error(`${t('common.failed')}: ${msg}`)
+    }
+    else { ms.error(msg) }
   }
   catch {
-    ms.error(t('common.serverError'))
+    ms.error(t('review.unsaved'))
   }
+  finally { wallpaperSaving.value = false }
 }
 
 function handlePageChange(page: number) {
@@ -150,6 +202,15 @@ onMounted(() => {
     <NSpin v-show="loading" size="small" />
     <NAlert type="info" :bordered="false">
       {{ $t('apps.uploadsFileManager.alertText') }}
+    </NAlert>
+    <NAlert v-if="wallpaperDraft" type="warning" class="mt-2">
+      {{ $t('review.unsaved') }}
+      <NButton size="tiny" :loading="wallpaperSaving" @click="handleSetWallpaper(wallpaperDraft)">
+        {{ $t('review.retry') }}
+      </NButton>
+      <NButton size="tiny" :disabled="wallpaperSaving" @click="wallpaperDraft = null">
+        {{ $t('common.cancel') }}
+      </NButton>
     </NAlert>
     <div class="mt-2 flex items-center">
       <span class="mr-2">{{ $t('apps.uploadsFileManager.publicGallery') }}</span>
@@ -217,7 +278,26 @@ onMounted(() => {
       />
     </div>
 
-    <RoundCardModal v-model:show="infoModalState.show" class="zpanel-settings-modal" style="max-width: 300px;" size="small" :title="$t('apps.uploadsFileManager.infoTitle')">
+    <RoundCardModal v-model:show="infoModalState.show" class="zpanel-settings-modal" style="max-width: 420px;" size="small" :title="$t('apps.uploadsFileManager.infoTitle')">
+      <NSpin :show="usageLoading">
+        <p>{{ $t('review.usage') }}</p>
+        <p v-if="usageFailed">
+          {{ $t('common.failed') }}
+        </p>
+        <p v-if="!usage.length && !usageLoading && !usageFailed">
+          {{ $t('review.unused') }}
+        </p>
+        <p v-for="(entry, index) in usage" :key="index">
+          {{ $t(`review.usage_${entry.kind}`) }}: {{ entry.title || (entry.id ? `#${entry.id}` : $t('review.privateUsage')) }}
+        </p>
+        <div v-if="infoModalState.fileInfo?.ownerId === authStore.userInfo?.id">
+          <p>{{ $t('review.replaceHelp') }}</p>
+          <NSelect v-model:value="replacementID" :options="imageList.filter(item => item.id !== infoModalState.fileInfo?.id).map(item => ({ label: item.fileName, value: item.id }))" />
+          <NButton class="mt-2" :disabled="!replacementID" :loading="replacing" @click="replaceUsage">
+            {{ $t('review.replaceUsage') }}
+          </NButton>
+        </div>
+      </NSpin>
       <div>
         <div>
           <div class="mb-2">

@@ -199,11 +199,11 @@ func (a *FileApi) Deletes(c *gin.Context) {
 			return err
 		}
 		for _, v := range files {
-			var refCount int64
-			if err := tx.Model(&models.FileReference{}).Where("file_id=?", v.ID).Count(&refCount).Error; err != nil {
+			usage, err := models.FindFileUsage(tx, v)
+			if err != nil {
 				return err
 			}
-			if refCount > 0 {
+			if len(usage) > 0 {
 				return fmt.Errorf("file %d is still referenced", v.ID)
 			}
 		}
@@ -262,4 +262,63 @@ func fileResponse(v models.File) map[string]interface{} {
 		"purpose":      v.Purpose,
 		"status":       v.Status,
 	}
+}
+
+// Usage only reveals names belonging to the caller; another user's private
+// navigation titles are never exposed through the shared gallery.
+func (a *FileApi) Usage(c *gin.Context) {
+	req := struct {
+		ID uint `json:"id"`
+	}{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiReturn.Error(c, "invalid file")
+		return
+	}
+	user, _ := base.GetCurrentUserInfo(c)
+	file := models.File{}
+	if err := global.Db.Where("id=? AND status=? AND (owner_id=? OR visibility=?)", req.ID, models.FileStatusActive, user.ID, models.FileVisibilityPublic).First(&file).Error; err != nil {
+		apiReturn.ErrorDataNotFound(c)
+		return
+	}
+	usages, err := models.FindFileUsage(global.Db, file)
+	if err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	for i := range usages {
+		if usages[i].OwnerID != user.ID && !(usages[i].OwnerID == 0 && user.Role == 1) {
+			usages[i].Title = ""
+			usages[i].ID = ""
+		}
+	}
+	apiReturn.SuccessData(c, usages)
+}
+
+func (a *FileApi) Replace(c *gin.Context) {
+	req := struct {
+		ID            uint `json:"id"`
+		ReplacementID uint `json:"replacementId"`
+	}{}
+	if err := c.ShouldBindJSON(&req); err != nil || req.ID == req.ReplacementID {
+		apiReturn.Error(c, "invalid replacement")
+		return
+	}
+	user, _ := base.GetCurrentUserInfo(c)
+	err := global.Db.Transaction(func(tx *gorm.DB) error {
+		source, target := models.File{}, models.File{}
+		if err := tx.Where("id=? AND owner_id=? AND status=?", req.ID, user.ID, models.FileStatusActive).First(&source).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("id=? AND status=? AND (owner_id=? OR visibility=?)", req.ReplacementID, models.FileStatusActive, user.ID, models.FileVisibilityPublic).First(&target).Error; err != nil {
+			return err
+		}
+		return models.ReplaceFileUsage(tx, source, target, user.ID, user.Role == 1)
+	})
+	if err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	global.UserToken.Flush()
+	global.SystemSetting.Cache.Flush()
+	apiReturn.Success(c)
 }

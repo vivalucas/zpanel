@@ -37,7 +37,16 @@ func init() {
 
 // LoginRateLimit 限制登录接口的 IP 请求频率
 func LoginRateLimit(c *gin.Context) {
-	ip := c.ClientIP()
+	limitByIP(c, "login:", maxPerMinute)
+}
+
+// CaptchaRateLimit bounds unauthenticated image generation separately from login attempts.
+func CaptchaRateLimit(c *gin.Context) {
+	limitByIP(c, "captcha:", 30)
+}
+
+func limitByIP(c *gin.Context, prefix string, limit int) {
+	ip := prefix + c.ClientIP()
 	now := time.Now()
 
 	ipRecordsMu.Lock()
@@ -57,7 +66,7 @@ func LoginRateLimit(c *gin.Context) {
 	}
 
 	record.count++
-	exceeded := record.count > maxPerMinute
+	exceeded := record.count > limit
 	ipRecordsMu.Unlock()
 
 	if exceeded {

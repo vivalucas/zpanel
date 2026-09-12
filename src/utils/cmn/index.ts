@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { isSafeNavigationUrl } from '@/utils/navigation'
 import { h } from 'vue'
 import type { NotificationReactive } from 'naive-ui'
 import { NButton, createDiscreteApi } from 'naive-ui'
@@ -101,6 +102,9 @@ export function getTitle(): string {
 }
 
 export function openExternalUrl(url: string) {
+  if (!isSafeNavigationUrl(url))
+    return
+
   const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
   if (newWindow)
     newWindow.opener = null

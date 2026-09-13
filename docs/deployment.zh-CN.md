@@ -1,6 +1,6 @@
 # 部署配置与运维参考
 
-首次安装见 [Ubuntu 局域网指南](../README.zh-CN.md#ubuntu-局域网部署推荐)。本文对应 1.1.8，推荐单实例 Docker、SQLite、默认存储路径。默认部署不需要 Node.js、Go、MySQL 或 Redis。本轮完成源码与文档检查，未做 Ubuntu 实机部署/恢复验收。
+首次安装见 [Ubuntu 局域网指南](../README.zh-CN.md#ubuntu-局域网部署推荐)。本文对应 1.2.0，推荐单实例 Docker、SQLite、默认存储路径。默认部署不需要 Node.js、Go、MySQL 或 Redis。本轮完成源码与文档检查，未做 Ubuntu 实机部署/恢复验收。
 
 ## 配置来源与生效
 

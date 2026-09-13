@@ -37,11 +37,34 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
+      - name: API unit tests
+        run: pnpm test
+
       - name: Regression checks
         run: pnpm run test:review
 
       - name: Build
         run: pnpm run build
+
+      - name: Set up Go for browser tests
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: service/go.mod
+          cache-dependency-path: service/go.sum
+
+      - name: Install browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser regression tests
+        run: pnpm test:e2e
+
+      - name: Upload browser test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: test-results/
+          retention-days: 7
 
   backend:
     name: Backend

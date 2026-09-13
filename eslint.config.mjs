@@ -3,7 +3,7 @@ import antfu from '@antfu/eslint-config'
 export default antfu({
   lessOpinionated: true,
   stylistic: false,
-  vue: true,
+  react: true,
   typescript: true,
   ignores: [
     'dist/**',
@@ -33,7 +33,6 @@ export default antfu({
     'unicorn/prefer-node-protocol': 'off',
     'unicorn/prefer-number-properties': 'off',
     'unused-imports/no-unused-vars': 'warn',
-    'vue/no-unused-refs': 'warn',
     'yaml/plain-scalar': 'off',
     'yaml/sort-keys': 'off',
   },

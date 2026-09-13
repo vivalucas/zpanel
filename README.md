@@ -137,7 +137,7 @@ Version tags create GitHub Releases with release notes, Linux amd64 deployment p
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
 
-`latest` points to the most recently published stable image. If you need repeatable rollbacks, use an explicit version tag such as `vivalucas/zpanel:1.1.8`.
+`latest` points to the most recently published stable image. If you need repeatable rollbacks, use an explicit version tag such as `vivalucas/zpanel:1.2.0`.
 
 Health check endpoint:
 
@@ -205,6 +205,8 @@ The official image includes `docker-cli`, and Docker management works by running
 
 ## Local Development
 
+The frontend uses **React + TypeScript + Vite + Ant Design**, with shared theme tokens and a unified settings center. Architecture details are documented in [the frontend guide (Chinese)](docs/frontend.zh-CN.md) · [Audit and verification scope (Chinese)](docs/frontend-audit.zh-CN.md).
+
 Frontend requirements:
 
 - Node.js `24.15.0`
@@ -236,9 +238,13 @@ By default, the frontend dev server listens on `http://127.0.0.1:1002` and proxi
 ```bash
 pnpm run type-check
 pnpm run lint
+pnpm test
+pnpm test:review
 pnpm run build
 cd service && go test ./...
 ```
+
+Browser regression tests: run `pnpm build`, `pnpm exec playwright install chromium`, and `pnpm test:e2e`. The suite starts an isolated Go server with a temporary database.
 
 GitHub Actions runs the same frontend and backend checks on pull requests and pushes to the main branches.
 

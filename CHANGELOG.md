@@ -4,6 +4,25 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.0 - 2026-09-13
+
+### Frontend
+
+- Simplified interface text to functional labels and necessary instructions.
+- Rebuilt the frontend with React, TypeScript and Ant Design; replaced modal-based management with hash-routed settings pages and a shared light/dark theme.
+- Migrated navigation editing and sorting, search, monitor configuration, files, import/export, account switching, user administration and Docker management.
+- Preserve unsaved settings on failures, confirm before leaving edited settings, and lock forms while saving. Preserve the default search engine when an earlier engine is deleted.
+- Use default dependency chunking with lazy pages to avoid production circular-initialization failures; retain the shared-entry size warning as a known performance item.
+- Support UUID generation on ordinary HTTP LAN origins; discard stale session responses and reject delayed actions after an account switch.
+- Preserve file pagination on empty pages and allow replacement images from other pages and the public gallery.
+- Avoid rerunning custom JavaScript on unrelated site updates; support safe-mode recovery from hash URLs.
+
+### Reliability and Documentation
+
+- Return the correct missing-record error code for first-use configuration and an unset public account.
+- Serve optional PWA manifest, worker and icons through Go using explicit public paths.
+- Added API/session and browser regressions, CI browser testing, frontend conventions and an audit coverage matrix. Full browser tests use temporary SQLite data; Docker success flows use mocks. Real Docker operations, Ubuntu deployment/restore, MySQL/Redis and native PWA installation remain outside the verified scope.
+
 ## 1.1.8 - 2026-09-12
 
 ### Security and Reliability

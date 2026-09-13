@@ -32,7 +32,7 @@ declare namespace Panel {
     interface State {
         rightSiderCollapsed: boolean
         leftSiderCollapsed: boolean
-        networkMode:PanelStateNetworkModeEnum | null
+        networkMode:number | null
         panelConfig:panelConfig
     }
 
@@ -40,7 +40,7 @@ declare namespace Panel {
         backgroundImageSrc?:string
         backgroundBlur?:number
         backgroundMaskNumber?:number
-        iconStyle?:PanelPanelConfigStyleEnum
+        iconStyle?:number
         iconTextColor?:string
         iconTextInfoHideDescription?:boolean
         iconTextIconHideTitle?:boolean

@@ -111,7 +111,7 @@ jobs:
           cp service/assets/conf.example.ini "${package_dir}/conf/conf.example.ini"
           cp docker-compose.yml "${package_dir}/docker-compose.yml"
           cp README.md README.zh-CN.md CHANGELOG.md LICENSE SECURITY.md "${package_dir}/"
-          cp docs/deployment.md docs/deployment.zh-CN.md "${package_dir}/docs/"
+          cp docs/deployment.md docs/deployment.zh-CN.md docs/frontend.zh-CN.md docs/frontend-audit.zh-CN.md "${package_dir}/docs/"
 
           cat > "${package_dir}/RELEASE.md" <<EOF
           # ZPanel ${APP_VERSION}

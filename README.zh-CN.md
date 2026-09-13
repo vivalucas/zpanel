@@ -299,10 +299,10 @@ sudo docker compose up -d
 重要环境建议固定版本：
 
 ```yaml
-image: vivalucas/zpanel:1.1.8
+image: vivalucas/zpanel:1.2.0
 ```
 
-`latest` 跟随最近一次成功发布的镜像；推送 GitHub `main` 不会自动更新镜像。发布是否完成请查看 [Releases](https://github.com/vivalucas/zpanel/releases) 和 [容器发布任务](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml)。GHCR 可作为另一个官方拉取渠道：`ghcr.io/vivalucas/zpanel:1.1.8`。
+`latest` 跟随最近一次成功发布的镜像；推送 GitHub `main` 不会自动更新镜像。发布是否完成请查看 [Releases](https://github.com/vivalucas/zpanel/releases) 和 [容器发布任务](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml)。GHCR 可作为另一个官方拉取渠道：`ghcr.io/vivalucas/zpanel:1.2.0`。
 
 升级按以下顺序操作：
 
@@ -428,6 +428,8 @@ sudo docker compose logs --tail=100 zpanel
 
 ## 本地开发
 
+前端采用 **React + TypeScript + Vite + Ant Design**，使用统一主题和设置中心。目录、状态管理与验证流程见 [前端开发说明](docs/frontend.zh-CN.md) · [自查与验证范围](docs/frontend-audit.zh-CN.md)。
+
 ```bash
 fnm use
 corepack enable
@@ -450,9 +452,13 @@ go run main.go
 ```bash
 pnpm run type-check
 pnpm run lint
+pnpm test
+pnpm test:review
 pnpm run build
 cd service && go test ./...
 ```
+
+浏览器回归：先执行 `pnpm build` 和 `pnpm exec playwright install chromium`，再执行 `pnpm test:e2e`。测试使用临时 Go 服务和数据库。
 
 GitHub Actions 会在 Pull Request 和主分支推送时运行前后端检查。
 

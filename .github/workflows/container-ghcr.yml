@@ -18,7 +18,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Read version from file
-        run: echo "APP_VERSION=$(cut -d '|' -f 2 ./service/assets/version)" >> "$GITHUB_ENV"
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_version="$(cut -d '|' -f 2 ./service/assets/version)"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v${app_version}" ]; then
+            echo "Tag does not match service/assets/version."
+            exit 1
+          fi
+          echo "APP_VERSION=${app_version}" >> "$GITHUB_ENV"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

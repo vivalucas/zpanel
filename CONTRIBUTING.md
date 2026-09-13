@@ -10,7 +10,8 @@ Requirements:
 - pnpm `11.1.3`
 - Go `1.26.3`
 
-Frontend:
+Frontend: React + TypeScript + Ant Design. See [frontend architecture and UI conventions](docs/frontend.zh-CN.md).
+
 
 ```bash
 corepack enable
@@ -35,9 +36,15 @@ Run these before opening a pull request:
 ```bash
 pnpm run type-check
 pnpm run lint
+pnpm test
+pnpm run test:review
 pnpm run build
+pnpm exec playwright install chromium
+pnpm run test:e2e
 cd service && go test ./...
 ```
+
+Browser tests require Go and run the production build against a disposable SQLite database on port `16521`. They never target the development database. Docker success paths use mocked API responses; the test server cannot access the developer's Docker context. Add a regression test for changed data flows and error recovery, and distinguish mocked checks from real integrations in the PR.
 
 If Go is not installed locally, mention that in the pull request verification notes.
 

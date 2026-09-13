@@ -4,6 +4,8 @@ import (
 	"gopkg.in/ini.v1"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"zpanel/global"
 	"zpanel/lib/iniConfig"
@@ -69,6 +71,34 @@ func TestExplicitTrustedProxy(t *testing.T) {
 		engine.ServeHTTP(recorder, req)
 		if recorder.Body.String() != tc.want {
 			t.Fatalf("got %s, want %s", recorder.Body.String(), tc.want)
+		}
+	}
+}
+
+func TestPublicPWAAssets(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.Mkdir("web", 0755); err != nil {
+		t.Fatal(err)
+	}
+	assets := []string{"manifest.webmanifest", "sw.js", "registerSW.js", "pwa-192x192.png", "pwa-512x512.png", "apple-touch-icon.png"}
+	for _, name := range assets {
+		if err := os.WriteFile(filepath.Join("web", name), []byte("fixture"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	engine := NewRouter()
+	for _, name := range assets {
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/"+name, nil))
+		if recorder.Code != http.StatusOK || recorder.Body.String() != "fixture" {
+			t.Fatalf("%s: status %d", name, recorder.Code)
+		}
+	}
+	for _, name := range []string{"conf/conf.ini", "data/database/zpanel.db", "missing.js"} {
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/"+name, nil))
+		if recorder.Code != http.StatusNotFound {
+			t.Fatalf("unexpected public path %s", name)
 		}
 	}
 }

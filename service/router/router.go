@@ -51,6 +51,10 @@ func NewRouter() *gin.Engine {
 		router.Static("/custom", webPath+"/custom")
 		router.StaticFile("/favicon.ico", webPath+"/favicon.ico")
 		router.StaticFile("/favicon.svg", webPath+"/favicon.svg")
+		// Explicit public PWA files; never expose arbitrary files from the working directory.
+		for _, name := range []string{"manifest.webmanifest", "sw.js", "registerSW.js", "pwa-192x192.png", "pwa-512x512.png", "apple-touch-icon.png"} {
+			router.StaticFile("/"+name, webPath+"/"+name)
+		}
 	}
 
 	// 上传的文件。URL 固定为 /uploads，物理目录由 storage.uploads_path 控制。

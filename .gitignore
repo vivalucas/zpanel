@@ -87,3 +87,7 @@ mcp.json
 # Additional AI tools
 .mimocode/
 .agents/
+
+# Browser test artifacts
+/test-results/
+/playwright-report/

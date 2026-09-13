@@ -2,78 +2,75 @@ import fs from 'fs'
 import path from 'path'
 import type { PluginOption } from 'vite'
 import { defineConfig, loadEnv } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 
 function setupPlugins(env: ImportMetaEnv): PluginOption[] {
-  return [
-    vue(),
-    env.VITE_GLOB_APP_PWA === 'true' && VitePWA({
-      injectRegister: 'auto',
-      manifest: {
-        name: 'ZPanel',
-        short_name: 'ZPanel',
-        icons: [
-          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-        ],
-      },
-    }),
-    createSvgIconsPlugin({
-      iconDirs: [path.resolve(process.cwd(), 'src/assets/svg-icons')],
-      symbolId: '[name]',
-    }),
-  ]
+	return [
+		react(),
+		env.VITE_GLOB_APP_PWA === 'true' &&
+			VitePWA({
+				injectRegister: 'auto',
+				workbox: { inlineWorkboxRuntime: true },
+				manifest: {
+					name: 'ZPanel',
+					short_name: 'ZPanel',
+					icons: [
+						{ src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+						{ src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+						{ src: 'apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+					],
+				},
+			}),
+	]
 }
 
 export default defineConfig((env) => {
-  const viteEnv = loadEnv(env.mode, process.cwd()) as unknown as ImportMetaEnv
-  const apiProxyTarget = viteEnv.VITE_APP_API_BASE_URL || 'http://127.0.0.1:6521/'
-  const versionFile = path.resolve(process.cwd(), '.zpanel-build-version')
-  const appVersion = fs.existsSync(versionFile)
-    ? fs.readFileSync(versionFile, 'utf-8').trim()
-    : viteEnv.VITE_APP_VERSION || 'unknown'
+	const viteEnv = loadEnv(env.mode, process.cwd()) as unknown as ImportMetaEnv
+	const apiProxyTarget = viteEnv.VITE_APP_API_BASE_URL || 'http://127.0.0.1:6521/'
+	const versionFile = path.resolve(process.cwd(), '.zpanel-build-version')
+	const appVersion = fs.existsSync(versionFile)
+		? fs.readFileSync(versionFile, 'utf-8').trim()
+		: viteEnv.VITE_APP_VERSION || 'unknown'
 
-  return {
-    resolve: {
-      alias: {
-        '@': path.resolve(process.cwd(), 'src'),
-      },
-    },
-    plugins: setupPlugins(viteEnv),
-    define: {
-      'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
-    },
-    server: {
-      host: '0.0.0.0',
-      port: 1002,
-      open: false,
-      proxy: {
-        '/api': {
-          target: apiProxyTarget,
-          changeOrigin: true, // 允许跨域
-          rewrite: path => path.replace('/api/', '/api/'),
-        },
-        '/uploads': {
-          target: apiProxyTarget,
-          changeOrigin: true, // 允许跨域
-          rewrite: path => path.replace('/uploads/', '/uploads/'),
-        },
-      },
-    },
-    build: {
-      reportCompressedSize: false,
-      sourcemap: false,
-      commonjsOptions: {
-        ignoreTryCatch: false,
-      },
-      terserOptions: {
-        compress: {
-          drop_console: true,
-        },
-      },
-    },
-  }
+	return {
+		resolve: {
+			alias: {
+				'@': path.resolve(process.cwd(), 'src'),
+			},
+		},
+		plugins: setupPlugins(viteEnv),
+		define: {
+			'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+		},
+		server: {
+			host: '0.0.0.0',
+			port: 1002,
+			open: false,
+			proxy: {
+				'/api': {
+					target: apiProxyTarget,
+					changeOrigin: true, // 允许跨域
+					rewrite: (path) => path.replace('/api/', '/api/'),
+				},
+				'/uploads': {
+					target: apiProxyTarget,
+					changeOrigin: true, // 允许跨域
+					rewrite: (path) => path.replace('/uploads/', '/uploads/'),
+				},
+			},
+		},
+		build: {
+			reportCompressedSize: false,
+			sourcemap: false,
+			commonjsOptions: {
+				ignoreTryCatch: false,
+			},
+			terserOptions: {
+				compress: {
+					drop_console: true,
+				},
+			},
+		},
+	}
 })

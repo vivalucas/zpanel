@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button, Form, Input, Modal, Select, Space } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
 import type { Group } from '@/lib/api'
-import { ImageUpload } from '@/components/shared'
+import { ImageUpload } from '@/components/ImageUpload'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 export default function ItemEditor({
 	item,

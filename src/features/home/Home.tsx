@@ -2,9 +2,10 @@ import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Avatar, Button, Dropdown, Empty, Input, Modal, Select, Space, Tooltip } from 'antd'
+import { Button, Dropdown, Empty, Input, Modal, Select, Space, Tooltip } from 'antd'
 import {
 	AppstoreOutlined,
+	DownOutlined,
 	EllipsisOutlined,
 	GlobalOutlined,
 	LoginOutlined,
@@ -19,7 +20,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { AuthInfo, Group } from '@/lib/api'
 import { useGroups, usePanel, useSearchConfig } from '@/lib/queries'
 import { usePreferences } from '@/app/store'
-import { Loading, QueryError, SafeHtml } from '@/components/shared'
+import { Loading, QueryError } from '@/components/shared'
+import { SafeHtml } from '@/components/SafeHtml'
 import { SortableGrid } from '@/components/Sortable'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 import ItemEditor from './ItemEditor'
@@ -53,7 +55,7 @@ export function ItemIcon({ item }: { item: Panel.ItemInfo }) {
 			{icon?.itemType === 2 && icon.src && !failed ? (
 				<img src={icon.src} alt="" loading="lazy" onError={() => setFailed(true)} />
 			) : icon?.itemType === 3 && icon.text ? (
-				<Icon icon={icon.text} width={28} />
+				<Icon icon={icon.text} width={35} />
 			) : (
 				<span>{(icon?.itemType === 1 && icon.text) || item.title.slice(0, 2).toUpperCase()}</span>
 			)}
@@ -72,7 +74,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const [search, setSearch] = useState('')
 	const [engine, setEngine] = useState<string>()
 	const [engineSaving, setEngineSaving] = useState(false)
-	const [sorting, setSorting] = useState(false)
+	const [sortingGroupId, setSortingGroupId] = useState<number | null>(null)
 	const [savingSort, setSavingSort] = useState(false)
 	const [editor, setEditor] = useState<{ item?: Panel.ItemInfo; groupId?: number } | null>(null)
 	const [frame, setFrame] = useState<{ url: string; title: string } | null>(null)
@@ -92,6 +94,8 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		)
 	const config = panel.data.panel
 	const wallpaper = config.backgroundImageSrc
+	const homeTextColor =
+		config.iconTextColor?.trim().toLowerCase() === '#1f2937' ? undefined : config.iconTextColor || undefined
 	const configSearchEnabled = config.searchBoxSearchIcon
 	const filtered = (groups.data || [])
 		.map((group) => ({
@@ -179,72 +183,68 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 					}}
 				/>
 			)}
-			<header className="home-header">
-				<a href="#/" className="brand">
-					{config.logoImageSrc ? (
-						<img src={config.logoImageSrc} alt="" />
-					) : (
-						<span className="brand-mark small">Z</span>
-					)}
-					<strong>{config.logoText || 'ZPanel'}</strong>
-				</a>
-				<Space>
-					{config.netModeChangeButtonShow && (
-						<Tooltip
-							title={t(
-								preferences.network === 'wan' ? 'panelHome.changeToLanModel' : 'panelHome.changeToWanModel',
-							)}
-						>
-							<Button
-								icon={<GlobalOutlined aria-hidden="true" />}
-								onClick={() =>
-									preferences.setPreference({ network: preferences.network === 'wan' ? 'lan' : 'wan' })
-								}
-							>
-								{preferences.network === 'wan' ? t('ui.wan') : t('ui.lan')}
-							</Button>
-						</Tooltip>
-					)}
-					{editable ? (
+			<div className="home-tools">
+				{config.netModeChangeButtonShow && (
+					<Tooltip
+						title={t(
+							preferences.network === 'wan' ? 'panelHome.changeToLanModel' : 'panelHome.changeToWanModel',
+						)}
+					>
 						<Button
+							aria-label={preferences.network === 'wan' ? t('ui.wan') : t('ui.lan')}
+							icon={<GlobalOutlined aria-hidden="true" />}
+							onClick={() =>
+								preferences.setPreference({ network: preferences.network === 'wan' ? 'lan' : 'wan' })
+							}
+						/>
+					</Tooltip>
+				)}
+				{editable ? (
+					<Tooltip title={t('ui.settings')}>
+						<Button
+							aria-label={t('ui.settings')}
 							icon={<SettingOutlined aria-hidden="true" />}
 							onClick={() => navigate('/settings/appearance')}
-						>
-							{t('ui.settings')}
-						</Button>
-					) : (
-						<Button icon={<LoginOutlined aria-hidden="true" />} onClick={() => navigate('/login')}>
-							{t('login.loginButton')}
-						</Button>
-					)}
-					{editable && (
-						<Avatar src={auth.user.headImage} className="user-avatar">
-							{(auth.user.name || auth.user.username || 'Z').slice(0, 1)}
-						</Avatar>
-					)}
-				</Space>
-			</header>
+						/>
+					</Tooltip>
+				) : (
+					<Tooltip title={t('login.loginButton')}>
+						<Button
+							aria-label={t('login.loginButton')}
+							icon={<LoginOutlined aria-hidden="true" />}
+							onClick={() => navigate('/login', { state: { fromPublicHome: true } })}
+						/>
+					</Tooltip>
+				)}
+			</div>
 			<div
 				className="home-content"
 				style={
 					{
 						maxWidth: `${config.maxWidth || 1200}${config.maxWidthUnit === '%' ? '%' : 'px'}`,
-						paddingTop: config.marginTop,
-						paddingBottom: config.marginBottom,
-						width: `${100 - Math.min(40, config.marginX || 0) * 2}%`,
-						'--home-text': config.iconTextColor || undefined,
+						marginTop: `${config.marginTop ?? 10}%`,
+						marginBottom: `${config.marginBottom ?? 10}%`,
+						paddingInline: `${10 + (config.marginX ?? 5)}px`,
+						'--home-text': homeTextColor,
 					} as CSSProperties
 				}
 			>
 				<section className="home-hero">
-					<Clock seconds={config.clockShowSecond} color={config.clockColor} />
+					<div className="home-identity">
+						{config.logoImageSrc && <img className="home-logo-image" src={config.logoImageSrc} alt="" />}
+						<strong className="home-logo-text">{config.logoText || 'ZPanel'}</strong>
+						<span className="home-identity-divider" aria-hidden="true">
+							|
+						</span>
+						<Clock seconds={config.clockShowSecond} color={config.clockColor} />
+					</div>
 					{config.searchBoxShow && (
 						<div className="search-box">
 							<SearchOutlined aria-hidden="true" />
 							<Input
 								variant="borderless"
 								aria-label={t('ui.search')}
-								placeholder={t('ui.searchPlaceholder')}
+								placeholder={t(configSearchEnabled ? 'ui.searchPlaceholder' : 'ui.webSearchPlaceholder')}
 								value={search}
 								allowClear
 								onChange={(e) => setSearch(e.target.value)}
@@ -262,6 +262,9 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 							/>
 							<Select
 								aria-label={t('ui.searchEngine')}
+								suffixIcon={
+									wallpaper ? <DownOutlined style={{ color: '#fff' }} aria-hidden="true" /> : undefined
+								}
 								disabled={engineSaving}
 								loading={engineSaving}
 								variant="borderless"
@@ -305,35 +308,6 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						<MonitorCards showTitle={config.systemMonitorShowTitle} />
 					</Suspense>
 				)}
-				<div className="home-toolbar">
-					<div>
-						<h1>
-							{t('ui.applications')}
-							<span>{groups.data.reduce((sum, g) => sum + g.items.length, 0)}</span>
-						</h1>
-					</div>
-					{editable && (
-						<Space wrap>
-							<Button
-								icon={<SwapOutlined aria-hidden="true" />}
-								type={sorting ? 'primary' : 'default'}
-								onClick={() => {
-									setSorting(!sorting)
-									setSearch('')
-								}}
-							>
-								{t(sorting ? 'common.done' : 'ui.sort')}
-							</Button>
-							<Button
-								type="primary"
-								icon={<PlusOutlined aria-hidden="true" />}
-								onClick={() => (groups.data.length ? setEditor({}) : navigate('/settings/groups'))}
-							>
-								{t('iconItem.add')}
-							</Button>
-						</Space>
-					)}
-				</div>
 				{!groups.data.length ? (
 					<div className="empty-collection">
 						<Empty
@@ -353,34 +327,54 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 					<Empty description={t('ui.noResults')} />
 				) : (
 					filtered.map((group) => (
-						<section className="navigation-group" key={group.id}>
+						<section
+							className={`navigation-group ${sortingGroupId === group.id ? 'is-sorting' : ''}`}
+							key={group.id}
+						>
 							<div className="group-heading">
-								<h2>
-									{group.title}
-									<span>{group.items.length}</span>
-								</h2>
+								<h2>{group.title}</h2>
 								{editable && (
-									<Button
-										type="text"
-										size="small"
-										aria-label={t('iconItem.add')}
-										icon={<PlusOutlined aria-hidden="true" />}
-										onClick={() => setEditor({ groupId: group.id })}
-									/>
+									<Space className="group-actions">
+										<Button
+											type="text"
+											size="small"
+											aria-label={`${group.title} ${t('iconItem.add')}`}
+											icon={<PlusOutlined aria-hidden="true" />}
+											onClick={() => setEditor({ groupId: group.id })}
+										/>
+										<Button
+											type={sortingGroupId === group.id ? 'primary' : 'text'}
+											size="small"
+											aria-label={`${group.title} ${t(sortingGroupId === group.id ? 'common.done' : 'ui.sort')}`}
+											icon={<SwapOutlined aria-hidden="true" />}
+											disabled={savingSort || group.items.length < 2}
+											onClick={() => {
+												setSortingGroupId(sortingGroupId === group.id ? null : group.id)
+												setSearch('')
+											}}
+										/>
+									</Space>
 								)}
 							</div>
 							<SortableGrid
 								className={`app-grid ${config.iconStyle === 1 ? 'icon-grid' : ''}`}
 								items={group.items as (Panel.ItemInfo & { id: number })[]}
-								disabled={!sorting || savingSort || !!search}
+								disabled={sortingGroupId !== group.id || savingSort || !!search}
 								onSort={(sorted) => void saveSort(group, sorted)}
 							>
 								{(item) => (
-									<Dropdown menu={menu(item)} trigger={['contextMenu']}>
+									<Dropdown
+										menu={menu(item)}
+										trigger={['contextMenu']}
+										disabled={sortingGroupId === group.id}
+									>
 										<article className="navigation-card">
 											<button
 												className="app-link"
-												onClick={() => (sorting ? setEditor({ item }) : open(item))}
+												onClick={() => {
+													if (sortingGroupId !== group.id) open(item)
+												}}
+												aria-disabled={sortingGroupId === group.id}
 												aria-label={item.title}
 											>
 												<ItemIcon key={item.icon?.src} item={item} />
@@ -388,12 +382,12 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 													{!(config.iconStyle === 1 && config.iconTextIconHideTitle) && (
 														<strong>{item.title}</strong>
 													)}
-													{config.iconStyle !== 1 && !config.iconTextInfoHideDescription && (
-														<span>{item.description || item.url}</span>
-													)}
+													{config.iconStyle !== 1 &&
+														!config.iconTextInfoHideDescription &&
+														item.description && <span>{item.description}</span>}
 												</div>
 											</button>
-											{!sorting && (
+											{sortingGroupId !== group.id && (
 												<Dropdown menu={menu(item)} trigger={['click']}>
 													<Button
 														className="item-menu"

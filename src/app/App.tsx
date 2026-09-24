@@ -14,7 +14,7 @@ import { useAuth, useSite } from '@/lib/queries'
 import { ApiError } from '@/lib/api'
 import { usePreferences } from './store'
 import { Loading, QueryError } from '@/components/shared'
-import Login from '@/features/auth/Login'
+const Login = lazy(() => import('@/features/auth/Login'))
 const Home = lazy(() => import('@/features/home/Home'))
 const Settings = lazy(() => import('@/features/settings/Settings'))
 
@@ -108,7 +108,14 @@ const router = createHashRouter(
 			}
 		>
 			<Route path="/" element={<Protected />} />
-			<Route path="/login" element={<Login />} />
+			<Route
+				path="/login"
+				element={
+					<Suspense fallback={<Loading />}>
+						<Login />
+					</Suspense>
+				}
+			/>
 			<Route path="/settings" element={<Navigate to="/settings/appearance" replace />} />
 			<Route path="/settings/:section" element={<Protected settings />} />
 			<Route path="*" element={<NotFound />} />

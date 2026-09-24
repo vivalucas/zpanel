@@ -19,7 +19,7 @@ function MonitorCard({ item }: { item: MonitorItem }) {
 					percent: value.usages?.length
 						? value.usages.reduce((sum, n) => sum + n, 0) / value.usages.length
 						: 0,
-					detail: `${value.coreCount} cores`,
+					detail: t('ui.cpuCores', { count: value.coreCount }),
 					name: 'CPU',
 				}
 			}

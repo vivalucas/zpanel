@@ -7,7 +7,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { defaultPanel } from '@/lib/api'
 import { usePanel } from '@/lib/queries'
 import { usePreferences } from '@/app/store'
-import { ImageUpload, Loading, QueryError, Section } from '@/components/shared'
+import { Loading, QueryError, Section } from '@/components/shared'
+import { ImageUpload } from '@/components/ImageUpload'
 export default function Appearance() {
 	const request = useSessionRequest()
 	const panel = usePanel()
@@ -118,14 +119,14 @@ export default function Appearance() {
 							</Form.Item>
 						</Space.Compact>
 					</Form.Item>
-					<Form.Item name="marginX" label={`${t('apps.baseSettings.leftRightMargin')} (%)`}>
-						<InputNumber min={0} max={20} />
+					<Form.Item name="marginX" label={`${t('apps.baseSettings.leftRightMargin')} (px)`}>
+						<InputNumber min={0} max={100} />
 					</Form.Item>
-					<Form.Item name="marginTop" label={t('apps.baseSettings.topMargin')}>
-						<InputNumber min={0} max={300} />
+					<Form.Item name="marginTop" label={`${t('apps.baseSettings.topMargin')} (%)`}>
+						<InputNumber min={0} max={50} />
 					</Form.Item>
-					<Form.Item name="marginBottom" label={t('apps.baseSettings.bottomMargin')}>
-						<InputNumber min={0} max={300} />
+					<Form.Item name="marginBottom" label={`${t('apps.baseSettings.bottomMargin')} (%)`}>
+						<InputNumber min={0} max={50} />
 					</Form.Item>
 					{toggle('iconTextInfoHideDescription', 'apps.baseSettings.hideDescription')}
 					{toggle('iconTextIconHideTitle', 'apps.baseSettings.hideTitle')}

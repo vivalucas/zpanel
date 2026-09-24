@@ -362,6 +362,8 @@
     "lan": "LAN",
     "search": "Search",
     "searchPlaceholder": "Find an app, or press Enter to search the web",
+    "webSearchPlaceholder": "Enter a query and press Enter to search the web",
+    "cpuCores": "{count} cores",
     "searchEngine": "Search engine",
     "applications": "Applications",
     "sort": "Sort",

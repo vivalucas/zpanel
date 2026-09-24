@@ -428,7 +428,7 @@ sudo docker compose logs --tail=100 zpanel
 
 ## 本地开发
 
-前端采用 **React + TypeScript + Vite + Ant Design**，使用统一主题和设置中心。目录、状态管理与验证流程见 [前端开发说明](docs/frontend.zh-CN.md) · [自查与验证范围](docs/frontend-audit.zh-CN.md)。
+前端采用 **React + TypeScript + Vite + Ant Design**，使用统一主题和设置中心。目录、状态管理与验证流程见 [前端开发说明](docs/frontend.zh-CN.md) · [视觉设计规范](docs/ui-design.zh-CN.md) · [自查与验证范围](docs/frontend-audit.zh-CN.md)。
 
 ```bash
 fnm use

@@ -48,7 +48,7 @@ test('login, create a group and app, edit, search and keyboard-sort with persist
 	await page.getByLabel('账号', { exact: true }).fill('admin@zpanel.local')
 	await page.getByLabel('密码', { exact: true }).fill('12345678')
 	await page.getByRole('button', { name: '登录', exact: true }).click()
-	await expect(page.getByRole('heading', { name: /我的应用/ })).toBeVisible()
+	await expect(page.locator('.home-identity')).toBeVisible()
 	await page.goto('/#/settings/groups')
 	await page.getByRole('button', { name: '添加', exact: true }).click()
 	await page.getByLabel('标题').fill('工作空间')
@@ -58,10 +58,10 @@ test('login, create a group and app, edit, search and keyboard-sort with persist
 		.click()
 	await expect(page.getByText('工作空间', { exact: true })).toBeVisible()
 	await page.goto('/#/')
-	await page.getByRole('button', { name: '添加项目', exact: true }).first().click()
+	await page.getByRole('button', { name: '工作空间 添加项目' }).click()
 	await page.getByLabel('标题').fill('Project Atlas')
 	await page.getByRole('combobox', { name: '分组', exact: true }).click()
-	await page.getByTitle('工作空间', { exact: true }).click()
+	await page.locator('.ant-select-dropdown:visible .ant-select-item-option[title="工作空间"]').click()
 	await page.getByLabel('地址', { exact: true }).fill('https://example.com')
 	await page.getByLabel('描述信息', { exact: true }).fill('项目文档与协作空间')
 	await page
@@ -93,7 +93,11 @@ test('login, create a group and app, edit, search and keyboard-sort with persist
 		(await api(request, '/panel/itemIcon/getListByGroupId', { itemIconGroupId: group.id })).list,
 	).toHaveLength(2)
 	await page.reload()
-	await page.getByRole('button', { name: '排序', exact: true }).click()
+	await page.getByRole('button', { name: '工作空间 排序' }).click()
+	const appInSort = page.getByRole('button', { name: 'Project Atlas Updated', exact: true })
+	await expect(appInSort).toHaveAttribute('aria-disabled', 'true')
+	await appInSort.dispatchEvent('click')
+	await expect(page.getByRole('dialog')).toHaveCount(0)
 	const handle = page.getByRole('button', { name: '拖动排序，也可按空格和方向键操作' }).first()
 	await handle.focus()
 	await page.keyboard.press('Space', { delay: 100 })
@@ -125,7 +129,7 @@ test('appearance persists and dark/light theme reaches controls and home', async
 		.toBe('rgb(20, 20, 20)')
 	await page.screenshot({ path: 'test-results/settings-dark.png', fullPage: true, animations: 'disabled' })
 	await page.goto('/#/')
-	await expect(page.getByRole('link', { name: 'Z My Homelab' })).toBeVisible()
+	await expect(page.locator('.home-logo-text')).toHaveText('My Homelab')
 	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
 })
 test('search/monitor settings and site customizations save; safe mode disables custom code', async ({
@@ -157,7 +161,7 @@ test('search/monitor settings and site customizations save; safe mode disables c
 	await expect(page).toHaveTitle('ZPanel Test')
 	await expect(page.locator('html')).toHaveAttribute('data-custom-test', 'yes')
 	await page.goto('/?safeMode=1#/')
-	await expect(page.getByRole('heading', { name: /我的应用/ })).toBeVisible()
+	await expect(page.locator('.home-identity')).toBeVisible()
 	await expect(page.locator('html')).not.toHaveAttribute('data-custom-test', 'yes')
 })
 test('file upload, wallpaper reference, export and import round trip', async ({ page, request }) => {
@@ -237,6 +241,10 @@ test('ordinary users cannot open admin pages; account switching and public mode 
 	await guestPage.goto('http://127.0.0.1:16521/#/')
 	await expect(guestPage.getByRole('heading', { name: 'Reader-only group' })).toBeVisible()
 	await expect(guestPage.getByRole('button', { name: '添加项目' })).toHaveCount(0)
+	await guestPage.getByRole('button', { name: '登录', exact: true }).click()
+	await expect(guestPage.getByRole('button', { name: '返回首页' })).toBeVisible()
+	await guestPage.getByRole('button', { name: '返回首页' }).click()
+	await expect(guestPage.getByRole('heading', { name: 'Reader-only group' })).toBeVisible()
 	await guest.close()
 	await api(request, '/panel/users/setPublicVisitUser', { userId: null })
 })
@@ -251,7 +259,7 @@ test('desktop and mobile pages have no overflow or runtime errors, and Docker fa
 	const errors: string[] = []
 	page.on('pageerror', (err) => errors.push(err.message))
 	await enter(page)
-	await expect(page.getByRole('heading', { name: /我的应用/ })).toBeVisible()
+	await expect(page.locator('.home-identity')).toBeVisible()
 	await expect(page.locator('.monitor-card')).toHaveCount(2)
 	await expect(page.locator('.monitor-card strong')).toHaveCount(2)
 	await page.screenshot({ path: 'test-results/home-desktop.png', fullPage: true })
@@ -269,7 +277,7 @@ test('desktop and mobile pages have no overflow or runtime errors, and Docker fa
 		'/settings/about',
 	]) {
 		await page.goto(`/#${path}`)
-		await expect(page.locator(path === '/' ? '.home-toolbar' : '.settings-section').first()).toBeVisible()
+		await expect(page.locator(path === '/' ? '.home-hero' : '.settings-section').first()).toBeVisible()
 		await expect
 			.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
 			.toBeTruthy()

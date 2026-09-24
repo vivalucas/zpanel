@@ -63,6 +63,16 @@ export default defineConfig((env) => {
 		build: {
 			reportCompressedSize: false,
 			sourcemap: false,
+			rolldownOptions: {
+				output: {
+					codeSplitting: {
+						groups: [
+							// Keep the React runtime together; app and Ant Design chunks depend on it in one direction.
+							{ name: 'react-runtime', test: /node_modules\/(?:react|react-dom|scheduler)\// },
+						],
+					},
+				},
+			},
 			commonjsOptions: {
 				ignoreTryCatch: false,
 			},

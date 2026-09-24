@@ -6,7 +6,8 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePreferences } from '@/app/store'
 import { languageOptions } from '@/locales'
-import { ImageUpload, Section } from '@/components/shared'
+import { Section } from '@/components/shared'
+import { ImageUpload } from '@/components/ImageUpload'
 export default function Account({ user }: { user: User.Info }) {
 	const request = useSessionRequest()
 	const prefs = usePreferences()

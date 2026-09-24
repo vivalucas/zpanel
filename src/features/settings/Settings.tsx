@@ -60,14 +60,6 @@ export default function Settings({ auth }: { auth: AuthInfo }) {
 				</a>
 				<div className="sidebar-label">{t('ui.settings')}</div>
 				<Menu selectedKeys={[section]} items={sections} onClick={({ key }) => navigate(`/settings/${key}`)} />
-				<Button
-					className="back-home"
-					type="text"
-					icon={<ArrowLeftOutlined aria-hidden="true" />}
-					onClick={() => navigate('/')}
-				>
-					{t('exception.goHome')}
-				</Button>
 			</aside>
 			<main className="settings-main">
 				<header className="settings-header">

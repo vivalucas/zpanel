@@ -4,6 +4,20 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.1 - 2026-09-24
+
+### Frontend
+
+- Restored the Vue homepage layout positions and 70 px default app icons while keeping the new glass design. Aligned margin units and defaults with the previous configuration.
+- Improved wallpaper and dark-theme contrast, simplified detail cards, and moved navigation actions back to their groups.
+- Removed the misleading return-home action from a standalone login page; kept it when arriving from the public homepage and restored language selection before login.
+- Matched search hints to the active setting, localized CPU core counts, and prevented accidental app edits while sorting.
+- Lazy-loaded login, upload, and HTML sanitization code. Split the React runtime into its own chunk; the largest production script is now about 363 KB with no bundle-size warning.
+
+### Verification
+
+- Passed 15 production-browser regressions, 9 unit tests, navigation/import checks, TypeScript, ESLint, and standard/PWA builds. Updated the visual design and audit documentation.
+
 ## 1.2.0 - 2026-09-13
 
 ### Frontend

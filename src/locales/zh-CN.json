@@ -362,6 +362,8 @@
     "lan": "内网",
     "search": "搜索",
     "searchPlaceholder": "搜索应用，或按 Enter 搜索网页",
+    "webSearchPlaceholder": "输入关键词，按 Enter 搜索网页",
+    "cpuCores": "{count} 核",
     "searchEngine": "搜索引擎",
     "applications": "我的应用",
     "sort": "排序",

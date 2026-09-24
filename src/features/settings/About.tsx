@@ -3,7 +3,8 @@ import { useFeedback } from '@/lib/feedback'
 import { useQuery } from '@tanstack/react-query'
 import { Descriptions } from 'antd'
 import MarkdownIt from 'markdown-it'
-import { QueryError, SafeHtml, Section } from '@/components/shared'
+import { QueryError, Section } from '@/components/shared'
+import { SafeHtml } from '@/components/SafeHtml'
 const markdown = new MarkdownIt({ html: false, linkify: true })
 export default function About() {
 	const request = useSessionRequest()

@@ -45,6 +45,7 @@ test('HTTP LAN without randomUUID opens login and refreshes captcha after failed
 	})
 	await page.route('**/api/login', (route) => route.fulfill({ json: { code: 1002, msg: 'Invalid captcha' } }))
 	await page.goto('/#/login')
+	await expect(page.getByRole('button', { name: '返回首页' })).toHaveCount(0)
 	await page.getByLabel('账号', { exact: true }).fill('admin@zpanel.local')
 	await page.getByLabel('密码', { exact: true }).fill('12345678')
 	await page.locator('input[maxlength="6"]').fill('000000')
@@ -54,6 +55,9 @@ test('HTTP LAN without randomUUID opens login and refreshes captcha after failed
 	await expect(captcha).not.toHaveAttribute('src', before!)
 	await expect(page.locator('button[type=submit]')).not.toHaveClass(/ant-btn-loading/)
 	await expect(page.getByRole('button', { name: '登录', exact: true })).toBeEnabled()
+	await page.getByRole('combobox', { name: '界面语言' }).click()
+	await page.getByText('English', { exact: true }).click()
+	await expect(page.getByRole('button', { name: 'Login', exact: true })).toBeVisible()
 	expect(errors).toEqual([])
 })
 test('failed appearance saves preserve drafts, block navigation, and successful retry locks inputs', async ({

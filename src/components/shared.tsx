@@ -1,9 +1,6 @@
-import { Alert, Button, Spin, Upload } from 'antd'
-import { UploadOutlined } from '@ant-design/icons'
+import { Alert, Button, Spin } from 'antd'
 import { useTranslation } from 'react-i18next'
-import DOMPurify from 'dompurify'
-import { ApiError, uploadImage } from '@/lib/api'
-import { useFeedback } from '@/lib/feedback'
+import { ApiError } from '@/lib/api'
 import type { ReactNode } from 'react'
 
 export function Loading() {
@@ -53,39 +50,5 @@ export function Section({
 			</div>
 			{children}
 		</section>
-	)
-}
-/* eslint-disable react/dom-no-dangerously-set-innerhtml -- This component sanitizes all HTML with DOMPurify. */
-export function SafeHtml({ html, className }: { html?: string; className?: string }) {
-	// Only sanitized HTML is injected; arbitrary scripts are handled by the explicit site setting.
-	return (
-		<div
-			className={className}
-			dangerouslySetInnerHTML={{
-				__html: DOMPurify.sanitize(html || '', { ADD_ATTR: ['target'], FORBID_TAGS: ['style'] }),
-			}}
-		/>
-	)
-}
-/* eslint-enable react/dom-no-dangerously-set-innerhtml */
-export function ImageUpload({ onChange }: { onChange: (url: string) => void }) {
-	const { t, error } = useFeedback()
-	return (
-		<Upload
-			accept=".png,.jpg,.jpeg,.webp,.gif,.ico"
-			showUploadList={false}
-			customRequest={async (options) => {
-				try {
-					const data = await uploadImage(options.file as Blob)
-					onChange(data.imageUrl)
-					options.onSuccess?.(data)
-				} catch (err) {
-					error(err)
-					options.onError?.(err as Error)
-				}
-			}}
-		>
-			<Button icon={<UploadOutlined aria-hidden="true" />}>{t('iconItem.selectUpload')}</Button>
-		</Upload>
 	)
 }

@@ -2,13 +2,15 @@ import { useSessionRequest } from '@/lib/session'
 import { randomId } from '@/lib/id'
 import { useFeedback } from '@/lib/feedback'
 import { useState } from 'react'
-import { Button, Form, Input, Typography } from 'antd'
+import { Button, Form, Input, Select, Typography } from 'antd'
 import { ArrowLeftOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useSite } from '@/lib/queries'
 import { apiBase } from '@/lib/api'
 import { usePreferences } from '@/app/store'
-import { Loading, QueryError, SafeHtml } from '@/components/shared'
+import { languageOptions } from '@/locales'
+import { Loading, QueryError } from '@/components/shared'
+import { SafeHtml } from '@/components/SafeHtml'
 export default function Login() {
 	const request = useSessionRequest()
 	const site = useSite()
@@ -17,7 +19,7 @@ export default function Login() {
 	const { t, error } = useFeedback()
 	const [busy, setBusy] = useState(false)
 	const [captchaId, setCaptchaId] = useState(() => randomId())
-	const signIn = usePreferences((s) => s.signIn)
+	const { language, setPreference, signIn } = usePreferences()
 	if (site.isPending) return <Loading />
 	if (site.error)
 		return (
@@ -35,14 +37,23 @@ export default function Login() {
 				<div className="login-orbit" />
 			</div>
 			<div className="login-content">
-				<Button
-					className="login-back"
-					type="text"
-					icon={<ArrowLeftOutlined aria-hidden="true" />}
-					onClick={() => navigate('/')}
-				>
-					{t('exception.goHome')}
-				</Button>
+				<Select
+					className="login-language"
+					aria-label={t('ui.language')}
+					value={language}
+					options={languageOptions}
+					onChange={(value) => setPreference({ language: value })}
+				/>
+				{location.state?.fromPublicHome && (
+					<Button
+						className="login-back"
+						type="text"
+						icon={<ArrowLeftOutlined aria-hidden="true" />}
+						onClick={() => navigate('/')}
+					>
+						{t('exception.goHome')}
+					</Button>
+				)}
 				<div className="login-form">
 					<div className="brand-mark small">Z</div>
 					<Typography.Title level={2}>{t('login.welcomeMessage')}</Typography.Title>

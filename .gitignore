@@ -91,3 +91,6 @@ mcp.json
 # Browser test artifacts
 /test-results/
 /playwright-report/
+
+# Shared handbook entry
+!/CLAUDE.md

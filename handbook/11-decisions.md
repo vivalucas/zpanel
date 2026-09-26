@@ -67,7 +67,7 @@
 - `Dockerfile`
 - `docker-compose.yml`
 - `service/assets/version`
-- `10-planning-log.md` 中的 ADR-005
+- `09-current-plan.md` 中的 ADR-005
 
 **后续补充**：
 
@@ -134,8 +134,8 @@
 - `src/locales/index.ts`
 - `src/store/modules/app/helper.ts`
 - `src/utils/defaultData/index.ts`
-- `10-planning-log.md` 中的 ADR-004
-- `06-dev-log.md` 中的 2026-05-20（多语言 README 与产品本地化框架）
+- `09-current-plan.md` 中的 ADR-004
+- `11-decisions.md` 中的 2026-05-20（多语言 README 与产品本地化框架）
 
 **后续补充**：
 
@@ -198,11 +198,11 @@
 
 **相关文件**：
 
-- `10-planning-log.md` 中的 ADR-003
-- `06-dev-log.md` 中的 2026-05-20（PRO 功能开源化第一版）
+- `09-current-plan.md` 中的 ADR-003
+- `11-decisions.md` 中的 2026-05-20（PRO 功能开源化第一版）
 - `service/api/api_v1/system/docker.go`
-- `src/components/apps/DockerManager/index.vue`
-- `src/components/apps/Style/index.vue`
+- `src/features/settings/Docker.tsx`
+- `src/features/settings/Appearance.tsx`
 
 **后续补充**：
 
@@ -265,9 +265,9 @@
 
 - `README.md`
 - `LICENSE`
-- `src/components/apps/About/index.vue`
-- `10-planning-log.md` 中的 ADR-001
-- `06-dev-log.md` 中的 2026-05-20（fork 初始化与 project-log 建立）
+- `src/features/settings/About.tsx`
+- `09-current-plan.md` 中的 ADR-001
+- `11-decisions.md` 中的 2026-05-20（fork 初始化与 project-log 建立）
 
 **后续补充**：
 
@@ -324,7 +324,7 @@
 
 **相关文件**：
 
-- `src/App.vue`（customJs 注入）
+- `src/app/App.tsx`（customJs 注入）
 - `service/api/api_v1/panel/itemIcon.go`（GetSiteFavicon）
 - `service/initialize/database/connect.go`（默认密码）
 - `service/router/router.go`（静态文件）
@@ -391,3 +391,7 @@
 4. 配置导出不承诺携带二进制图片，完整备份使用 conf/data；UI 明确说明此边界。
 5. 导航跳转只允许网页协议和相对地址，阻断导入内容中的脚本 URL；如果未来需要 ssh 等原生客户端协议，应显式评估和增加白名单，而非开放任意协议。
 6. 当前 Git 已跟踪 project-log，本轮保留现状。早期“只在本地忽略”的要求记为历史取舍，未擅自删除跟踪或改写 Git 历史。
+
+## 当前前端决策
+
+1.2.0 已替换为 React，旧 Vue/Pinia/Naive UI 不并存；1.2.1 保留原首页空间布局并改善视觉。实现约定以 docs/frontend.zh-CN.md 与 ui-design.zh-CN.md 为准。原 13 质量评估已合入 10；新增专题从 15 起。

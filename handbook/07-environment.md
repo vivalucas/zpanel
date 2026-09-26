@@ -72,7 +72,7 @@
 - project-log 中只记录变量名、用途、假示例值和配置位置。
 - 不写入真实数据库密码、Redis 密码、token、cookie、私钥。
 - 生产环境必须替换配置模板中的示例密码。
-- 如果真实密钥曾被提交或写入文档，立即轮换密钥，并在 `06-dev-log.md` 记录处理方式。
+- 如果真实密钥曾被提交或写入文档，立即轮换密钥，并在 `11-decisions.md` 记录处理方式。
 
 ## 第三方服务
 
@@ -87,8 +87,8 @@
 
 | 项目 | 当前值 | 来源 |
 |------|--------|------|
-| 产品版本 | `1.1.8` | `service/assets/version` 与 `package.json` |
-| 后端版本源 | `1|1.1.8` | `service/assets/version` |
+| 产品版本 | `1.2.1` | `service/assets/version` 与 `package.json` |
+| 后端版本源 | `1|1.2.1` | `service/assets/version` |
 | 健康检查 | `GET /api/healthz` | `service/router/router.go` |
 | 默认 HTTP 端口 | `6521` | `service/assets/conf.example.ini` |
 

@@ -46,7 +46,7 @@
 - `PublicModeInterceptor`：公开模式允许访问的面板数据接口。
 - `AdminInterceptor`：管理员权限接口。
 
-前端在 `src/utils/request/index.ts` 中通过请求头 `token` 传递当前登录 token；后端中间件从 `c.GetHeader("token")` 读取。
+前端在 `src/lib/` 请求层 中通过请求头 `token` 传递当前登录 token；后端中间件从 `c.GetHeader("token")` 读取。
 
 ## 统一响应格式
 

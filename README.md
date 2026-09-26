@@ -303,3 +303,7 @@ ZPanel is based on the MIT-licensed open-source version of [Sun-Panel](https://g
 ## License
 
 MIT License. See [LICENSE](./LICENSE).
+
+## 开发文档
+
+项目规则见 [AGENTS.md](AGENTS.md)，开发导航见 [handbook/README.md](handbook/README.md)。

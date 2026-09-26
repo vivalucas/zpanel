@@ -8,7 +8,7 @@ export default antfu({
   ignores: [
     'dist/**',
     'node_modules/**',
-    'project-log/**/*.md',
+    'handbook/**/*.md',
   ],
 }, {
   rules: {

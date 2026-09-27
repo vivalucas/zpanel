@@ -158,9 +158,11 @@ export default function Modules() {
 					>
 						<Switch />
 					</Form.Item>
-					<Button type="primary" htmlType="submit" loading={busy === 'search'}>
-						{t('common.save')}
-					</Button>
+					<div className="form-actions">
+						<Button type="primary" htmlType="submit" loading={busy === 'search'}>
+							{t('common.save')}
+						</Button>
+					</div>
 				</Form>
 			</Section>
 			<Section title={t('apps.baseSettings.systemMonitorStatus')} description={t('ui.monitorDescription')}>
@@ -258,7 +260,7 @@ export default function Modules() {
 										</div>
 									</div>
 								))}
-								<Space>
+								<div className="form-actions">
 									<Button
 										icon={<PlusOutlined aria-hidden="true" />}
 										onClick={() =>
@@ -270,7 +272,7 @@ export default function Modules() {
 									<Button type="primary" htmlType="submit" loading={busy === 'monitors'}>
 										{t('common.save')}
 									</Button>
-								</Space>
+								</div>
 							</>
 						)}
 					</Form.List>

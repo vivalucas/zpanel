@@ -120,13 +120,12 @@ test('appearance persists and dark/light theme reaches controls and home', async
 	await expect
 		.poll(async () => (await api(request, '/panel/userConfig/get')).panel.logoText)
 		.toBe('My Homelab')
-	await page.getByRole('combobox', { name: '界面主题' }).click()
 	await page.getByText('深色', { exact: true }).click()
 	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
 	await page.keyboard.press('Escape')
 	await expect
 		.poll(() => page.getByLabel('面板名称').evaluate((el) => getComputedStyle(el).backgroundColor))
-		.toBe('rgb(20, 20, 20)')
+		.toBe('rgba(48, 54, 70, 0.72)')
 	await page.screenshot({ path: 'test-results/settings-dark.png', fullPage: true, animations: 'disabled' })
 	await page.goto('/#/')
 	await expect(page.locator('.home-logo-text')).toHaveText('My Homelab')

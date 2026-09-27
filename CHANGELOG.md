@@ -4,6 +4,19 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.2 - 2026-09-27
+
+### Frontend
+
+- Redesigned settings as a single floating glass window with an integrated sidebar, independent content scrolling, and responsive mobile navigation.
+- Added visual theme choices and live identity/wallpaper draft previews. Theme choices fit narrow windows; long names are contained, and failed logo images fall back to initials and recover when the URL changes.
+- Kept appearance and site save bars outside the scrolling content so they do not cover keyboard-focused fields. Aligned action-area styling for search, monitoring and account forms while preserving separate saves.
+
+### Documentation and Verification
+
+- Aligned frontend and visual conventions, current project state, and regression guidance with the settings redesign.
+- Added regressions for Chinese/English narrow layouts, light/dark themes, keyboard focus with draft warnings, and logo preview edge cases. Verified the redesign with 19 browser regressions, 9 unit tests, navigation/import regression checks, production build, TypeScript, ESLint and documentation checks; Safari/Firefox, real mobile keyboards and other operating systems remain unverified.
+
 ## 1.2.1 - 2026-09-24
 
 ### Frontend

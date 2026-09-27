@@ -30,6 +30,7 @@ export default function Site() {
 	if (query.error) return <QueryError error={query.error} retry={() => query.refetch()} />
 	return (
 		<Form
+			className="settings-form"
 			form={form}
 			onValuesChange={() => setDirty(true)}
 			disabled={saving}
@@ -51,30 +52,32 @@ export default function Site() {
 				}
 			}}
 		>
-			<Section title={t('apps.baseSettings.siteAndLogin')}>
-				<div className="form-grid">
-					{['siteTitle', 'siteIcon', 'loginTitle', 'loginSubtitle'].map((key) => (
-						<Form.Item key={key} name={key} label={t(`apps.baseSettings.${key}`)}>
-							<Input />
-						</Form.Item>
-					))}
-				</div>
-				<Form.Item name="loginFooter" label={t('apps.baseSettings.loginFooter')}>
-					<Input.TextArea rows={3} />
-				</Form.Item>
-				<Form.Item name="loginCaptcha" label={t('apps.baseSettings.loginCaptcha')} valuePropName="checked">
-					<Switch />
-				</Form.Item>
-			</Section>
-			<Section title={t('apps.baseSettings.customCssJs')}>
-				<Alert type="info" showIcon title={t('ui.safeModeHint')} />
-				<Form.Item className="spaced" name="customCss" label="CSS">
-					<Input.TextArea className="code-input" rows={7} />
-				</Form.Item>
-				<Form.Item name="customJs" label="JavaScript">
-					<Input.TextArea className="code-input" rows={7} />
-				</Form.Item>
-			</Section>
+			<div className="settings-form-content">
+				<Section title={t('apps.baseSettings.siteAndLogin')}>
+					<div className="form-grid">
+						{['siteTitle', 'siteIcon', 'loginTitle', 'loginSubtitle'].map((key) => (
+							<Form.Item key={key} name={key} label={t(`apps.baseSettings.${key}`)}>
+								<Input />
+							</Form.Item>
+						))}
+					</div>
+					<Form.Item name="loginFooter" label={t('apps.baseSettings.loginFooter')}>
+						<Input.TextArea rows={3} />
+					</Form.Item>
+					<Form.Item name="loginCaptcha" label={t('apps.baseSettings.loginCaptcha')} valuePropName="checked">
+						<Switch />
+					</Form.Item>
+				</Section>
+				<Section title={t('apps.baseSettings.customCssJs')}>
+					<Alert type="info" showIcon title={t('ui.safeModeHint')} />
+					<Form.Item className="spaced" name="customCss" label="CSS">
+						<Input.TextArea className="code-input" rows={7} />
+					</Form.Item>
+					<Form.Item name="customJs" label="JavaScript">
+						<Input.TextArea className="code-input" rows={7} />
+					</Form.Item>
+				</Section>
+			</div>
 			<div className="save-bar">
 				<Button type="primary" htmlType="submit" loading={saving}>
 					{t('common.save')}

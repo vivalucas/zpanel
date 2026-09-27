@@ -48,12 +48,12 @@ export default function Account({ user }: { user: User.Info }) {
 							<Input />
 						</Form.Item>
 					</div>
-					<Space>
+					<div className="form-actions">
 						<ImageUpload onChange={(url) => form.setFieldValue('headImage', url)} />
 						<Button type="primary" htmlType="submit" loading={saving}>
 							{t('common.save')}
 						</Button>
-					</Space>
+					</div>
 				</Form>
 			</Section>
 			<Section title={t('ui.language')}>
@@ -143,9 +143,11 @@ export default function Account({ user }: { user: User.Info }) {
 					>
 						<Input.Password autoComplete="new-password" />
 					</Form.Item>
-					<Button htmlType="submit" loading={passwordBusy}>
-						{t('settingUserInfo.updatePassword')}
-					</Button>
+					<div className="form-actions">
+						<Button type="primary" htmlType="submit" loading={passwordBusy}>
+							{t('settingUserInfo.updatePassword')}
+						</Button>
+					</div>
 				</Form>
 			</Section>
 			<Button

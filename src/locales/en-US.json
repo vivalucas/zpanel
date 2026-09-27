@@ -444,7 +444,6 @@
     "selectImportData": "Select data to import.",
     "aboutDescription": "Self-hosted dashboard",
     "backendVersion": "Backend version",
-    "attribution": "Based on Sun-Panel (MIT license).",
     "leaveUnsaved": "Discard unsaved changes and leave?"
   }
 }

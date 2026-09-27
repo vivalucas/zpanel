@@ -6,8 +6,6 @@
 
 ---
 
-ZPanel 是 [Sun-Panel](https://github.com/hslr-s/sun-panel) MIT 开源版本的独立 fork。Sun-Panel 和原作者为本项目提供了重要基础。ZPanel 不是 Sun-Panel 官方项目，也不代表原项目继续维护。
-
 ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放，不引入付费授权系统。围绕自托管使用场景，ZPanel 对前端工程结构、用户与导航数据、个性化配置、文件上传、Docker 管理和部署流程做了持续整理与优化；同时补强了登录验证码、访问拦截、权限校验、登录限流、安全响应头、容器健康检查、CI 质量门禁和项目协作文件，让项目更适合作为可维护、可部署、可二次开发的开源样例。
 
 关键词：自托管导航页、NAS 导航面板、Homelab Dashboard、个人服务器首页、Docker 管理面板、内网服务导航、浏览器主页。
@@ -465,10 +463,6 @@ GitHub Actions 会在 Pull Request 和主分支推送时运行前后端检查。
 ## 贡献与安全
 
 贡献前请阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)。安全问题请按 [SECURITY.md](./SECURITY.md) 私下报告。
-
-## Fork 说明
-
-ZPanel 基于 Sun-Panel 的 MIT 开源版本构建。ZPanel 是独立项目，不是官方延续；当前代码围绕 ZPanel 的产品方向持续演进，重点改进自托管部署、用户体验、权限安全、Docker 管理和工程质量。
 
 ## 许可
 

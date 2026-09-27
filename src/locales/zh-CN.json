@@ -444,7 +444,6 @@
     "selectImportData": "请选择要导入的数据。",
     "aboutDescription": "自托管导航面板",
     "backendVersion": "后端版本",
-    "attribution": "基于 Sun-Panel（MIT 许可证）。",
     "leaveUnsaved": "放弃未保存的修改并离开？"
   }
 }

@@ -6,8 +6,6 @@ Un panneau de navigation auto-heberge, propre et leger, pour NAS, homelab, serve
 
 ---
 
-ZPanel est un fork independant de la version open source sous licence MIT de [Sun-Panel](https://github.com/hslr-s/sun-panel). Sun-Panel et son auteur original ont fourni une base importante pour ce projet. ZPanel n'est pas un projet officiel Sun-Panel.
-
 ZPanel vise a rester leger, agreable a utiliser, facile a deployer et ouvert par defaut, sans introduire de barriere de licence payante. Pour les usages auto-heberges, ZPanel continue d'ameliorer la structure frontend, les donnees utilisateur et de navigation, la personnalisation, les televersements, la gestion Docker et le flux de deploiement. Le projet renforce aussi le captcha de connexion, l'interception des acces, les controles de permission, la limitation des tentatives de connexion, les en-tetes de securite, les health checks de conteneur, les controles CI et les fichiers de collaboration.
 
 ## Fonctionnalites

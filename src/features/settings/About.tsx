@@ -38,7 +38,6 @@ export default function About() {
 					GitHub ↗
 				</a>
 			</p>
-			<p className="muted">{t('ui.attribution')}</p>
 			{description.error ? (
 				<QueryError error={description.error} retry={() => description.refetch()} />
 			) : (

@@ -6,8 +6,6 @@ A clean, lightweight, self-hosted navigation panel and server homepage for NAS, 
 
 ---
 
-ZPanel is an independent fork of the MIT-licensed open-source version of [Sun-Panel](https://github.com/hslr-s/sun-panel). Sun-Panel and its original author provided an important foundation for this project. ZPanel is not affiliated with or endorsed by the original project; it is maintained separately for users who want a refreshed self-hosted navigation panel.
-
 The goal is simple: keep the panel lightweight, pleasant to use, easy to deploy, open by default, and free of a paid authorization system. ZPanel continues to refine the frontend architecture, user and navigation data flows, personalization settings, file uploads, Docker management, and deployment workflow. It also adds practical hardening and maintainability work around login captcha, access interception, permission checks, login rate limiting, security headers, container health checks, CI quality gates, and project collaboration files.
 
 ---
@@ -267,7 +265,7 @@ go build -o zpanel --ldflags="-X zpanel/global.RUNCODE=release" main.go
 
 ## Project Status
 
-ZPanel has completed its initial fork cleanup and a broad engineering pass across product behavior, deployment, security posture, and repository standards. Frontend type-check, lint, production build, backend tests, and backend release build are expected to pass before release.
+ZPanel has completed a broad engineering pass across product behavior, deployment, security posture, and repository standards. Frontend type-check, lint, production build, backend tests, and backend release build are expected to pass before release.
 
 Still pending before a polished release:
 
@@ -291,12 +289,6 @@ Security reports should follow [SECURITY.md](./SECURITY.md).
 - Add safer recovery paths for custom CSS / JS misconfiguration
 - Improve Docker management UX and deployment documentation
 - Explore plugin, widget, and application-center ideas for future versions
-
----
-
-## Fork Notice
-
-ZPanel is based on the MIT-licensed open-source version of [Sun-Panel](https://github.com/hslr-s/sun-panel). It is an independent project, not an official continuation, and now evolves around ZPanel's own self-hosted product direction.
 
 ---
 

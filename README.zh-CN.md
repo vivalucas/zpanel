@@ -65,7 +65,7 @@ ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放�
 - 登录验证码、登录限流、权限拦截和安全响应头
 - Docker / Compose 健康检查接口：`GET /api/healthz`
 - GitHub Actions 前后端质量检查
-- Dependabot、Issue 模板、PR 模板、贡献指南和安全策略
+- Issue 模板、PR 模板、贡献指南和安全策略
 
 ## Ubuntu 局域网部署（推荐）
 

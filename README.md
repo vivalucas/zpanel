@@ -67,7 +67,7 @@ Keywords: self-hosted dashboard, NAS dashboard, homelab dashboard, personal serv
 - Login captcha, login rate limiting, permission interception, and security headers
 - Docker / Compose health check endpoint: `GET /api/healthz`
 - GitHub Actions checks for frontend and backend quality
-- Dependabot, Issue templates, PR template, contribution guide, and security policy
+- Issue templates, PR template, contribution guide, and security policy
 
 ---
 

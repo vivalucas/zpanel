@@ -16,8 +16,8 @@
 
 2026-09-27 设置 UI 已按用户确认方向改为一体化悬浮磨砂玻璃窗口，统一导航、内容滚动和手机布局；风格设置增加主题视觉选项与标识/壁纸草稿预览。自查发现的窄宽度裁切、保存栏遮挡键盘焦点、长名称溢出及失效标识图片均已修复：保存栏独立占据底部空间，主题随容器收缩，预览省略长文字并提供图片回退；搜索/监控和个人账号的表单操作区统一样式，仍分别保存。前端规范、视觉规则与质量索引已对齐，回归边界记录在 11。
 
-此前验证基线为 b464d19 后的 1.2.2 设置 UI 与版本改动：生产构建、类型检查、全量 ESLint、9 项单元测试、test:review、文档链接与 diff 检查通过；项目标准 pnpm test:e2e 在全新临时 SQLite 服务上 19 项全部通过，含 tests/e2e/settings-layout.spec.ts 的 4 项新增回归。macOS Chromium 实际查看桌面、320px/390px 手机、641px 窄窗口、浅/深主题及模拟彩色壁纸；未验证 Safari/Firefox、真实手机软键盘与 Windows/Ubuntu 浏览器。1.2.2 已同步版本源与 CHANGELOG，随设置 UI 改动提交到 main；main 未推送到 origin/main、未创建标签或 Release。设计权威见 docs/ui-design.zh-CN.md。
+此前验证基线为 b464d19 后的 1.2.2 设置 UI 与版本改动：生产构建、类型检查、全量 ESLint、9 项单元测试、test:review、文档链接与 diff 检查通过；项目标准 pnpm test:e2e 在全新临时 SQLite 服务上 19 项全部通过，含 tests/e2e/settings-layout.spec.ts 的 4 项新增回归。macOS Chromium 实际查看桌面、320px/390px 手机、641px 窄窗口、浅/深主题及模拟彩色壁纸；未验证 Safari/Firefox、真实手机软键盘与 Windows/Ubuntu 浏览器。1.2.2 已同步版本源与 CHANGELOG，随设置 UI 改动提交到 main；未创建标签或 Release。设计权威见 docs/ui-design.zh-CN.md。
 
 2026-09-28 以 de56b93 为基线将 1.2.2 本地源码构建部署到 Ubuntu 单实例 Docker。先停机备份，再复用原配置和数据挂载；新容器 healthy，局域网页面及健康接口返回 200，登录配置接口正常，SQLite integrity_check 为 ok。服务器浏览器实查尝试超时，本次未完成部署后的视觉验收；此前 1.2.2 本地视觉和 E2E 验证如上。
 
-2026-09-28 dev 同步批次补充设置说明和共享读取失败状态：首次加载失败显示状态区，已有数据刷新失败保留上次结果；公开访问、图库共享和恢复默认值文案已核准。11 个语言文件补齐相同 key，并加入自动校验。macOS 上生产构建、类型检查、全量 ESLint、9 项单元测试、test:review、文档检查及隔离 SQLite 服务的 21 项 E2E 通过；已查看浅色错误页和深色设置页。真实 Docker 操作、服务器部署后视觉、Safari/Firefox、真实手机软键盘及 Windows/Ubuntu 浏览器仍未验证。
+2026-09-28 设置说明和共享读取失败状态已合入 main：首次加载失败显示状态区，已有数据刷新失败保留上次结果；公开访问、图库共享和恢复默认值文案已核准。11 个语言文件补齐相同 key，并加入自动校验。macOS 上生产构建、类型检查、全量 ESLint、9 项单元测试、test:review、文档检查及隔离 SQLite 服务的 21 项 E2E 通过；已查看浅色错误页和深色设置页。真实 Docker 操作、服务器部署后视觉、Safari/Firefox、真实手机软键盘及 Windows/Ubuntu 浏览器仍未验证。

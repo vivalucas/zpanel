@@ -1,6 +1,6 @@
 # 当前状态
 
-2026-09-27 对照 package.json、service/assets/version、src、工作流、CHANGELOG 与 docs 核对。当前源码版本 1.2.2，已从旧 Vue 改为 React + Ant Design。
+2026-09-28 对照 package.json、service/assets/version、src、工作流、CHANGELOG 与 docs 核对。当前源码版本 1.2.3，已从旧 Vue 改为 React + Ant Design。
 
 现有导航、设置 Hash 页面、会话隔离、图库引用替换、事务幂等导入、账号/公开模式、Docker 管理与可选 PWA。1.2.1 已恢复首页布局位置、70px 默认图标、玻璃/壁纸对比，并延迟加载登录/上传/HTML 净化模块；旧“大 chunk 未解决”不是最新结论。
 

@@ -4,6 +4,19 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.3 - 2026-09-28
+
+### Frontend
+
+- Clarified settings that affect public access, shared images, reset behavior and Docker controls with concise in-page guidance.
+- Unified read-error presentation across settings pages with retry actions and optional technical details. Kept previously loaded data visible when a refresh fails.
+- Completed the corresponding translations across 11 languages and added a locale-key consistency check.
+
+### Maintenance and Verification
+
+- Kept repository development on `main` and stopped automatic dependency-update branches.
+- Verified the settings and error-state changes with 21 browser regressions, 9 unit tests, production build, type checking, ESLint and documentation checks. Real Docker operations and browsers beyond macOS Chromium remain unverified.
+
 ## 1.2.2 - 2026-09-27
 
 ### Frontend

@@ -48,7 +48,7 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 	return (
 		<Section
 			title={t('adminSettingUsers.appName')}
-			description={t('adminSettingUsers.alertText')}
+			description={t('ui.publicAccessHelp')}
 			extra={
 				<Button type="primary" icon={<PlusOutlined aria-hidden="true" />} onClick={() => edit({})}>
 					{t('common.add')}
@@ -65,110 +65,126 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 				allowClear
 				className="table-search"
 			/>
-			{(users.error || publicUser.error) && (
-				<QueryError error={users.error || publicUser.error} retry={() => refresh()} />
+			{users.error && (
+				<QueryError
+					error={users.error}
+					compact={!!users.data}
+					title={users.data ? t('ui.refreshFailedWithPreviousData') : undefined}
+					description={users.data ? t('ui.refreshPreviousDataHint') : undefined}
+					retry={() => users.refetch()}
+				/>
 			)}
-			<Table
-				rowKey="id"
-				loading={users.isPending}
-				dataSource={users.data?.list}
-				scroll={{ x: 660 }}
-				pagination={{
-					current: page,
-					pageSize: 10,
-					total: users.data?.count,
-					showSizeChanger: false,
-					onChange: setPage,
-				}}
-				columns={[
-					{
-						title: t('common.username'),
-						dataIndex: 'username',
-						render: (value, user) => (
-							<Space>
-								{value}
-								{user.id === currentUser.id && <Tag>{t('adminSettingUsers.currentUseUsername')}</Tag>}
-							</Space>
-						),
-					},
-					{ title: t('common.nikeName'), dataIndex: 'name' },
-					{
-						title: t('adminSettingUsers.role'),
-						dataIndex: 'role',
-						render: (role) => (
-							<Tag color={role === 1 ? 'blue' : 'default'}>
-								{t(role === 1 ? 'common.role.admin' : 'common.role.regularUser')}
-							</Tag>
-						),
-					},
-					{
-						title: t('ui.publicAccess'),
-						render: (_, user) => (
-							<Button
-								size="small"
-								loading={busy}
-								disabled={publicUser.isPending || !!publicUser.error}
-								type={publicUser.data === user.id ? 'primary' : 'default'}
-								onClick={() =>
-									modal.confirm({
-										title: t('adminSettingUsers.setOrUnsetPublicMode'),
-										content: user.username,
-										onOk: async () => {
-											setBusy(true)
-											try {
-												await request('/panel/users/setPublicVisitUser', {
-													userId: publicUser.data === user.id ? null : user.id,
-												})
-												await refresh()
-											} catch (err) {
-												error(err)
-												throw err
-											} finally {
-												setBusy(false)
-											}
-										},
-									})
-								}
-							>
-								{t(publicUser.data === user.id ? 'ui.enabled' : 'ui.disabled')}
-							</Button>
-						),
-					},
-					{
-						title: t('common.action'),
-						render: (_, user) => (
-							<Space>
-								<Button size="small" onClick={() => edit(user)}>
-									{t('common.edit')}
-								</Button>
+			{publicUser.error && (!users.error || !!users.data) && (
+				<QueryError error={publicUser.error} compact retry={() => publicUser.refetch()} />
+			)}
+			{(!users.error || !!users.data) && (
+				<Table
+					rowKey="id"
+					loading={users.isPending}
+					dataSource={users.data?.list}
+					scroll={{ x: 660 }}
+					pagination={{
+						current: page,
+						pageSize: 10,
+						total: users.data?.count,
+						showSizeChanger: false,
+						onChange: setPage,
+					}}
+					columns={[
+						{
+							title: t('common.username'),
+							dataIndex: 'username',
+							render: (value, user) => (
+								<Space>
+									{value}
+									{user.id === currentUser.id && <Tag>{t('adminSettingUsers.currentUseUsername')}</Tag>}
+								</Space>
+							),
+						},
+						{ title: t('common.nikeName'), dataIndex: 'name' },
+						{
+							title: t('adminSettingUsers.role'),
+							dataIndex: 'role',
+							render: (role) => (
+								<Tag color={role === 1 ? 'blue' : 'default'}>
+									{t(role === 1 ? 'common.role.admin' : 'common.role.regularUser')}
+								</Tag>
+							),
+						},
+						{
+							title: t('ui.publicAccess'),
+							render: (_, user) => (
 								<Button
 									size="small"
-									danger
-									disabled={user.id === currentUser.id}
+									loading={busy}
+									disabled={publicUser.isPending || !!publicUser.error}
+									type={publicUser.data === user.id ? 'primary' : 'default'}
 									onClick={() =>
 										modal.confirm({
-											title: t('ui.deleteUser'),
-											content: user.username,
-											okButtonProps: { danger: true },
+											title: t('adminSettingUsers.setOrUnsetPublicMode'),
+											content: t(
+												publicUser.data === user.id
+													? 'ui.disablePublicAccessConfirm'
+													: 'ui.enablePublicAccessConfirm',
+												{ username: user.username },
+											),
 											onOk: async () => {
+												setBusy(true)
 												try {
-													await request('/panel/users/deletes', { userIds: [user.id] })
+													await request('/panel/users/setPublicVisitUser', {
+														userId: publicUser.data === user.id ? null : user.id,
+													})
 													await refresh()
 												} catch (err) {
 													error(err)
 													throw err
+												} finally {
+													setBusy(false)
 												}
 											},
 										})
 									}
 								>
-									{t('common.delete')}
+									{t(publicUser.data === user.id ? 'ui.enabled' : 'ui.disabled')}
 								</Button>
-							</Space>
-						),
-					},
-				]}
-			/>
+							),
+						},
+						{
+							title: t('common.action'),
+							render: (_, user) => (
+								<Space>
+									<Button size="small" onClick={() => edit(user)}>
+										{t('common.edit')}
+									</Button>
+									<Button
+										size="small"
+										danger
+										disabled={user.id === currentUser.id}
+										onClick={() =>
+											modal.confirm({
+												title: t('ui.deleteUser'),
+												content: user.username,
+												okButtonProps: { danger: true },
+												onOk: async () => {
+													try {
+														await request('/panel/users/deletes', { userIds: [user.id] })
+														await refresh()
+													} catch (err) {
+														error(err)
+														throw err
+													}
+												},
+											})
+										}
+									>
+										{t('common.delete')}
+									</Button>
+								</Space>
+							),
+						},
+					]}
+				/>
+			)}
 			<Modal
 				open={!!editing}
 				title={t(editing?.id ? 'common.edit' : 'common.add')}
@@ -202,7 +218,7 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 					<Form.Item name="name" label={t('common.nikeName')}>
 						<Input />
 					</Form.Item>
-					<Form.Item name="role" label={t('adminSettingUsers.role')}>
+					<Form.Item name="role" label={t('adminSettingUsers.role')} extra={t('ui.roleHelp')}>
 						<Select
 							options={[
 								{ value: 1, label: t('common.role.admin') },

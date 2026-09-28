@@ -53,7 +53,7 @@ export default function Site() {
 			}}
 		>
 			<div className="settings-form-content">
-				<Section title={t('apps.baseSettings.siteAndLogin')}>
+				<Section title={t('apps.baseSettings.siteAndLogin')} description={t('ui.siteDescription')}>
 					<div className="form-grid">
 						{['siteTitle', 'siteIcon', 'loginTitle', 'loginSubtitle'].map((key) => (
 							<Form.Item key={key} name={key} label={t(`apps.baseSettings.${key}`)}>
@@ -68,7 +68,7 @@ export default function Site() {
 						<Switch />
 					</Form.Item>
 				</Section>
-				<Section title={t('apps.baseSettings.customCssJs')}>
+				<Section title={t('apps.baseSettings.customCssJs')} description={t('ui.customCodeDescription')}>
 					<Alert type="info" showIcon title={t('ui.safeModeHint')} />
 					<Form.Item className="spaced" name="customCss" label="CSS">
 						<Input.TextArea className="code-input" rows={7} />

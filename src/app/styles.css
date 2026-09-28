@@ -120,6 +120,94 @@ a {
 	margin: auto;
 	padding: 100px 24px;
 }
+.status-state {
+	min-height: 220px;
+	padding: 32px 20px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 14px;
+	text-align: center;
+}
+.status-state-icon {
+	width: 42px;
+	height: 42px;
+	border: 1px solid var(--border);
+	border-radius: 50%;
+	background: var(--soft);
+	color: var(--muted);
+	display: grid;
+	place-items: center;
+	font-size: 18px;
+	flex: none;
+}
+.status-state-copy {
+	min-width: 0;
+	max-width: 560px;
+}
+.status-state-copy strong {
+	display: block;
+	font-size: 16px;
+	font-weight: 600;
+}
+.status-state-copy p {
+	margin: 6px 0 0;
+	color: var(--muted);
+	font-size: 13px;
+	line-height: 1.6;
+}
+.status-state-copy details {
+	margin-top: 10px;
+	color: var(--muted);
+	font-size: 12px;
+}
+.status-state-copy summary {
+	cursor: pointer;
+	width: fit-content;
+	margin: auto;
+}
+.status-state-copy code {
+	display: block;
+	margin-top: 8px;
+	overflow-wrap: anywhere;
+	font-family: 'SFMono-Regular', Consolas, monospace;
+}
+.status-state-compact {
+	min-height: 0;
+	padding: 14px 0;
+	flex-direction: row;
+	align-items: flex-start;
+	justify-content: flex-start;
+	text-align: start;
+	gap: 12px;
+}
+.status-state-compact .status-state-icon {
+	width: 32px;
+	height: 32px;
+	font-size: 14px;
+}
+.status-state-compact .status-state-copy {
+	flex: 1;
+}
+.status-state-compact .status-state-copy strong {
+	font-size: 14px;
+}
+.status-state-compact .status-state-copy p {
+	margin-top: 2px;
+}
+.status-state-compact .status-state-copy summary {
+	margin: 0;
+}
+@media (max-width: 640px) {
+	.status-state-compact {
+		flex-wrap: wrap;
+	}
+	.status-state-compact .status-state-action {
+		flex: 0 0 calc(100% - 44px);
+		margin-left: 44px;
+	}
+}
 .home-page {
 	display: flow-root;
 	min-height: 100vh;
@@ -1276,6 +1364,7 @@ a {
 	min-height: 0;
 	overflow: auto;
 	padding: 0 var(--settings-content-padding);
+	scroll-padding-bottom: 8px;
 	overscroll-behavior: contain;
 	scrollbar-width: thin;
 }

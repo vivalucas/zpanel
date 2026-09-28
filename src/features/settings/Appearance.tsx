@@ -89,7 +89,7 @@ export default function Appearance() {
 						}))}
 					/>
 				</Section>
-				<Section title={t('ui.identity')}>
+				<Section title={t('ui.identity')} description={t('ui.identityDescription')}>
 					<div className="identity-preview" aria-hidden="true">
 						<Avatar className="identity-mark" shape="square" size={36} src={logoImage || undefined}>
 							{Array.from(logoText || 'Z')[0]}
@@ -105,7 +105,7 @@ export default function Appearance() {
 						</Form.Item>
 					</div>
 				</Section>
-				<Section title={t('apps.baseSettings.wallpaper')}>
+				<Section title={t('apps.baseSettings.wallpaper')} description={t('ui.wallpaperDescription')}>
 					<div
 						className="wallpaper-preview"
 						aria-hidden="true"
@@ -125,15 +125,15 @@ export default function Appearance() {
 						}}
 					/>
 					<div className="form-grid spaced">
-						<Form.Item name="backgroundBlur" label={t('apps.baseSettings.vague')}>
+						<Form.Item name="backgroundBlur" label={t('ui.wallpaperBlur')}>
 							<Slider min={0} max={30} />
 						</Form.Item>
-						<Form.Item name="backgroundMaskNumber" label={t('apps.baseSettings.mask')}>
+						<Form.Item name="backgroundMaskNumber" label={t('ui.wallpaperShade')}>
 							<Slider min={0} max={1} step={0.05} />
 						</Form.Item>
 					</div>
 				</Section>
-				<Section title={t('apps.baseSettings.contentArea')}>
+				<Section title={t('apps.baseSettings.contentArea')} description={t('ui.contentAreaDescription')}>
 					<div className="form-grid">
 						<Form.Item name="iconStyle" label={t('ui.cardStyle')}>
 							<Select
@@ -171,11 +171,11 @@ export default function Appearance() {
 						<Form.Item name="marginBottom" label={`${t('apps.baseSettings.bottomMargin')} (%)`}>
 							<InputNumber min={0} max={50} />
 						</Form.Item>
-						{toggle('iconTextInfoHideDescription', 'apps.baseSettings.hideDescription')}
-						{toggle('iconTextIconHideTitle', 'apps.baseSettings.hideTitle')}
+						{toggle('iconTextInfoHideDescription', 'ui.hideDetailDescription')}
+						{toggle('iconTextIconHideTitle', 'ui.hideCompactTitle')}
 					</div>
 				</Section>
-				<Section title={t('ui.widgets')}>
+				<Section title={t('ui.widgets')} description={t('ui.widgetsDescription')}>
 					<div className="form-grid">
 						{toggle('clockShowSecond', 'apps.baseSettings.clockSecondShow')}
 						<Form.Item name="clockColor" label={t('ui.clockColor')}>
@@ -184,12 +184,12 @@ export default function Appearance() {
 						{toggle('searchBoxShow', 'apps.baseSettings.searchBar')}
 						{toggle('searchBoxSearchIcon', 'apps.baseSettings.searchBarSearchItem')}
 						{toggle('systemMonitorShow', 'apps.baseSettings.systemMonitorStatus')}
-						{toggle('systemMonitorShowTitle', 'apps.baseSettings.showTitle')}
-						{toggle('systemMonitorPublicVisitModeShow', 'apps.baseSettings.publicVisitModeShow')}
+						{toggle('systemMonitorShowTitle', 'ui.showMonitorTitle')}
+						{toggle('systemMonitorPublicVisitModeShow', 'ui.publicMonitor')}
 						{toggle('netModeChangeButtonShow', 'apps.baseSettings.netModeChangeButtonShow')}
 					</div>
 				</Section>
-				<Section title={t('apps.baseSettings.customFooter')}>
+				<Section title={t('apps.baseSettings.customFooter')} description={t('ui.footerDescription')}>
 					<Form.Item name="footerHtml">
 						<Input.TextArea rows={3} />
 					</Form.Item>
@@ -201,7 +201,7 @@ export default function Appearance() {
 					<Button
 						onClick={() =>
 							modal.confirm({
-								title: t('apps.baseSettings.resetWarnText'),
+								title: t('ui.resetDefaultsConfirm'),
 								onOk: () => {
 									form.setFieldsValue(defaultPanel)
 									setDirty(true)

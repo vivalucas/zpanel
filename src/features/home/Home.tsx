@@ -300,7 +300,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						</div>
 					)}
 					{searchConfig.error && config.searchBoxShow && (
-						<QueryError error={searchConfig.error} retry={() => searchConfig.refetch()} />
+						<QueryError error={searchConfig.error} compact retry={() => searchConfig.refetch()} />
 					)}
 				</section>
 				{config.systemMonitorShow && (editable || config.systemMonitorPublicVisitModeShow) && (

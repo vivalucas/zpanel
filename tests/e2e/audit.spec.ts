@@ -127,6 +127,25 @@ test('removing an earlier search engine preserves the selected default and reloa
 		})
 	}
 })
+test('a failed settings section does not hide the other section', async ({ page }) => {
+	let monitorFail = true
+	await page.route('**/api/system/moduleConfig/getByName', (route) => {
+		if (route.request().postDataJSON().name !== 'module-systemMonitor' || !monitorFail)
+			return route.continue()
+		return route.fulfill({ json: { code: -1, msg: 'Monitor settings unavailable' } })
+	})
+	await enter(page, '/settings/modules')
+	await expect(page.getByRole('heading', { name: '搜索引擎' })).toBeVisible()
+	await expect(page.getByLabel('默认搜索引擎')).toBeVisible()
+	const monitorSection = page
+		.locator('.settings-section')
+		.filter({ has: page.getByRole('heading', { name: '系统状态组件' }) })
+	await expect(monitorSection.getByRole('alert')).toBeVisible()
+	await expect(monitorSection.locator('form')).toHaveCount(0)
+	monitorFail = false
+	await monitorSection.getByRole('button', { name: '重试' }).click()
+	await expect(monitorSection.locator('form')).toBeVisible()
+})
 test('custom JavaScript is not rerun by unrelated site changes; hash safe mode clears it', async ({
 	page,
 	request,
@@ -208,6 +227,66 @@ test('Docker action confirmation, failed action retry and log controls match the
 	await expect(row.getByRole('button', { name: '停止', exact: true })).toBeEnabled()
 	await row.getByRole('button', { name: '日志', exact: true }).click()
 	await expect(page.locator('.log-output')).toContainText('audit log 200')
+})
+test('Docker read failures replace the empty table and recover in place', async ({ page }) => {
+	let containersFail = true
+	let statsFail = true
+	await page.route('**/api/system/docker/containers', (route) =>
+		route.fulfill({
+			json: containersFail
+				? { code: -1, msg: 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock' }
+				: {
+						code: 0,
+						data: {
+							count: 1,
+							list: [
+								{
+									id: 'abc123',
+									names: 'recovered-container',
+									image: 'nginx',
+									state: 'running',
+									status: 'Up',
+									ports: '80/tcp',
+								},
+							],
+						},
+					},
+		}),
+	)
+	await page.route('**/api/system/docker/stats', (route) =>
+		route.fulfill({
+			json: statsFail
+				? { code: -1, msg: 'Docker stats unavailable' }
+				: { code: 0, data: [{ ID: 'abc123', CPUPerc: '1.0%', MemUsage: '2MiB', NetIO: '0B' }] },
+		}),
+	)
+	await enter(page, '/settings/docker')
+	const failure = page.getByRole('alert')
+	await expect(failure).toContainText('容器列表暂时无法加载')
+	await expect(page.getByRole('table')).toHaveCount(0)
+	await expect(
+		failure.getByText('Cannot connect to the Docker daemon at unix:///var/run/docker.sock'),
+	).not.toBeVisible()
+	await failure.getByText('技术详情').click()
+	await expect(
+		failure.getByText('Cannot connect to the Docker daemon at unix:///var/run/docker.sock'),
+	).toBeVisible()
+	containersFail = false
+	await failure.getByRole('button', { name: '重试' }).click()
+	await expect(page.getByRole('row').filter({ hasText: 'recovered-container' })).toBeVisible()
+	const partialFailure = page.getByRole('alert')
+	await expect(partialFailure).toContainText('资源信息暂时无法加载')
+	statsFail = false
+	await partialFailure.getByRole('button', { name: '重试' }).click()
+	await expect(partialFailure).toHaveCount(0)
+	await expect(page.getByRole('row').filter({ hasText: 'recovered-container' })).toContainText('1.0%')
+	containersFail = true
+	await page.getByRole('button', { name: '刷新', exact: true }).click()
+	await expect(page.getByRole('alert')).toContainText('刷新失败')
+	await expect(page.getByRole('row').filter({ hasText: 'recovered-container' })).toBeVisible()
+	containersFail = false
+	await page.getByRole('alert').getByRole('button', { name: '重试' }).click()
+	await expect(page.getByRole('alert')).toHaveCount(0)
 })
 test('unknown settings routes return 404 and both mobile admin routes fit', async ({ page }) => {
 	await enter(page, '/settings/missing-page')

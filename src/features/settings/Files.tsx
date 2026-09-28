@@ -61,6 +61,7 @@ export default function Files({ user }: { user: User.Info }) {
 	return (
 		<Section
 			title={t('ui.files')}
+			description={t('ui.filesDescription')}
 			extra={
 				<Upload
 					multiple
@@ -84,7 +85,7 @@ export default function Files({ user }: { user: User.Info }) {
 				</Upload>
 			}
 		>
-			{panel.error && <QueryError error={panel.error} retry={() => panel.refetch()} />}
+			{panel.error && <QueryError error={panel.error} compact retry={() => panel.refetch()} />}
 			<Tabs
 				activeKey={tab}
 				items={[
@@ -236,7 +237,7 @@ export default function Files({ user }: { user: User.Info }) {
 									}}
 								/>
 								{replacements.error && (
-									<QueryError error={replacements.error} retry={() => replacements.refetch()} />
+									<QueryError error={replacements.error} compact retry={() => replacements.refetch()} />
 								)}
 								<Select
 									style={{ width: '100%' }}

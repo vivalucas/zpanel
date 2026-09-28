@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
-import { Button, Menu, Result, Select } from 'antd'
+import { Button, Menu, Select } from 'antd'
 import {
 	ArrowLeftOutlined,
 	AppstoreOutlined,
@@ -15,7 +15,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom'
 import type { AuthInfo } from '@/lib/api'
 import { usePanel } from '@/lib/queries'
-import { Loading } from '@/components/shared'
+import { Loading, StatusState } from '@/components/shared'
 import { useTranslation } from 'react-i18next'
 const Appearance = lazy(() => import('./Appearance'))
 const Groups = lazy(() => import('./Groups'))
@@ -96,9 +96,13 @@ export default function Settings({ auth }: { auth: AuthInfo }) {
 					<div className="settings-body" ref={bodyRef}>
 						<Suspense fallback={<Loading />}>
 							{!allowed ? (
-								<Result
-									status={['users', 'docker', 'site'].includes(section) ? '403' : '404'}
+								<StatusState
 									title={['users', 'docker', 'site'].includes(section) ? '403' : '404'}
+									description={t(
+										['users', 'docker', 'site'].includes(section)
+											? 'exception.noAccess'
+											: 'exception.pageNotFound',
+									)}
 								/>
 							) : (
 								<div key={section}>

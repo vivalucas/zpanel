@@ -19,7 +19,7 @@ export default function Docker() {
 	})
 	const stats = useQuery({
 		queryKey: ['docker-stats'],
-		enabled: containers.isSuccess,
+		enabled: !!containers.data?.list.length,
 		queryFn: ({ signal }) => request<System.DockerStats[]>('/system/docker/stats', {}, { signal }),
 	})
 	const logs = useQuery({
@@ -28,7 +28,8 @@ export default function Docker() {
 		queryFn: ({ signal }) =>
 			request<{ logs: string }>('/system/docker/logs', { id: logsId, lines }, { signal }),
 	})
-	const refresh = () => Promise.all([containers.refetch(), stats.refetch()])
+	const refresh = () =>
+		Promise.all([containers.refetch(), ...(containers.data?.list.length ? [stats.refetch()] : [])])
 	const action = (row: System.DockerContainer, name: string) =>
 		modal.confirm({
 			title: t(`apps.dockerManager.${name}`),
@@ -51,99 +52,131 @@ export default function Docker() {
 	return (
 		<Section
 			title="Docker"
+			description={t('ui.dockerDescription')}
 			extra={
-				<Button
-					icon={<ReloadOutlined aria-hidden="true" />}
-					loading={containers.isFetching || stats.isFetching}
-					onClick={() => refresh()}
-				>
-					{t('ui.refresh')}
-				</Button>
+				!containers.error && (
+					<Button
+						icon={<ReloadOutlined aria-hidden="true" />}
+						loading={containers.isFetching || stats.isFetching}
+						onClick={() => refresh()}
+					>
+						{t('ui.refresh')}
+					</Button>
+				)
 			}
 		>
-			<Input.Search
-				className="table-search"
-				aria-label={t('ui.searchContainers')}
-				placeholder={t('ui.searchContainers')}
-				allowClear
-				onChange={(e) => setFilter(e.target.value)}
-			/>
-			{(containers.error || stats.error) && (
-				<QueryError error={containers.error || stats.error} retry={() => refresh()} />
+			{containers.error && !containers.data ? (
+				<QueryError
+					error={containers.error}
+					title={t('ui.dockerListUnavailable')}
+					description={t('ui.dockerConnectionHint')}
+					diagnostic
+					retry={() => containers.refetch()}
+				/>
+			) : (
+				<>
+					{containers.error && (
+						<QueryError
+							error={containers.error}
+							compact
+							title={t('ui.refreshFailedWithPreviousData')}
+							description={t('ui.refreshPreviousDataHint')}
+							diagnostic
+							retry={() => containers.refetch()}
+						/>
+					)}
+					<Input.Search
+						className="table-search"
+						aria-label={t('ui.searchContainers')}
+						placeholder={t('ui.searchContainers')}
+						allowClear
+						onChange={(e) => setFilter(e.target.value)}
+					/>
+					{stats.error && !!containers.data?.list.length && (
+						<QueryError
+							error={stats.error}
+							compact
+							title={t('ui.dockerStatsUnavailable')}
+							description={t('ui.dockerConnectionHint')}
+							diagnostic
+							retry={() => stats.refetch()}
+						/>
+					)}
+					<Table
+						rowKey="id"
+						loading={containers.isPending}
+						dataSource={containers.data?.list.filter((row) =>
+							`${row.names} ${row.image}`.toLowerCase().includes(filter.toLowerCase()),
+						)}
+						scroll={{ x: 820 }}
+						columns={[
+							{
+								title: t('apps.dockerManager.container'),
+								dataIndex: 'names',
+								render: (name, row) => (
+									<div>
+										<strong>{name}</strong>
+										<div className="muted">{row.image}</div>
+									</div>
+								),
+							},
+							{
+								title: t('apps.dockerManager.status'),
+								dataIndex: 'status',
+								render: (status, row) => (
+									<Tag color={row.state === 'running' ? 'green' : 'default'}>{status}</Tag>
+								),
+							},
+							{
+								title: t('apps.dockerManager.resources'),
+								render: (_, row) => {
+									const value = stats.data?.find((s) => s.ID === row.id || row.id.startsWith(s.ID))
+									return (
+										<div className="mono">
+											CPU {value?.CPUPerc || '—'}
+											<br />
+											MEM {value?.MemUsage || '—'}
+											<br />
+											NET {value?.NetIO || '—'}
+										</div>
+									)
+								},
+							},
+							{ title: t('apps.dockerManager.ports'), dataIndex: 'ports', ellipsis: true },
+							{
+								title: t('common.action'),
+								width: 250,
+								render: (_, row) => (
+									<Space wrap>
+										{['start', 'stop', 'restart', 'pause', 'unpause'].map((name) => (
+											<Button
+												key={name}
+												size="small"
+												disabled={
+													pending.includes(row.id) ||
+													(name === 'start'
+														? row.state === 'running' || row.state === 'paused'
+														: name === 'unpause'
+															? row.state !== 'paused'
+															: name === 'pause'
+																? row.state !== 'running'
+																: !['running', 'paused'].includes(row.state))
+												}
+												onClick={() => action(row, name)}
+											>
+												{t(`apps.dockerManager.${name}`)}
+											</Button>
+										))}
+										<Button size="small" onClick={() => setLogsId(row.id)}>
+											{t('apps.dockerManager.logs')}
+										</Button>
+									</Space>
+								),
+							},
+						]}
+					/>
+				</>
 			)}
-			<Table
-				rowKey="id"
-				loading={containers.isPending}
-				dataSource={containers.data?.list.filter((row) =>
-					`${row.names} ${row.image}`.toLowerCase().includes(filter.toLowerCase()),
-				)}
-				scroll={{ x: 820 }}
-				columns={[
-					{
-						title: t('apps.dockerManager.container'),
-						dataIndex: 'names',
-						render: (name, row) => (
-							<div>
-								<strong>{name}</strong>
-								<div className="muted">{row.image}</div>
-							</div>
-						),
-					},
-					{
-						title: t('apps.dockerManager.status'),
-						dataIndex: 'status',
-						render: (status, row) => (
-							<Tag color={row.state === 'running' ? 'green' : 'default'}>{status}</Tag>
-						),
-					},
-					{
-						title: t('apps.dockerManager.resources'),
-						render: (_, row) => {
-							const value = stats.data?.find((s) => s.ID === row.id || row.id.startsWith(s.ID))
-							return (
-								<div className="mono">
-									CPU {value?.CPUPerc || '—'}
-									<br />
-									MEM {value?.MemUsage || '—'}
-									<br />
-									NET {value?.NetIO || '—'}
-								</div>
-							)
-						},
-					},
-					{ title: t('apps.dockerManager.ports'), dataIndex: 'ports', ellipsis: true },
-					{
-						title: t('common.action'),
-						width: 250,
-						render: (_, row) => (
-							<Space wrap>
-								{['start', 'stop', 'restart', 'pause', 'unpause'].map((name) => (
-									<Button
-										key={name}
-										size="small"
-										disabled={
-											pending.includes(row.id) ||
-											(name === 'start'
-												? row.state === 'running' || row.state === 'paused'
-												: name === 'unpause'
-													? row.state !== 'paused'
-													: name === 'pause'
-														? row.state !== 'running'
-														: !['running', 'paused'].includes(row.state))
-										}
-										onClick={() => action(row, name)}
-									>
-										{t(`apps.dockerManager.${name}`)}
-									</Button>
-								))}
-								<Button size="small" onClick={() => setLogsId(row.id)}>
-									{t('apps.dockerManager.logs')}
-								</Button>
-							</Space>
-						),
-					},
-				]}
-			/>
 			<Modal
 				open={!!logsId}
 				title={t('apps.dockerManager.logs')}
@@ -164,7 +197,13 @@ export default function Docker() {
 					</Button>
 				</Space>
 				{logs.error ? (
-					<QueryError error={logs.error} />
+					<QueryError
+						error={logs.error}
+						title={t('ui.dockerLogsUnavailable')}
+						compact
+						diagnostic
+						retry={() => logs.refetch()}
+					/>
 				) : (
 					<pre className="log-output">
 						{logs.isPending ? t('ui.loading') : logs.data?.logs || t('ui.noLogs')}

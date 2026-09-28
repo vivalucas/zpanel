@@ -56,7 +56,7 @@ export default function Account({ user }: { user: User.Info }) {
 					</div>
 				</Form>
 			</Section>
-			<Section title={t('ui.language')}>
+			<Section title={t('ui.language')} description={t('ui.languageDescription')}>
 				<Select
 					aria-label={t('ui.language')}
 					style={{ width: 220 }}
@@ -100,7 +100,7 @@ export default function Account({ user }: { user: User.Info }) {
 				</div>
 				<Button onClick={() => navigate('/login')}>{t('ui.addAccount')}</Button>
 			</Section>
-			<Section title={t('settingUserInfo.updatePassword')}>
+			<Section title={t('settingUserInfo.updatePassword')} description={t('ui.passwordDescription')}>
 				<Form
 					layout="vertical"
 					onFinish={async (values) => {

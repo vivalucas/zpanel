@@ -8,12 +8,12 @@ import {
 	Route,
 	useLocation,
 } from 'react-router-dom'
-import { Button, Result } from 'antd'
+import { Button } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useAuth, useSite } from '@/lib/queries'
 import { ApiError } from '@/lib/api'
 import { usePreferences } from './store'
-import { Loading, QueryError } from '@/components/shared'
+import { Loading, QueryError, StatusState } from '@/components/shared'
 const Login = lazy(() => import('@/features/auth/Login'))
 const Home = lazy(() => import('@/features/home/Home'))
 const Settings = lazy(() => import('@/features/settings/Settings'))
@@ -89,11 +89,10 @@ function Protected({ settings = false }: { settings?: boolean }) {
 function NotFound() {
 	const { t } = useTranslation()
 	return (
-		<Result
-			status="404"
+		<StatusState
 			title="404"
-			subTitle={t('exception.pageNotFound')}
-			extra={<Button href="#/">{t('exception.goHome')}</Button>}
+			description={t('exception.pageNotFound')}
+			action={<Button href="#/">{t('exception.goHome')}</Button>}
 		/>
 	)
 }

@@ -35,3 +35,15 @@ await assert.rejects(collectIconGroups(async () => ({ code: 0, data: { list: [{ 
 const exported = await collectIconGroups(async () => ({ code: 0, data: { list: [{ id: 1, title: 'Apps', sort: 0 }] } }), async () => ({ code: 0, data: { list: [{ title: 'App', sort: 0, icon: null, url: 'https://example.com' }] } }))
 assert.equal(exported[0].children[0].sort, 0)
 process.stdout.write('Export failure and ordering regression checks passed.\n')
+
+const localeDir = path.resolve('src/locales')
+const localeKeys = (value, prefix = '') => Object.entries(value).flatMap(([key, entry]) => {
+  const name = prefix ? `${prefix}.${key}` : key
+  return entry && typeof entry === 'object' && !Array.isArray(entry) ? localeKeys(entry, name) : [name]
+})
+const referenceKeys = localeKeys(JSON.parse(fs.readFileSync(path.join(localeDir, 'en-US.json'), 'utf8'))).sort()
+for (const filename of fs.readdirSync(localeDir).filter(name => name.endsWith('.json'))) {
+  const keys = localeKeys(JSON.parse(fs.readFileSync(path.join(localeDir, filename), 'utf8'))).sort()
+  assert.deepEqual(keys, referenceKeys, `${filename} locale keys differ from en-US`)
+}
+process.stdout.write('Locale key parity checks passed.\n')

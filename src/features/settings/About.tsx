@@ -32,14 +32,14 @@ export default function About() {
 					{ key: 'backend', label: t('ui.backendVersion'), children: version.data?.versionName || '—' },
 				]}
 			/>
-			{version.error && <QueryError error={version.error} retry={() => version.refetch()} />}
+			{version.error && <QueryError error={version.error} compact retry={() => version.refetch()} />}
 			<p>
 				<a href="https://github.com/vivalucas/zpanel" target="_blank" rel="noopener noreferrer">
 					GitHub ↗
 				</a>
 			</p>
 			{description.error ? (
-				<QueryError error={description.error} retry={() => description.refetch()} />
+				<QueryError error={description.error} compact retry={() => description.refetch()} />
 			) : (
 				<SafeHtml html={markdown.render(description.data || '')} />
 			)}

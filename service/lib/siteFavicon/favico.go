@@ -37,7 +37,11 @@ func GetOneFaviconURL(urlStr string) (string, error) {
 }
 
 func GetFaviconURLs(urlStr string) ([]string, error) {
-	iconURLs, err := getFaviconURL(urlStr)
+	return GetFaviconURLsWithOrigins(urlStr, nil)
+}
+
+func GetFaviconURLsWithOrigins(urlStr string, origins []string) ([]string, error) {
+	iconURLs, err := getFaviconURLWithOrigins(urlStr, origins)
 	if err != nil {
 		return nil, err
 	}
@@ -76,12 +80,16 @@ func GetOneFaviconURLAndUpload(urlStr string) (string, bool) {
 }
 
 func getFaviconURL(url string) ([]string, error) {
+	return getFaviconURLWithOrigins(url, nil)
+}
+
+func getFaviconURLWithOrigins(url string, origins []string) ([]string, error) {
 	var icons []string
 	icons = make([]string, 0)
-	if err := safehttp.ValidateURL(url); err != nil {
+	if err := safehttp.ValidateURLWithPrivateOrigins(url, origins); err != nil {
 		return icons, err
 	}
-	client := safehttp.NewClient(15 * time.Second)
+	client := safehttp.NewClientWithPrivateOrigins(15*time.Second, origins)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return icons, err

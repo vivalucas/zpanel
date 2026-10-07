@@ -2,7 +2,7 @@ import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Button, Dropdown, Empty, Input, Modal, Select, Space, Tooltip } from 'antd'
+import { Alert, Button, Dropdown, Empty, Input, Modal, Select, Space, Tooltip } from 'antd'
 import {
 	AppstoreOutlined,
 	DownOutlined,
@@ -107,6 +107,10 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 			),
 		}))
 		.filter((group) => !configSearchEnabled || !search || group.items.length)
+	const destination = (item: Panel.ItemInfo) => {
+		const url = preferences.network === 'lan' ? item.lanUrl || item.url : item.url || item.lanUrl
+		return url && isSafeNavigationUrl(url) ? url : undefined
+	}
 	const open = (item: Panel.ItemInfo, override?: string) => {
 		const url =
 			override || (preferences.network === 'lan' ? item.lanUrl || item.url : item.url || item.lanUrl)
@@ -229,6 +233,17 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 					} as CSSProperties
 				}
 			>
+				{editable && !!panel.data.panelWarnings.length && (
+					<Alert
+						className="spaced"
+						type="warning"
+						showIcon
+						title={t('review.panelRepair')}
+						action={
+							<Button onClick={() => navigate('/settings/appearance')}>{t('review.repairAppearance')}</Button>
+						}
+					/>
+				)}
 				<section className="home-hero">
 					<div className="home-identity">
 						{config.logoImageSrc && <img className="home-logo-image" src={config.logoImageSrc} alt="" />}
@@ -363,46 +378,66 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 								onSort={(sorted) => void saveSort(group, sorted)}
 							>
 								{(item) => (
-									<Dropdown
-										menu={menu(item)}
-										trigger={['contextMenu']}
-										disabled={sortingGroupId === group.id}
-									>
-										<article className="navigation-card">
-											<button
-												className="app-link"
-												onClick={() => {
-													if (sortingGroupId !== group.id) open(item)
-												}}
-												aria-disabled={sortingGroupId === group.id}
-												aria-label={item.title}
-											>
-												<ItemIcon key={item.icon?.src} item={item} />
-												<div className="app-copy">
-													{!(config.iconStyle === 1 && config.iconTextIconHideTitle) && (
-														<strong>{item.title}</strong>
-													)}
-													{config.iconStyle !== 1 &&
-														!config.iconTextInfoHideDescription &&
-														item.description && <span>{item.description}</span>}
-												</div>
-											</button>
-											{sortingGroupId !== group.id && (
-												<Dropdown menu={menu(item)} trigger={['click']}>
-													<Button
-														className="item-menu"
-														type="text"
-														size="small"
-														aria-label={`${t('ui.more')} ${item.title}`}
-														icon={<EllipsisOutlined aria-hidden="true" />}
-													/>
-												</Dropdown>
-											)}
-										</article>
-									</Dropdown>
+									<article className="navigation-card">
+										<a
+											className="app-link"
+											href={destination(item)}
+											target={item.openMethod === 2 ? '_blank' : undefined}
+											rel="noopener noreferrer"
+											title={destination(item)}
+											onClick={(event) => {
+												if (sortingGroupId === group.id) {
+													event.preventDefault()
+													return
+												}
+												if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+													event.preventDefault()
+													open(item)
+												}
+											}}
+											onAuxClick={(event) => {
+												if (sortingGroupId === group.id) event.preventDefault()
+											}}
+											aria-disabled={sortingGroupId === group.id}
+											aria-label={item.title}
+										>
+											<ItemIcon key={item.icon?.src} item={item} />
+											<div className="app-copy">
+												{!(config.iconStyle === 1 && config.iconTextIconHideTitle) && (
+													<strong>{item.title}</strong>
+												)}
+												{config.iconStyle !== 1 &&
+													!config.iconTextInfoHideDescription &&
+													item.description && <span>{item.description}</span>}
+											</div>
+										</a>
+										{sortingGroupId !== group.id && (
+											<Dropdown menu={menu(item)} trigger={['click']}>
+												<Button
+													className="item-menu"
+													type="text"
+													size="small"
+													aria-label={`${t('ui.more')} ${item.title}`}
+													icon={<EllipsisOutlined aria-hidden="true" />}
+												/>
+											</Dropdown>
+										)}
+									</article>
 								)}
 							</SortableGrid>
-							{!group.items.length && <div className="empty-group">{t('ui.emptyGroup')}</div>}
+							{!group.items.length && (
+								<div className="empty-group">
+									<p>{t('ui.emptyGroup')}</p>
+									{editable && (
+										<Space wrap>
+											<Button onClick={() => setEditor({ groupId: group.id })}>{t('review.firstApp')}</Button>
+											<Button type="link" onClick={() => navigate('/settings/backup')}>
+												{t('ui.import')}
+											</Button>
+										</Space>
+									)}
+								</div>
+							)}
 						</section>
 					))
 				)}

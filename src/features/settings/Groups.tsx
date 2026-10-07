@@ -1,9 +1,10 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
 import { useState } from 'react'
-import { Button, Empty, Form, Input, Modal, Space, Tag } from 'antd'
+import { Button, Empty, Form, Input, Modal, Select, Space, Tag, Alert } from 'antd'
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
+import type { Group } from '@/lib/api'
 import { useGroups } from '@/lib/queries'
 import { Loading, QueryError, Section } from '@/components/shared'
 import { SortableGrid } from '@/components/Sortable'
@@ -11,10 +12,12 @@ export default function Groups() {
 	const request = useSessionRequest()
 	const groups = useGroups()
 	const client = useQueryClient()
-	const { t, error, modal } = useFeedback()
+	const { t, error } = useFeedback()
 	const [editing, setEditing] = useState<Panel.ItemIconGroup | null>(null)
 	const [busy, setBusy] = useState(false)
 	const [form] = Form.useForm()
+	const [deleting, setDeleting] = useState<Group | null>(null)
+	const [moveToGroupId, setMoveToGroupId] = useState<number>(0)
 	const refresh = () => client.invalidateQueries({ queryKey: ['groups'] })
 	if (groups.isPending) return <Loading />
 	if (groups.error) return <QueryError error={groups.error} retry={() => groups.refetch()} />
@@ -67,22 +70,14 @@ export default function Groups() {
 									danger
 									aria-label={t('common.delete')}
 									icon={<DeleteOutlined aria-hidden="true" />}
-									onClick={() =>
-										modal.confirm({
-											title: t('ui.deleteGroup'),
-											content: t('ui.deleteGroupDescription', { title: group.title }),
-											okButtonProps: { danger: true },
-											onOk: async () => {
-												try {
-													await request('/panel/itemIconGroup/deletes', { ids: [group.id] })
-													await refresh()
-												} catch (err) {
-													error(err)
-													throw err
-												}
-											},
-										})
-									}
+									disabled={busy || groups.data.length < 2}
+									title={groups.data.length < 2 ? t('review.keepGroup') : undefined}
+									onClick={() => {
+										setDeleting(group)
+										setMoveToGroupId(
+											group.items.length ? groups.data.find((g) => g.id !== group.id)?.id || 0 : 0,
+										)
+									}}
 								/>
 							</Space>
 						</div>
@@ -91,6 +86,57 @@ export default function Groups() {
 			) : (
 				<Empty />
 			)}
+			<Modal
+				open={!!deleting}
+				title={t('review.deleteGroupTitle')}
+				onCancel={() => {
+					if (!busy) setDeleting(null)
+				}}
+				cancelButtonProps={{ disabled: busy }}
+				confirmLoading={busy}
+				okButtonProps={{ danger: moveToGroupId === 0 }}
+				onOk={async () => {
+					if (!deleting) return
+					setBusy(true)
+					try {
+						await request('/panel/itemIconGroup/deletes', {
+							ids: [deleting.id],
+							...(moveToGroupId ? { moveToGroupId } : {}),
+						})
+						await refresh()
+						setDeleting(null)
+					} catch (err) {
+						error(err)
+					} finally {
+						setBusy(false)
+					}
+				}}
+			>
+				<p>{t('review.deleteGroupCount', { title: deleting?.title, count: deleting?.items.length || 0 })}</p>
+				{!!deleting?.items.length && (
+					<Select
+						className="full-width"
+						aria-label={t('review.groupItemAction')}
+						disabled={busy}
+						value={moveToGroupId}
+						onChange={setMoveToGroupId}
+						options={[
+							{ value: 0, label: t('review.deleteGroupItems') },
+							...(groups.data || [])
+								.filter((g) => g.id !== deleting?.id)
+								.map((g) => ({ value: g.id, label: t('review.moveGroupItems', { title: g.title }) })),
+						]}
+					/>
+				)}
+				{moveToGroupId === 0 && (
+					<Alert
+						className="spaced"
+						type="warning"
+						showIcon
+						title={t('ui.deleteGroupDescription', { title: deleting?.title })}
+					/>
+				)}
+			</Modal>
 			<Modal
 				open={!!editing}
 				title={t(editing?.id ? 'common.edit' : 'common.add')}
@@ -116,7 +162,7 @@ export default function Groups() {
 					}}
 				>
 					<Form.Item name="title" label={t('common.title')} rules={[{ required: true, whitespace: true }]}>
-						<Input maxLength={100} />
+						<Input maxLength={200} />
 					</Form.Item>
 				</Form>
 			</Modal>

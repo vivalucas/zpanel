@@ -1390,3 +1390,10 @@ a {
 		--settings-content-padding: 18px;
 	}
 }
+
+/* Upload history remains readable in narrow forms and action headers. */
+.image-upload { max-width: min(100%, 360px); min-width: 0; }
+.upload-row { display: flex; width: 100%; }
+.upload-row > .ant-space-item:first-child { flex: 1; min-width: 0; }
+.full-width { width: 100%; }
+a.app-link { text-decoration: none; color: inherit; }

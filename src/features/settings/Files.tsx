@@ -1,11 +1,10 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
 import { useEffect, useState } from 'react'
-import { Button, Empty, Image, Modal, Pagination, Select, Space, Tabs, Upload } from 'antd'
-import { UploadOutlined } from '@ant-design/icons'
+import { Button, Empty, Image, Modal, Pagination, Select, Space, Tabs } from 'antd'
+import { ImageUpload } from '@/components/ImageUpload'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePanel } from '@/lib/queries'
-import { uploadImage } from '@/lib/api'
 import { Loading, QueryError, Section } from '@/components/shared'
 import { bytes } from '@/lib/format'
 interface Usage {
@@ -63,26 +62,12 @@ export default function Files({ user }: { user: User.Info }) {
 			title={t('ui.files')}
 			description={t('ui.filesDescription')}
 			extra={
-				<Upload
+				<ImageUpload
 					multiple
-					accept=".png,.jpg,.jpeg,.gif,.webp,.ico"
-					showUploadList={false}
-					customRequest={async (options) => {
-						try {
-							const result = await uploadImage(options.file as Blob)
-							options.onSuccess?.(result)
-							await refresh()
-							void message.success(t('common.success'))
-						} catch (err) {
-							error(err)
-							options.onError?.(err as Error)
-						}
+					onChange={async () => {
+						await refresh()
 					}}
-				>
-					<Button type="primary" icon={<UploadOutlined aria-hidden="true" />}>
-						{t('iconItem.selectUpload')}
-					</Button>
-				</Upload>
+				/>
 			}
 		>
 			{panel.error && <QueryError error={panel.error} compact retry={() => panel.refetch()} />}

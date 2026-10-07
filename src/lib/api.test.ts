@@ -15,6 +15,14 @@ function response(code: number, data: unknown = null) {
 	return new Response(JSON.stringify({ code, data, msg: 'backend message' }), { status: 200 })
 }
 describe('aPI contract and session boundaries', () => {
+	it('loads the full navigation snapshot with a single cancellable request', async () => {
+		const groups = [{ id: 1, title: 'Apps', items: [{ id: 2, title: 'NAS' }] }]
+		const fetch = vi.fn().mockResolvedValue(response(0, groups))
+		vi.stubGlobal('fetch', fetch)
+		await expect(fetchGroups()).resolves.toEqual(groups)
+		expect(fetch).toHaveBeenCalledTimes(1)
+		expect(fetch.mock.calls[0][0]).toBe('/api/panel/itemIconGroup/getNavigation')
+	})
 	it('sends current authentication, language, and cancellation signal', async () => {
 		const fetch = vi.fn().mockResolvedValue(response(0, { id: 1 }))
 		vi.stubGlobal('fetch', fetch)

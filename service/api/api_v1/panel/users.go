@@ -153,7 +153,6 @@ func (a UsersApi) Deletes(c *gin.Context) {
 		return
 	}
 
-	global.UserToken.Flush()
 	apiReturn.Success(c)
 }
 
@@ -234,7 +233,6 @@ func (a UsersApi) Update(c *gin.Context) {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
-	global.UserToken.Flush() // 更新用户信息并立即清除敏感变更后的缓存
 	// 返回token等基本信息（清除密码字段）
 	param.Password = ""
 	param.PasswordAlgo = ""
@@ -339,7 +337,7 @@ func (a UsersApi) GetPublicVisitUser(c *gin.Context) {
 	if err := global.SystemSetting.GetValueByInterface(systemSetting.PANEL_PUBLIC_USER_ID, &userId); err == nil && userId != nil {
 		userInfo := models.User{}
 		if err := global.Db.First(&userInfo, "id=?", userId).Error; err == nil {
-			apiReturn.SuccessData(c, userInfo)
+			apiReturn.SuccessData(c, gin.H{"id": userInfo.ID, "username": userInfo.Username, "name": userInfo.Name})
 			return
 		}
 	}

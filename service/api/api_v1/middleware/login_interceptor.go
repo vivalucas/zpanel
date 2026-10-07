@@ -7,14 +7,12 @@ import (
 	"zpanel/models"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func rejectInactiveUser(c *gin.Context, rawToken string, userInfo models.User) bool {
 	if userInfo.Status == 1 {
 		return false
-	}
-	if rawToken != "" {
-		global.UserToken.Delete(rawToken)
 	}
 	apiReturn.ErrorByCode(c, 1004)
 	c.Abort()
@@ -36,19 +34,15 @@ func LoginInterceptor(c *gin.Context) {
 		return
 	}
 
-	// 直接返回缓存的用户信息
-	if userInfo, success := global.UserToken.Get(rawToken); success {
-		if rejectInactiveUser(c, rawToken, userInfo) {
-			return
-		}
-		c.Set("userInfo", userInfo)
-		return
-	}
-
-	global.Logger.Debug("准备查询数据库的用户资料")
+	// Session revocation and current roles are authoritative in the database.
 
 	// 去库中查询是否存在该用户；否则返回错误
 	if session, err := models.GetActiveSessionByToken(global.Db, rawToken); err != nil || session.User.ID == 0 {
+		if err != nil && err != gorm.ErrRecordNotFound {
+			apiReturn.ErrorDatabase(c, err.Error())
+			c.Abort()
+			return
+		}
 		apiReturn.ErrorCode(c, 1001, global.Lang.Get("login.err_token_expire"), nil)
 		c.Abort()
 		return
@@ -60,8 +54,9 @@ func LoginInterceptor(c *gin.Context) {
 		}
 		info.Token = rawToken
 		now := time.Now()
-		_ = global.Db.Model(&models.Session{}).Where("id=?", session.ID).Update("last_seen_at", now).Error
-		global.UserToken.SetDefault(rawToken, info)
+		if session.LastSeenAt == nil || now.Sub(*session.LastSeenAt) >= 5*time.Minute {
+			_ = global.Db.Model(&models.Session{}).Where("id=? AND revoked_at IS NULL", session.ID).Update("last_seen_at", now).Error
+		}
 		c.Set("userInfo", info)
 	}
 

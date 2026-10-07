@@ -18,7 +18,7 @@ func InitMonitorRouter(router *gin.RouterGroup) {
 	r.POST("/system/docker/logs", middleware.AdminInterceptor, dockerApi.Logs)
 
 	// 公开模式
-	rPublic := router.Group("", middleware.PublicModeInterceptor)
+	rPublic := router.Group("", middleware.PublicModeInterceptor, middleware.MonitorAccess)
 	{
 		rPublic.POST("/system/monitor/getAll", api.GetAll)
 		rPublic.POST("/system/monitor/getCpuState", api.GetCpuState)

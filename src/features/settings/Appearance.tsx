@@ -66,6 +66,9 @@ export default function Appearance() {
 			}}
 		>
 			<div className="settings-form-content">
+				{!!panel.data.panelWarnings.length && (
+					<Alert className="spaced" type="warning" showIcon title={t('review.panelRepairSave')} />
+				)}
 				<Section title={t('ui.theme')} description={t('ui.themeDescription')}>
 					<Segmented
 						className="theme-picker"
@@ -97,7 +100,7 @@ export default function Appearance() {
 						<strong title={logoText || 'ZPanel'}>{logoText || 'ZPanel'}</strong>
 					</div>
 					<div className="form-grid">
-						<Form.Item name="logoText" label={t('ui.logoText')}>
+						<Form.Item name="logoText" label={t('ui.logoText')} rules={[{ max: 200 }]}>
 							<Input />
 						</Form.Item>
 						<Form.Item name="logoImageSrc" label={t('ui.logoImage')}>
@@ -162,13 +165,25 @@ export default function Appearance() {
 								</Form.Item>
 							</Space.Compact>
 						</Form.Item>
-						<Form.Item name="marginX" label={`${t('apps.baseSettings.leftRightMargin')} (px)`}>
+						<Form.Item
+							name="marginX"
+							rules={[{ required: true }]}
+							label={`${t('apps.baseSettings.leftRightMargin')} (px)`}
+						>
 							<InputNumber min={0} max={100} />
 						</Form.Item>
-						<Form.Item name="marginTop" label={`${t('apps.baseSettings.topMargin')} (%)`}>
+						<Form.Item
+							name="marginTop"
+							rules={[{ required: true }]}
+							label={`${t('apps.baseSettings.topMargin')} (%)`}
+						>
 							<InputNumber min={0} max={50} />
 						</Form.Item>
-						<Form.Item name="marginBottom" label={`${t('apps.baseSettings.bottomMargin')} (%)`}>
+						<Form.Item
+							name="marginBottom"
+							rules={[{ required: true }]}
+							label={`${t('apps.baseSettings.bottomMargin')} (%)`}
+						>
 							<InputNumber min={0} max={50} />
 						</Form.Item>
 						{toggle('iconTextInfoHideDescription', 'ui.hideDetailDescription')}

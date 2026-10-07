@@ -10,7 +10,7 @@ type ItemIcon struct {
 	BaseModel
 	IconJson        string                    `gorm:"type:varchar(1000)" json:"-"`
 	Icon            datatype.ItemIconIconInfo `gorm:"-" json:"icon"`
-	Title           string                    `gorm:"type:varchar(50)" json:"title"`
+	Title           string                    `gorm:"type:varchar(200)" json:"title"`
 	Url             string                    `gorm:"type:varchar(1000)" json:"url"`
 	LanUrl          string                    `gorm:"type:varchar(1000)" json:"lanUrl"`
 	Description     string                    `gorm:"type:varchar(1000)" json:"description"`
@@ -23,7 +23,7 @@ type ItemIcon struct {
 	Sort            int                       `gorm:"type:int(11)" json:"sort"`
 	ItemIconGroupId int                       `json:"itemIconGroupId"`
 	UserId          uint                      `json:"userId"`
-	User            User                      `json:"user"`
+	User            User                      `json:"-"`
 }
 
 func (m *ItemIcon) DeleteByItemIconGroupIds(db *gorm.DB, userId uint, itemIconGroupIds []uint) (err error) {

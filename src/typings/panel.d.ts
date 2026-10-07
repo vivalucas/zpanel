@@ -64,6 +64,7 @@ declare namespace Panel {
 
     interface userConfig{
         panel:panelConfig
+        panelWarnings?:string[]
         searchEngine?:Panel.SearchEngine
     }
 
@@ -78,4 +79,3 @@ declare namespace Panel {
         icon?:string
     }
 }
-

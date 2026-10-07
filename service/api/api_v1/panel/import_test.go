@@ -19,7 +19,7 @@ func TestImportAtomicRetryAndReplace(t *testing.T) {
 	db.Create(&old)
 	cfg := models.UserConfig{UserId: 1, PanelJson: `{"keep":true}`, SearchEngineJson: `{"existing":true}`}
 	db.Create(&cfg)
-	groups := []importGroup{{Title: "Imported", Sort: 1, Children: []models.ItemIcon{{Title: "App", Url: "https://example.com", Sort: 0}}}}
+	groups := []importGroup{{Title: "Imported", Sort: 1, Children: []models.ItemIcon{{Title: "App", Url: "https://example.com", OpenMethod: 2, Sort: 0}}}}
 	req := importRequest{RequestID: "request-1234567890", Mode: "replace", Icons: &groups, Panel: map[string]interface{}{"new": true}}
 	if err := db.Exec(`CREATE TRIGGER fail_items BEFORE INSERT ON item_icons BEGIN SELECT RAISE(ABORT, 'simulated failure'); END`).Error; err != nil {
 		t.Fatal(err)

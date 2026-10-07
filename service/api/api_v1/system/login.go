@@ -23,7 +23,7 @@ type LoginApi struct {
 // 登录输入验证
 type LoginLoginVerify struct {
 	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required,max=50"`
+	Password string `json:"password" validate:"required,max=72"`
 	VCode    string `json:"vcode" validate:"max=6"`
 	Email    string `json:"email"`
 }
@@ -47,7 +47,14 @@ func (l LoginApi) Login(c *gin.Context) {
 	}
 
 	settings := systemSetting.ApplicationSetting{}
-	global.SystemSetting.GetValueByInterface("system_application", &settings)
+	if err := global.SystemSetting.GetValueOrDefault(systemSetting.SYSTEM_APPLICATION, &settings); err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	if len(param.Password) > cmn.MaxPasswordBytes {
+		apiReturn.ErrorParamFomat(c, "password must be no more than 72 bytes")
+		return
+	}
 	if settings.LoginCaptcha {
 		if !captcha.CaptchaVerifyHandle(param.Email, param.VCode) {
 			apiReturn.ErrorByCode(c, 2001)
@@ -93,8 +100,6 @@ func (l LoginApi) Login(c *gin.Context) {
 	info.ReferralCode = ""
 	info.Token = rawToken
 
-	global.UserToken.SetDefault(rawToken, info)
-
 	// 设置当前用户信息
 	c.Set("userInfo", info)
 	apiReturn.SuccessData(c, info)
@@ -135,7 +140,6 @@ func (l *LoginApi) Logout(c *gin.Context) {
 			apiReturn.ErrorDatabase(c, err.Error())
 			return
 		}
-		global.UserToken.Delete(rawToken)
 	}
 	apiReturn.Success(c)
 }

@@ -5,9 +5,11 @@ import (
 	"zpanel/global"
 	"zpanel/lib/cmn"
 	"zpanel/lib/cmn/systemSetting"
+	"zpanel/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"gorm.io/gorm"
 )
 
 type About struct {
@@ -23,15 +25,16 @@ func (a *About) Get(c *gin.Context) {
 
 func (a *About) GetSiteSetting(c *gin.Context) {
 	siteSetting := systemSetting.DefaultSiteSetting()
-	if err := global.SystemSetting.GetValueByInterface(systemSetting.SITE_SETTING, &siteSetting); err != nil {
-		if err := global.SystemSetting.Set(systemSetting.SITE_SETTING, siteSetting); err != nil {
-			apiReturn.ErrorDatabase(c, err.Error())
-			return
-		}
+	if err := global.SystemSetting.GetValueOrDefault(systemSetting.SITE_SETTING, &siteSetting); err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
 	}
 
 	appSetting := systemSetting.ApplicationSetting{}
-	_ = global.SystemSetting.GetValueByInterface(systemSetting.SYSTEM_APPLICATION, &appSetting)
+	if err := global.SystemSetting.GetValueOrDefault(systemSetting.SYSTEM_APPLICATION, &appSetting); err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
 
 	apiReturn.SuccessData(c, gin.H{
 		"siteSetting":  siteSetting,
@@ -67,15 +70,23 @@ func (a *About) SetSiteSetting(c *gin.Context) {
 		siteSetting.LoginTitle = siteSetting.SiteTitle
 	}
 
-	if err := global.SystemSetting.Set(systemSetting.SITE_SETTING, siteSetting); err != nil {
-		apiReturn.ErrorDatabase(c, err.Error())
-		return
-	}
-
-	appSetting := systemSetting.ApplicationSetting{}
-	_ = global.SystemSetting.GetValueByInterface(systemSetting.SYSTEM_APPLICATION, &appSetting)
-	appSetting.LoginCaptcha = req.LoginCaptcha
-	if err := global.SystemSetting.Set(systemSetting.SYSTEM_APPLICATION, appSetting); err != nil {
+	err := global.Db.Transaction(func(tx *gorm.DB) error {
+		appSetting := systemSetting.ApplicationSetting{}
+		stored := models.SystemSetting{}
+		if err := tx.First(&stored, "config_name=?", systemSetting.SYSTEM_APPLICATION).Error; err != nil && err != gorm.ErrRecordNotFound {
+			return err
+		} else if err == nil {
+			if err := systemSetting.DecodeValue(systemSetting.SYSTEM_APPLICATION, stored.ConfigValue, &appSetting); err != nil {
+				return err
+			}
+		}
+		appSetting.LoginCaptcha = req.LoginCaptcha
+		if err := stored.SetWithDB(tx, systemSetting.SITE_SETTING, siteSetting); err != nil {
+			return err
+		}
+		return stored.SetWithDB(tx, systemSetting.SYSTEM_APPLICATION, appSetting)
+	})
+	if err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}

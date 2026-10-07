@@ -68,7 +68,7 @@ test('login, create a group and app, edit, search and keyboard-sort with persist
 		.getByRole('dialog')
 		.getByRole('button', { name: /确.*定/ })
 		.click()
-	await expect(page.getByRole('button', { name: 'Project Atlas', exact: true })).toBeVisible()
+	await expect(page.getByRole('link', { name: 'Project Atlas', exact: true })).toBeVisible()
 	await page.getByRole('button', { name: '更多操作 Project Atlas' }).click()
 	await page.getByRole('menuitem', { name: '编辑' }).click()
 	await page.getByLabel('标题').fill('Project Atlas Updated')
@@ -76,7 +76,7 @@ test('login, create a group and app, edit, search and keyboard-sort with persist
 		.getByRole('dialog')
 		.getByRole('button', { name: /确.*定/ })
 		.click()
-	await expect(page.getByRole('button', { name: 'Project Atlas Updated', exact: true })).toBeVisible()
+	await expect(page.getByRole('link', { name: 'Project Atlas Updated', exact: true })).toBeVisible()
 	await page.getByRole('textbox', { name: '搜索', exact: true }).fill('no-such-app')
 	await expect(page.getByText('没有找到匹配的应用')).toBeVisible()
 	await page.getByRole('textbox', { name: '搜索', exact: true }).clear()
@@ -94,7 +94,7 @@ test('login, create a group and app, edit, search and keyboard-sort with persist
 	).toHaveLength(2)
 	await page.reload()
 	await page.getByRole('button', { name: '工作空间 排序' }).click()
-	const appInSort = page.getByRole('button', { name: 'Project Atlas Updated', exact: true })
+	const appInSort = page.getByRole('link', { name: 'Project Atlas Updated', exact: true })
 	await expect(appInSort).toHaveAttribute('aria-disabled', 'true')
 	await appInSort.dispatchEvent('click')
 	await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -173,7 +173,7 @@ test('file upload, wallpaper reference, export and import round trip', async ({ 
 			'base64',
 		),
 	})
-	await expect(page.getByText('pixel.png', { exact: true })).toBeVisible()
+	await expect(page.locator('.file-card').getByText('pixel.png', { exact: true })).toBeVisible()
 	await page.getByRole('button', { name: '设为壁纸' }).click()
 	await expect
 		.poll(async () => (await api(request, '/panel/userConfig/get')).panel.backgroundImageSrc)

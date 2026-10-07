@@ -9,8 +9,9 @@ type UserConfig struct {
 	WallpaperFileID *uint  `gorm:"index" json:"wallpaperFileId"`
 
 	// 纯前端数据，面板样式数据
-	PanelJson string                 `json:"-"`
-	Panel     map[string]interface{} `gorm:"-" json:"panel"`
+	PanelJson     string                 `json:"-"`
+	Panel         map[string]interface{} `gorm:"-" json:"panel"`
+	PanelWarnings []string               `gorm:"-" json:"panelWarnings,omitempty"`
 
 	// 搜索引擎
 	SearchEngineJson string                 `json:"-"`

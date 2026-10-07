@@ -1,11 +1,11 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
 import { useQuery } from '@tanstack/react-query'
-import { Descriptions } from 'antd'
+import { Alert, Descriptions } from 'antd'
 import MarkdownIt from 'markdown-it'
 import { QueryError, Section } from '@/components/shared'
 import { SafeHtml } from '@/components/SafeHtml'
-const markdown = new MarkdownIt({ html: false, linkify: true })
+const markdown = new MarkdownIt({ html: false, linkify: false, typographer: false })
 export default function About() {
 	const request = useSessionRequest()
 	const { t } = useFeedback()
@@ -41,7 +41,12 @@ export default function About() {
 			{description.error ? (
 				<QueryError error={description.error} compact retry={() => description.refetch()} />
 			) : (
-				<SafeHtml html={markdown.render(description.data || '')} />
+				<>
+					{(description.data?.length || 0) > 32768 && (
+						<Alert type="warning" title={t('review.descriptionLimit')} />
+					)}
+					<SafeHtml html={markdown.render((description.data || '').slice(0, 32768))} />
+				</>
 			)}
 		</Section>
 	)

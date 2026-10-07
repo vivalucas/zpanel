@@ -4,6 +4,29 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.4 - 2026-10-07
+
+### Security and Reliability
+
+- Prevented navigation-group requests from creating client-supplied users through ORM associations. Kept ownership server-controlled and minimized the public-account response.
+- Fail closed when login settings cannot be read or decoded; configuration reads preserve stored data. Saved site settings and captcha changes in one transaction.
+- Enforced visitor monitor switches on the server. Made session revocation, current roles and security settings authoritative in the database instead of relying on cache invalidation.
+- Validated appearance fields and provided a recovery path for damaged saved settings. Unified password limits at 72 UTF-8 bytes and navigation titles at 200 characters.
+- Added an administrator-only exact-origin allowlist for private-network favicon retrieval, with redirect/DNS checks and loopback, link-local and cloud-metadata blocking.
+- Disabled unnecessary Markdown auto-linking, bounded description rendering, and updated Markdown parsing and HTML sanitization dependencies.
+
+### User Experience
+
+- Added first-application/import actions to empty groups, native card links, and support for applications with only a LAN address.
+- Added per-file upload status, preflight validation and failed-upload retry. Accepted multipart headers separately from the 10 MiB file-size limit.
+- Preview imported/replaced navigation counts and optionally move applications before deleting their group. Fetch complete navigation in one request.
+- Added localized page recovery and protected unsaved profile changes when switching accounts.
+
+### Verification
+
+- Passed Go tests, 14 frontend unit tests, 26 isolated SQLite browser regressions, production build, TypeScript, ESLint and documentation checks. Verified a fresh frozen-lockfile install and a zero-advisory production dependency audit.
+- Inspected desktop and 320 px mobile interfaces in macOS Chromium. Real MySQL/Redis/NAS integration, Docker operations, Ubuntu recovery, PWA installation/upgrades, Safari/Firefox and real mobile keyboards remain unverified.
+
 ## 1.2.3 - 2026-09-28
 
 ### Frontend

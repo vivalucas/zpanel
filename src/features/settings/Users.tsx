@@ -1,4 +1,5 @@
 import { useSessionRequest } from '@/lib/session'
+import { passwordRule } from '@/lib/password'
 import { useFeedback } from '@/lib/feedback'
 import { useState } from 'react'
 import { Button, Form, Input, Modal, Select, Space, Table, Tag } from 'antd'
@@ -229,7 +230,7 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 					<Form.Item
 						name="password"
 						label={t('login.passwordPlaceholder')}
-						rules={[{ required: !editing?.id, min: 6, max: 50 }]}
+						rules={[{ required: !editing?.id }, passwordRule(t('review.passwordSize'))]}
 					>
 						<Input.Password
 							autoComplete="new-password"

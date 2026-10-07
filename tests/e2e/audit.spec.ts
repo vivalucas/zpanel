@@ -425,20 +425,20 @@ test('home honors current-page, new-window, iframe and LAN navigation', async ({
 	try {
 		await enter(page, '/')
 		const popupPromise = page.waitForEvent('popup')
-		await page.getByRole('button', { name: 'Audit navigation', exact: true }).click()
+		await page.getByRole('link', { name: 'Audit navigation', exact: true }).click()
 		const popup = await popupPromise
 		await expect(popup).toHaveURL(/favicon\.svg\?wan=1/)
 		await popup.close()
 		await api(request, '/panel/itemIcon/edit', { ...item, openMethod: 3 })
 		await page.reload()
-		await page.getByRole('button', { name: 'Audit navigation', exact: true }).click()
+		await page.getByRole('link', { name: 'Audit navigation', exact: true }).click()
 		await expect(page.locator('iframe.app-frame')).toHaveAttribute('src', '/favicon.svg?wan=1')
 		await expect(page.locator('iframe.app-frame')).not.toHaveAttribute('sandbox', /allow-same-origin/)
 		await page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click()
 		await api(request, '/panel/itemIcon/edit', { ...item, openMethod: 1 })
 		await page.reload()
 		await page.getByRole('button', { name: '外网', exact: true }).click()
-		await page.getByRole('button', { name: 'Audit navigation', exact: true }).click()
+		await page.getByRole('link', { name: 'Audit navigation', exact: true }).click()
 		await expect(page).toHaveURL(/favicon\.svg\?lan=1/)
 	} finally {
 		await api(request, '/panel/itemIcon/deletes', { ids: [item.id] })

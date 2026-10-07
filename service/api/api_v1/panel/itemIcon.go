@@ -24,6 +24,22 @@ import (
 type ItemIcon struct {
 }
 
+func validateItem(item models.ItemIcon) error {
+	if err := models.ValidateNavigationTitle(item.Title); err != nil {
+		return err
+	}
+	if strings.TrimSpace(item.Url) == "" && strings.TrimSpace(item.LanUrl) == "" {
+		return fmt.Errorf("at least one address is required")
+	}
+	if item.OpenMethod < 1 || item.OpenMethod > 3 {
+		return fmt.Errorf("invalid open method")
+	}
+	if len(item.Url) > 1000 || len(item.LanUrl) > 1000 {
+		return fmt.Errorf("address is too long")
+	}
+	return nil
+}
+
 func ensureItemIconGroupsBelongToUser(db *gorm.DB, userId uint, groupIds []int) error {
 	uniqueIds := make([]int, 0, len(groupIds))
 	seen := map[int]bool{}
@@ -61,6 +77,11 @@ func (a *ItemIcon) Edit(c *gin.Context) {
 		apiReturn.ErrorParamFomat(c, err.Error())
 		return
 	}
+	if err := validateItem(req); err != nil {
+		apiReturn.ErrorParamFomat(c, err.Error())
+		return
+	}
+	req.User = models.User{}
 
 	if req.ItemIconGroupId == 0 {
 		// apiReturn.Error(c, "Group is mandatory")
@@ -133,6 +154,10 @@ func (a *ItemIcon) AddMultiple(c *gin.Context) {
 	}
 
 	for i := 0; i < len(req); i++ {
+		if err := validateItem(req[i]); err != nil {
+			apiReturn.ErrorParamFomat(c, err.Error())
+			return
+		}
 		if req[i].ItemIconGroupId == 0 {
 			apiReturn.ErrorParamFomat(c, "Group is mandatory")
 			return
@@ -283,7 +308,11 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 		return
 	}
 	resp := panelApiStructs.ItemIconGetSiteFaviconResp{}
-	iconURLs, err := siteFavicon.GetFaviconURLs(req.Url)
+	var origins []string
+	if userInfo.Role == 1 && global.Config != nil {
+		origins = strings.Split(global.Config.GetValueString("network", "favicon_private_origins"), ",")
+	}
+	iconURLs, err := siteFavicon.GetFaviconURLsWithOrigins(req.Url, origins)
 	if err != nil {
 		apiReturn.Error(c, "acquisition failed: get ico error:"+err.Error())
 		return
@@ -325,7 +354,7 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 		candidateUrl = parsedIcoURL.String()
 		global.Logger.Debug("fullUrl:", candidateUrl)
 
-		stored, err = storage.DownloadRemoteFile(candidateUrl, userInfo.ID, models.FilePurposeIcon, models.FileVisibilityPublic, 1024*1024, allowedFaviconExts())
+		stored, err = storage.DownloadRemoteFileWithOrigins(candidateUrl, userInfo.ID, models.FilePurposeIcon, models.FileVisibilityPublic, 1024*1024, allowedFaviconExts(), origins)
 		if err != nil {
 			lastErr = err
 			continue

@@ -1,4 +1,5 @@
 import { usePreferences } from '@/app/store'
+import { sanitizePanelConfig } from './panelConfig'
 
 export interface ApiResponse<T> {
 	code: number
@@ -91,36 +92,28 @@ export const defaultPanel: Panel.panelConfig = {
 	systemMonitorPublicVisitModeShow: false,
 	netModeChangeButtonShow: true,
 }
-export async function fetchPanel(signal?: AbortSignal) {
+export async function fetchPanel(signal?: AbortSignal, sessionRequest = request) {
 	try {
-		const data = await request<Panel.userConfig>('/panel/userConfig/get', {}, { signal })
-		return { ...data, panel: { ...defaultPanel, ...data.panel } }
+		const data = await sessionRequest<Panel.userConfig>('/panel/userConfig/get', {}, { signal })
+		const clean = sanitizePanelConfig(data.panel)
+		return {
+			...data,
+			panelWarnings: [...new Set([...(data.panelWarnings || []), ...clean.warnings])],
+			panel: { ...defaultPanel, ...clean.panel },
+		}
 	} catch (error) {
-		if (error instanceof ApiError && error.code === 1202) return { panel: { ...defaultPanel } }
+		if (error instanceof ApiError && error.code === 1202)
+			return { panel: { ...defaultPanel }, panelWarnings: [] }
 		throw error
 	}
 }
-export async function fetchGroups(signal?: AbortSignal): Promise<Group[]> {
-	const groups = await request<Common.ListResponse<Panel.ItemIconGroup[]>>(
-		'/panel/itemIconGroup/getList',
-		{},
-		{ signal },
-	)
-	return Promise.all(
-		(groups.list || []).map(async (group) => {
-			const result = await request<Common.ListResponse<Panel.ItemInfo[]>>(
-				'/panel/itemIcon/getListByGroupId',
-				{ itemIconGroupId: group.id },
-				{ signal },
-			)
-			return { ...group, id: group.id!, items: result.list || [] }
-		}),
-	)
+export async function fetchGroups(signal?: AbortSignal, sessionRequest = request): Promise<Group[]> {
+	return sessionRequest<Group[]>('/panel/itemIconGroup/getNavigation', {}, { signal })
 }
-export async function uploadImage(file: Blob) {
+export async function uploadImage(file: Blob, sessionRequest = request) {
 	const form = new FormData()
 	form.append('imgfile', file)
-	return request<{ imageUrl: string; fileId: number }>('/file/uploadImg', form)
+	return sessionRequest<{ imageUrl: string; fileId: number }>('/file/uploadImg', form)
 }
 export function getModule<T>(name: string, signal?: AbortSignal) {
 	return request<T | null>('/system/moduleConfig/getByName', { name: `module-${name}` }, { signal })

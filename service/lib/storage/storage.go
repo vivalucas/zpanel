@@ -150,10 +150,14 @@ func StoreUpload(file *multipart.FileHeader, ownerID uint, purpose, visibility s
 }
 
 func DownloadRemoteFile(rawURL string, ownerID uint, purpose, visibility string, maxSize int64, allowedExts []string) (StoredFile, error) {
-	if err := safehttp.ValidateURL(rawURL); err != nil {
+	return DownloadRemoteFileWithOrigins(rawURL, ownerID, purpose, visibility, maxSize, allowedExts, nil)
+}
+
+func DownloadRemoteFileWithOrigins(rawURL string, ownerID uint, purpose, visibility string, maxSize int64, allowedExts []string, origins []string) (StoredFile, error) {
+	if err := safehttp.ValidateURLWithPrivateOrigins(rawURL, origins); err != nil {
 		return StoredFile{}, err
 	}
-	client := safehttp.NewClient(15 * time.Second)
+	client := safehttp.NewClientWithPrivateOrigins(15*time.Second, origins)
 	resp, err := client.Get(rawURL)
 	if err != nil {
 		return StoredFile{}, err

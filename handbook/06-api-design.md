@@ -25,6 +25,7 @@
 | POST | `/api/panel/itemIcon/addMultiple` | 批量新增导航项目 | 是 |
 | POST | `/api/panel/itemIcon/getSiteFavicon` | 获取站点 favicon | 是 |
 | POST | `/api/panel/itemIconGroup/edit` | 新增 / 编辑分组 | 是 |
+| POST | `/api/panel/itemIconGroup/getNavigation` | 读取分组与应用的完整导航快照 | 公开模式拦截 |
 | POST | `/api/panel/itemIconGroup/deletes` | 删除分组 | 是 |
 | POST | `/api/panel/itemIconGroup/saveSort` | 保存分组排序 | 是 |
 | POST | `/api/system/docker/containers` | Docker 容器列表 | 管理员 |
@@ -103,6 +104,8 @@
 
 `vcode` 和 `email` 仅在登录验证码开启时需要。当前实现复用 `email` 字段传 `captchaId`，后续可单独重命名为 `captchaId`。
 
+密码最多 72 个 UTF-8 字节；新密码至少 6 字节，与 bcrypt 边界一致。安全配置读取失败时登录返回 1200，不回落为关闭验证码。
+
 **响应示例**：
 
 ```json
@@ -140,6 +143,8 @@
 ### `POST /api/system/siteSetting/set` — 保存站点设置
 
 **认证**：管理员。
+
+站点设置和验证码开关使用同一数据库事务，失败不保留部分写入；保留其他应用配置。
 
 **请求字段**：
 
@@ -217,3 +222,14 @@
 - 密码更新/登出不得在 session 撤销失败时报告成功。
 - Docker 请求最长 30 秒，输出最多 2 MiB；超时需刷新核实状态，不自动重试变更。
 - 导航编辑/批量新增拒绝脚本、data、file 等非 HTTP(S) 协议。
+
+## 导航与配置边界
+
+- `itemIconGroup/getNavigation` 请求 `{}`，响应 `data` 为分组数组，各组包含 `items`。归属、顺序与既有列表接口一致；旧接口保留。正常已有数据使用两次业务查询，不随分组数增加请求。
+- `itemIconGroup/edit` 仅接收 id/icon/title/description/sort，归属由服务端确定，不绑定 ORM 关联。
+- `itemIconGroup/deletes` 接收 `{ids,moveToGroupId?}`；目标须为本人且不在删除范围内。省略目标仍删除组内应用，传入目标则事务迁移。删除最后一个分组返回 1201。
+- 项目/分组标题均限制 1–200 个 Unicode 字符；项目 url/lanUrl 至少一个有效，openMethod 为 1/2/3。
+- `userConfig/set` 只接收 panel 和可选 searchEngine，按当前账号写入。样式写入/导入校验已知字段类型与范围，保留扩展字段；读取旧配置返回可选 panelWarnings，读取不修复数据库。
+- 访客监控需公开账号的 systemMonitorShow 和 systemMonitorPublicVisitModeShow 均为 true；未开启或配置损坏返回 1005，数据库失败返回 1200。已登录用户沿用监控权限。
+- `users/getPublicVisitUser` 仍限管理员，响应仅 id/username/name。
+- 会话撤销、账号状态/角色及安全配置直接读取数据库，避免 Redis 失效删除失败留下旧权限。

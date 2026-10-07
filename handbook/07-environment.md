@@ -43,6 +43,7 @@
 | `redis.password` | Redis 密码 | 空 |
 | `redis.prefix` | Redis key 前缀 | `zpanel:` |
 | `redis.db` | Redis DB 编号 | `0` |
+| `network.favicon_private_origins` | 管理员可获取 favicon 的私网源，逗号分隔完整 scheme/host/port | 空，默认拒绝 |
 
 说明：可变运行时数据已收敛到 `./data` 根目录。旧的 `base.source_path` 和 `base.source_temp_path` 已从新配置模板移除。
 
@@ -87,8 +88,8 @@
 
 | 项目 | 当前值 | 来源 |
 |------|--------|------|
-| 产品版本 | `1.2.3` | `service/assets/version` 与 `package.json` |
-| 后端版本源 | `1|1.2.3` | `service/assets/version` |
+| 产品版本 | `1.2.4` | `service/assets/version` 与 `package.json` |
+| 后端版本源 | `1|1.2.4` | `service/assets/version` |
 | 健康检查 | `GET /api/healthz` | `service/router/router.go` |
 | 默认 HTTP 端口 | `6521` | `service/assets/conf.example.ini` |
 
@@ -96,7 +97,7 @@
 
 | 配置 | 存储位置 | 说明 |
 |------|----------|------|
-| 登录验证码开关 | `system_setting.system_application` | `loginCaptcha`，由风格设置页面保存 |
+| 登录验证码开关 | `system_setting.system_application` | `loginCaptcha`，由站点设置页面保存 |
 | 站点标题 / 图标 / 登录页文案 | `system_setting.site_setting` | 全局站点展示配置 |
 | 自定义 CSS / JS | `system_setting.site_setting` | 前端启动时动态注入 |
 | 多账号快速切换 | 浏览器 localStorage | 仅本机浏览器保存，不写入服务端 |
@@ -136,6 +137,10 @@ go run main.go
 `[base] trusted_proxies`：逗号分隔受控反向代理的 IP/CIDR；默认空。示例仅用于说明：`127.0.0.1,192.0.2.10/32`，应替换为真实代理地址。无效值启动时明确报错，不回退到信任所有代理。生效需重启。
 
 Docker 操作固定 30 秒上下文超时、2 MiB 输出限制；验证码固定安全尺寸范围和独立 IP 限额，本轮未增加额外环境变量。
+
+### 私网 favicon
+
+在 `conf/conf.ini` 的 `[network]` 中设置 `favicon_private_origins`，例如 `http://192.168.1.10:8080,https://nas.example:8443`，修改后重启。示例是占位地址，不代表本项目设备。仅管理员可使用私网名单，普通用户仍只可访问公网；scheme、host、有效端口须完全匹配。环回、链路本地与云元数据地址始终拒绝；重定向和实际 DNS 连接同样检查，不能通过其他端口或源扩大范围。
 
 ## 2026-09-12 部署配置边界
 

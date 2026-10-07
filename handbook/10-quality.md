@@ -1,5 +1,7 @@
 # 质量与验证
 
+本轮全项目评审与获批修复见 [15 全项目评审](15-project-review.md)：7 项已确认问题、4 项待确认风险与 7 项体验优化。本地修复验收完成：Go 测试、14 项 Vitest、26 项浏览器回归及构建/类型/静态检查通过，环境缺口在专题中保留。
+
 当前前端验收矩阵见 [React 自查](../docs/frontend-audit.zh-CN.md)，验证命令见 [贡献指南](../CONTRIBUTING.md)。当前新增验证与未覆盖范围见 [01 当前状态](01-current-status.md)，避免将历史静态核对记录当作最新验证。
 
 历史原验收记录为 15 项 Playwright、9 项 Vitest、test:review、type-check、lint、Go 测试与普通/PWA 构建通过；不作为本次新增验证。

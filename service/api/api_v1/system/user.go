@@ -82,7 +82,6 @@ func (a *UserApi) UpdateInfo(c *gin.Context) {
 		"name":       params.Name,
 	})
 	// 删除缓存
-	global.UserToken.Delete(c.GetHeader("token"))
 	if err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
@@ -136,7 +135,6 @@ func (a *UserApi) UpdatePasssword(c *gin.Context) {
 		return
 	}
 
-	global.UserToken.Flush()
 	apiReturn.Success(c)
 }
 

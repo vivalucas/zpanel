@@ -74,16 +74,34 @@ export default function ItemEditor({
 				}}
 			>
 				<Form.Item name="title" label={t('common.title')} rules={[{ required: true, whitespace: true }]}>
-					<Input maxLength={100} />
+					<Input maxLength={200} />
 				</Form.Item>
 				<Form.Item name="itemIconGroupId" label={t('iconItem.iconGroup')} rules={[{ required: true }]}>
 					<Select options={groups.map((g) => ({ value: g.id, label: g.title }))} />
 				</Form.Item>
-				<Form.Item name="url" label={t('iconItem.url')} rules={[{ required: true }, urlRule]}>
-					<Input placeholder="https://" />
+				<Form.Item
+					name="url"
+					label={t('iconItem.url')}
+					dependencies={['lanUrl']}
+					rules={[
+						urlRule,
+						{
+							validator: () =>
+								form.getFieldValue('url') || form.getFieldValue('lanUrl')
+									? Promise.resolve()
+									: Promise.reject(new Error(t('review.addressRequired'))),
+						},
+					]}
+				>
+					<Input placeholder="https://" maxLength={1000} />
 				</Form.Item>
-				<Form.Item name="lanUrl" label={t('iconItem.lanUrl')} rules={[urlRule]}>
-					<Input placeholder="http://192.168.1.10:8080" />
+				<Form.Item
+					name="lanUrl"
+					label={t('iconItem.lanUrl')}
+					rules={[urlRule]}
+					extra={t('review.addressHelp')}
+				>
+					<Input placeholder="http://192.168.1.10:8080" maxLength={1000} />
 				</Form.Item>
 				<Form.Item name="description" label={t('common.description')}>
 					<Input.TextArea rows={2} maxLength={300} />
@@ -116,7 +134,7 @@ export default function ItemEditor({
 							<Button
 								loading={faviconBusy}
 								onClick={async () => {
-									const url = form.getFieldValue('url')
+									const url = form.getFieldValue('url') || form.getFieldValue('lanUrl')
 									if (!isSafeNavigationUrl(url || '')) return error(new Error(t('review.invalidUrl')))
 									setFaviconBusy(true)
 									try {

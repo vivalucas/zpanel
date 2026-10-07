@@ -1,26 +1,90 @@
-import { Button, Upload } from 'antd'
+import { useState } from 'react'
+import { Button, Space, Upload } from 'antd'
+import type { UploadFile } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
 import { uploadImage } from '@/lib/api'
+import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
 
-export function ImageUpload({ onChange }: { onChange: (url: string) => void }) {
+export function ImageUpload({
+	onChange,
+	multiple = false,
+	disabled = false,
+}: {
+	onChange: (url: string) => void | Promise<void>
+	multiple?: boolean
+	disabled?: boolean
+}) {
 	const { t, error } = useFeedback()
+	const request = useSessionRequest()
+	const [files, setFiles] = useState<UploadFile[]>([])
+	const uploading = files.some((file) => file.status === 'uploading')
+	const upload = async (file: File, uid: string) => {
+		setFiles((list) => list.map((entry) => (entry.uid === uid ? { ...entry, status: 'uploading' } : entry)))
+		try {
+			const result = await uploadImage(file, request)
+			setFiles((list) =>
+				list.map((entry) =>
+					entry.uid === uid ? { ...entry, status: 'done', url: result.imageUrl, response: result } : entry,
+				),
+			)
+			try {
+				await onChange(result.imageUrl)
+			} catch (err) {
+				error(err)
+			}
+			return result
+		} catch (err) {
+			setFiles((list) =>
+				list.map((entry) => (entry.uid === uid ? { ...entry, status: 'error', error: err } : entry)),
+			)
+			error(err)
+			throw err
+		}
+	}
 	return (
-		<Upload
-			accept=".png,.jpg,.jpeg,.webp,.gif,.ico"
-			showUploadList={false}
-			customRequest={async (options) => {
-				try {
-					const data = await uploadImage(options.file as Blob)
-					onChange(data.imageUrl)
-					options.onSuccess?.(data)
-				} catch (err) {
-					error(err)
-					options.onError?.(err as Error)
-				}
-			}}
-		>
-			<Button icon={<UploadOutlined aria-hidden="true" />}>{t('iconItem.selectUpload')}</Button>
-		</Upload>
+		<div className="image-upload">
+			<Upload
+				multiple={multiple}
+				disabled={disabled || (!multiple && uploading)}
+				accept=".png,.jpg,.jpeg,.webp,.gif,.ico"
+				fileList={files}
+				showUploadList={{ showRemoveIcon: (file) => file.status !== 'uploading' }}
+				onChange={({ fileList }) => setFiles(fileList)}
+				beforeUpload={(file) => {
+					if (file.size > 10 * 1024 * 1024 || !/\.(?:png|jpe?g|webp|gif|ico)$/i.test(file.name)) {
+						error(new Error(t('review.imageSizeType')))
+						return Upload.LIST_IGNORE
+					}
+					return true
+				}}
+				customRequest={(options) => {
+					const file = options.file as File & { uid: string }
+					void upload(file, file.uid)
+						.then((result) => options.onSuccess?.(result))
+						.catch((err: Error) => options.onError?.(err))
+				}}
+				itemRender={(node, file) => (
+					<Space className="upload-row">
+						{node}
+						{file.status === 'error' && (
+							<Button
+								size="small"
+								disabled={disabled}
+								onClick={() => {
+									if (file.originFileObj) void upload(file.originFileObj, file.uid).catch(() => {})
+								}}
+							>
+								{t('ui.retry')}
+							</Button>
+						)}
+					</Space>
+				)}
+			>
+				<Button disabled={disabled || (!multiple && uploading)} icon={<UploadOutlined aria-hidden="true" />}>
+					{t('iconItem.selectUpload')}
+				</Button>
+			</Upload>
+		</div>
 	)
 }

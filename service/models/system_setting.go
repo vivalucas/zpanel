@@ -39,15 +39,19 @@ func (m *SystemSetting) GetValueByInterface(configName string, structValue inter
 
 // 暂时仅支持结构体和字符串
 func (m *SystemSetting) Set(configName string, configValue interface{}) error {
+	return m.SetWithDB(Db, configName, configValue)
+}
+
+func (m *SystemSetting) SetWithDB(db *gorm.DB, configName string, configValue interface{}) error {
 	findRes := SystemSetting{}
-	db := Db.Model(m).First(&findRes, "config_name=?", configName)
-	if err := db.Error; err != nil && err != gorm.ErrRecordNotFound {
+	result := db.Model(&SystemSetting{}).First(&findRes, "config_name=?", configName)
+	if err := result.Error; err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
 	value := ""
 	if s, ok := configValue.(string); !ok {
 		if jsonStr, err := json.Marshal(configValue); err != nil {
-			value = ""
+			return err
 		} else {
 			value = string(jsonStr)
 		}
@@ -55,15 +59,15 @@ func (m *SystemSetting) Set(configName string, configValue interface{}) error {
 		value = s
 	}
 
-	if db.RowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		// 添加
-		if err := Db.Model(m).Create(&SystemSetting{ConfigName: configName, ConfigValue: value, ValueType: "json", SchemaVersion: 1}).Error; err != nil {
+		if err := db.Create(&SystemSetting{ConfigName: configName, ConfigValue: value, ValueType: "json", SchemaVersion: 1}).Error; err != nil {
 			return err
 		}
 
 	} else {
 		// 修改
-		if err := Db.Model(m).Where("id=?", findRes.ID).Update("config_value", value).Error; err != nil {
+		if err := db.Model(&SystemSetting{}).Where("id=?", findRes.ID).Update("config_value", value).Error; err != nil {
 			return err
 		}
 	}

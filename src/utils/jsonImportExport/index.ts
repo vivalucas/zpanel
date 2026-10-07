@@ -1,3 +1,4 @@
+import { isValidPanelConfig } from '../../lib/panelConfig'
 import CryptoJS from 'crypto-js'
 import dayjs from 'dayjs'
 import { isSafeNavigationUrl } from '../navigation'
@@ -169,13 +170,14 @@ function transformJson(jsonData: Record<string, unknown>): JsonStructure | null 
       return null
     let count = 0
     for (const group of jsonData.icons) {
-      if (!group || typeof group.title !== 'string' || !group.title.trim() || !Number.isInteger(group.sort) || !Array.isArray(group.children))
+      if (!group || typeof group.title !== 'string' || !group.title.trim() || Array.from(group.title).length > 200 || !Number.isInteger(group.sort) || !Array.isArray(group.children))
         return null
       count += group.children.length
       for (const item of group.children) {
-        if (!item || typeof item.title !== 'string' || !item.title.trim() || !Number.isInteger(item.sort)
-          || typeof item.url !== 'string' || !isSafeNavigationUrl(item.url)
+        if (!item || typeof item.title !== 'string' || !item.title.trim() || Array.from(item.title).length > 200 || !Number.isInteger(item.sort)
+          || typeof item.url !== 'string' || (item.url && !isSafeNavigationUrl(item.url))
           || typeof item.lanUrl !== 'string' || (item.lanUrl && !isSafeNavigationUrl(item.lanUrl))
+          || (!item.url && !item.lanUrl)
           || ![1, 2, 3].includes(item.openMethod) || typeof item.description !== 'string'
           || (item.icon !== null && (typeof item.icon !== 'object' || Array.isArray(item.icon))))
           return null
@@ -184,7 +186,7 @@ function transformJson(jsonData: Record<string, unknown>): JsonStructure | null 
     if (count > 10000)
       return null
   }
-  if ('styleConfig' in jsonData && (!jsonData.styleConfig || typeof jsonData.styleConfig !== 'object' || Array.isArray(jsonData.styleConfig)))
+  if ('styleConfig' in jsonData && !isValidPanelConfig(jsonData.styleConfig))
     return null
 
   // 使用类型断言将 JSON 数据转换为指定类型

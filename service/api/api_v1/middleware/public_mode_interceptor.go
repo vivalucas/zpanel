@@ -9,6 +9,7 @@ import (
 	"zpanel/models"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // 公开访问模式（访客模式）
@@ -20,13 +21,6 @@ func PublicModeInterceptor(c *gin.Context) {
 
 	// 没有token信息视为未登录
 	if rawToken != "" {
-		if userInfo, success := global.UserToken.Get(rawToken); success {
-			if rejectInactiveUser(c, rawToken, userInfo) {
-				return
-			}
-			c.Set("userInfo", userInfo)
-			return
-		}
 		if session, err := models.GetActiveSessionByToken(global.Db, rawToken); err == nil && session.User.ID != 0 {
 			info := session.User
 			if rejectInactiveUser(c, rawToken, info) {
@@ -34,11 +28,17 @@ func PublicModeInterceptor(c *gin.Context) {
 			}
 			info.Token = rawToken
 			now := time.Now()
-			_ = global.Db.Model(&models.Session{}).Where("id=?", session.ID).Update("last_seen_at", now).Error
-			global.UserToken.SetDefault(rawToken, info)
+			if session.LastSeenAt == nil || now.Sub(*session.LastSeenAt) >= 5*time.Minute {
+				_ = global.Db.Model(&models.Session{}).Where("id=? AND revoked_at IS NULL", session.ID).Update("last_seen_at", now).Error
+			}
 			c.Set("userInfo", info)
 			return
 		} else {
+			if err != nil && err != gorm.ErrRecordNotFound {
+				apiReturn.ErrorDatabase(c, err.Error())
+				c.Abort()
+				return
+			}
 			global.Logger.Debug("数据库查询用户失败")
 		}
 	} else {

@@ -2,9 +2,11 @@ package panel
 
 import (
 	"encoding/json"
+	"gorm.io/gorm/clause"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/api/api_v1/common/base"
 	"zpanel/global"
+	"zpanel/lib/panelconfig"
 	"zpanel/models"
 
 	"github.com/gin-gonic/gin"
@@ -29,8 +31,11 @@ func (a *UserConfig) Get(c *gin.Context) {
 	}
 
 	// 处理字段
-	if err := json.Unmarshal([]byte(cfg.PanelJson), &cfg.Panel); err != nil {
-		cfg.Panel = nil
+	if err := json.Unmarshal([]byte(cfg.PanelJson), &cfg.Panel); err != nil || cfg.Panel == nil {
+		cfg.Panel = map[string]interface{}{}
+		cfg.PanelWarnings = []string{"panel"}
+	} else {
+		cfg.Panel, cfg.PanelWarnings = panelconfig.Sanitize(cfg.Panel)
 	}
 	if err := json.Unmarshal([]byte(cfg.SearchEngineJson), &cfg.SearchEngine); err != nil {
 		cfg.SearchEngine = nil
@@ -41,12 +46,24 @@ func (a *UserConfig) Get(c *gin.Context) {
 
 func (a *UserConfig) Set(c *gin.Context) {
 	userInfo, _ := base.GetCurrentUserInfo(c)
-	req := models.UserConfig{}
+	input := struct {
+		Panel        map[string]interface{} `json:"panel"`
+		SearchEngine map[string]interface{} `json:"searchEngine"`
+	}{}
 
-	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+	if err := c.ShouldBindBodyWith(&input, binding.JSON); err != nil {
 		apiReturn.ErrorParamFomat(c, err.Error())
 		return
 	}
+	if input.Panel == nil {
+		apiReturn.ErrorParamFomat(c, "panel is required")
+		return
+	}
+	if err := panelconfig.Validate(input.Panel); err != nil {
+		apiReturn.ErrorParamFomat(c, err.Error())
+		return
+	}
+	req := models.UserConfig{UserId: userInfo.ID, Panel: input.Panel, SearchEngine: input.SearchEngine}
 
 	// 处理字段
 	if jb, err := json.Marshal(req.Panel); err != nil {
@@ -61,26 +78,13 @@ func (a *UserConfig) Set(c *gin.Context) {
 		req.SearchEngineJson = string(jb)
 	}
 
-	// 保存操作
-	if err := global.Db.First(&models.UserConfig{}, "user_id=?", userInfo.ID).Error; err != nil {
-		req.UserId = userInfo.ID
-		if err == gorm.ErrRecordNotFound {
-			// 新增
-			if err := global.Db.Create(&req).Error; err != nil {
-				apiReturn.ErrorDatabase(c, err.Error())
-				return
-			}
-		} else {
-			// 报错
-			apiReturn.ErrorDatabase(c, err.Error())
-			return
-		}
-	} else {
-		// 修改
-		if err := global.Db.Where("user_id=?", userInfo.ID).Updates(&req).Error; err != nil {
-			apiReturn.ErrorDatabase(c, err.Error())
-			return
-		}
+	columns := []string{"panel_json"}
+	if input.SearchEngine != nil {
+		columns = append(columns, "search_engine_json")
+	}
+	if err := global.Db.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "user_id"}}, DoUpdates: clause.AssignmentColumns(columns)}).Create(&req).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
 	}
 
 	apiReturn.Success(c)

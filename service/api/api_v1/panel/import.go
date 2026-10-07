@@ -10,6 +10,7 @@ import (
 	"zpanel/api/api_v1/common/base"
 	"zpanel/global"
 	"zpanel/lib/navigation"
+	"zpanel/lib/panelconfig"
 	"zpanel/models"
 
 	"github.com/gin-gonic/gin"
@@ -39,19 +40,22 @@ func importConfig(db *gorm.DB, userID uint, req importRequest) error {
 	if req.Icons == nil && req.Panel == nil {
 		return fmt.Errorf("no data selected")
 	}
+	if err := panelconfig.Validate(req.Panel); err != nil {
+		return err
+	}
 	if req.Icons != nil {
 		if len(*req.Icons) > 500 || (req.Mode == "replace" && len(*req.Icons) == 0) {
 			return fmt.Errorf("invalid group count")
 		}
 		count := 0
 		for _, group := range *req.Icons {
-			if group.Title == "" || len(group.Title) > 200 {
-				return fmt.Errorf("invalid group title")
+			if err := models.ValidateNavigationTitle(group.Title); err != nil {
+				return err
 			}
 			count += len(group.Children)
 			for _, item := range group.Children {
-				if item.Title == "" {
-					return fmt.Errorf("item title is required")
+				if err := validateItem(item); err != nil {
+					return err
 				}
 				if err := navigation.Validate(item.Url); err != nil {
 					return err
@@ -123,8 +127,9 @@ func importConfig(db *gorm.DB, userID uint, req importRequest) error {
 			merged := map[string]interface{}{}
 			if cfg.PanelJson != "" {
 				if err := json.Unmarshal([]byte(cfg.PanelJson), &merged); err != nil {
-					return err
+					merged = map[string]interface{}{}
 				}
+				merged, _ = panelconfig.Sanitize(merged)
 			}
 			if merged == nil {
 				merged = map[string]interface{}{}

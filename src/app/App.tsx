@@ -7,6 +7,7 @@ import {
 	Navigate,
 	Route,
 	useLocation,
+	useRouteError,
 } from 'react-router-dom'
 import { Button } from 'antd'
 import { useTranslation } from 'react-i18next'
@@ -96,9 +97,30 @@ function NotFound() {
 		/>
 	)
 }
+function RouteError() {
+	const { t } = useTranslation()
+	const failure = useRouteError()
+	useEffect(() => {
+		console.error('Page failed', failure)
+	}, [failure])
+	return (
+		<StatusState
+			title={t('exception.serverError')}
+			description={t('review.pageRecovery')}
+			action={
+				<>
+					<Button onClick={() => location.reload()}>{t('ui.retry')}</Button>{' '}
+					<Button href="/?safeMode=1#/settings/appearance">{t('review.repairAppearance')}</Button>{' '}
+					<Button href="/?safeMode=1#/settings/site">{t('ui.site')}</Button>
+				</>
+			}
+		/>
+	)
+}
 const router = createHashRouter(
 	createRoutesFromElements(
 		<Route
+			errorElement={<RouteError />}
 			element={
 				<>
 					<SiteCustomization />

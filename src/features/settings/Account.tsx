@@ -8,6 +8,8 @@ import { usePreferences } from '@/app/store'
 import { languageOptions } from '@/locales'
 import { Section } from '@/components/shared'
 import { ImageUpload } from '@/components/ImageUpload'
+import { passwordRule } from '@/lib/password'
+import { useUnsavedChanges } from '@/lib/unsaved'
 export default function Account({ user }: { user: User.Info }) {
 	const request = useSessionRequest()
 	const prefs = usePreferences()
@@ -17,6 +19,17 @@ export default function Account({ user }: { user: User.Info }) {
 	const [saving, setSaving] = useState(false)
 	const [passwordBusy, setPasswordBusy] = useState(false)
 	const [form] = Form.useForm()
+	const [dirty, setDirty] = useState(false)
+	useUnsavedChanges(dirty)
+	const switchAccount = (token: string) => {
+		const proceed = () => {
+			setDirty(false)
+			prefs.selectAccount(token)
+			navigate('/')
+		}
+		if (dirty) modal.confirm({ title: t('ui.leaveUnsaved'), content: t('review.unsaved'), onOk: proceed })
+		else proceed()
+	}
 	return (
 		<>
 			<Section title={t('ui.profile')}>
@@ -25,10 +38,12 @@ export default function Account({ user }: { user: User.Info }) {
 					disabled={saving}
 					initialValues={user}
 					layout="vertical"
+					onValuesChange={() => setDirty(true)}
 					onFinish={async (values) => {
 						setSaving(true)
 						try {
 							await request('/user/updateInfo', values)
+							setDirty(false)
 							await client.invalidateQueries({ queryKey: ['auth'] })
 							if (prefs.token && usePreferences.getState().token === prefs.token)
 								prefs.signIn({ token: prefs.token, user: { ...user, ...values } })
@@ -49,7 +64,13 @@ export default function Account({ user }: { user: User.Info }) {
 						</Form.Item>
 					</div>
 					<div className="form-actions">
-						<ImageUpload onChange={(url) => form.setFieldValue('headImage', url)} />
+						<ImageUpload
+							disabled={saving}
+							onChange={(url) => {
+								form.setFieldValue('headImage', url)
+								setDirty(true)
+							}}
+						/>
 						<Button type="primary" htmlType="submit" loading={saving}>
 							{t('common.save')}
 						</Button>
@@ -80,14 +101,7 @@ export default function Account({ user }: { user: User.Info }) {
 								{account.token === prefs.token ? (
 									<Tag color="blue">{t('adminSettingUsers.currentUseUsername')}</Tag>
 								) : (
-									<Button
-										onClick={() => {
-											prefs.selectAccount(account.token)
-											navigate('/')
-										}}
-									>
-										{t('ui.switch')}
-									</Button>
+									<Button onClick={() => switchAccount(account.token)}>{t('ui.switch')}</Button>
 								)}
 								{account.token !== prefs.token && (
 									<Button type="text" danger onClick={() => prefs.forgetAccount(account.token)}>
@@ -103,6 +117,7 @@ export default function Account({ user }: { user: User.Info }) {
 			<Section title={t('settingUserInfo.updatePassword')} description={t('ui.passwordDescription')}>
 				<Form
 					layout="vertical"
+					disabled={passwordBusy}
 					onFinish={async (values) => {
 						setPasswordBusy(true)
 						try {
@@ -123,7 +138,7 @@ export default function Account({ user }: { user: User.Info }) {
 					<Form.Item
 						name="newPassword"
 						label={t('settingUserInfo.newPassword')}
-						rules={[{ required: true, min: 6, max: 50 }]}
+						rules={[{ required: true }, passwordRule(t('review.passwordSize'))]}
 					>
 						<Input.Password autoComplete="new-password" />
 					</Form.Item>

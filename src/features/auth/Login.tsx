@@ -7,6 +7,7 @@ import { ArrowLeftOutlined, LockOutlined, UserOutlined } from '@ant-design/icons
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useSite } from '@/lib/queries'
 import { apiBase } from '@/lib/api'
+import { passwordRule } from '@/lib/password'
 import { usePreferences } from '@/app/store'
 import { languageOptions } from '@/locales'
 import { Loading, QueryError } from '@/components/shared'
@@ -83,12 +84,16 @@ export default function Login() {
 						<Form.Item name="username" label={t('common.username')} rules={[{ required: true }]}>
 							<Input prefix={<UserOutlined aria-hidden="true" />} autoComplete="username" size="large" />
 						</Form.Item>
-						<Form.Item name="password" label={t('login.passwordPlaceholder')} rules={[{ required: true }]}>
+						<Form.Item
+							name="password"
+							label={t('login.passwordPlaceholder')}
+							rules={[{ required: true }, passwordRule(t('review.passwordMax'), false)]}
+						>
 							<Input.Password
 								prefix={<LockOutlined aria-hidden="true" />}
 								autoComplete="current-password"
 								size="large"
-								maxLength={50}
+								maxLength={72}
 							/>
 						</Form.Item>
 						{site.data.loginCaptcha && (

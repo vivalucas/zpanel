@@ -22,7 +22,8 @@ type FileApi struct{}
 var allowedImageExts = []string{".png", ".jpg", ".gif", ".jpeg", ".webp", ".ico"}
 
 func (a *FileApi) UploadImg(c *gin.Context) {
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, storage.DefaultUploadMaxBytes)
+	// The file limit excludes multipart headers; StoreUpload enforces its actual size.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, storage.DefaultUploadMaxBytes+64*1024)
 	userInfo, _ := base.GetCurrentUserInfo(c)
 	f, err := c.FormFile("imgfile")
 	if err != nil {
@@ -318,7 +319,6 @@ func (a *FileApi) Replace(c *gin.Context) {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
-	global.UserToken.Flush()
 	global.SystemSetting.Cache.Flush()
 	apiReturn.Success(c)
 }

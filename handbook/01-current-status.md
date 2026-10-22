@@ -1,5 +1,7 @@
 # 当前状态
 
+2026-10-22 默认 favicon 与关联应用图标已统一为登录页的蓝紫底白色 Z；同步 SVG、ICO、Logo PNG、Apple Touch 和 PWA 图片。HTML 与运行时共用带构建指纹的 SVG，历史默认站点图标路径归一，自定义图标仍优先。基于 `94f2fd5` 加本轮 favicon 改动，Node.js 24.15.0/pnpm 11.1.3 生产构建、类型检查、相关 ESLint 和文档检查通过；隔离 SQLite 服务配合 macOS Chrome 实查标签页 favicon 与登录页，确认已使用新图标。未验证 Safari/Firefox、真实手机或 PWA 安装升级；未部署；本次按用户要求提交推送 main，实际同步状态以最新 Git 检查为准。
+
 2026-10-07 用户批准全面优化修复：7 项确认问题已修复，4 项风险已加固，7 项体验优化已完成，详见 [15 全项目评审](15-project-review.md)。以 6d7fb70 加本轮未提交改动验证：Go 全部测试、14 项 Vitest、26 项隔离 SQLite 浏览器回归、TypeScript、ESLint、test:review、生产构建及 frozen-lockfile 新目录安装通过，生产依赖 audit 为 0 项公告。macOS Chromium 实查桌面空首页/纯 LAN 录入、320px 手机首页及分组迁移预览。真实 MySQL/Redis/NAS/Docker、Ubuntu 恢复、PWA 安装升级、Safari/Firefox 与真实手机键盘仍待实机验证。用户已授权统一升级至 1.2.4 并提交推送到 GitHub main；实际同步状态以 Git 为准，生产部署未授权。原有 2026-09-29 部署记录保留在工作区，未纳入本轮提交。
 
 2026-09-28 对照 package.json、service/assets/version、src、工作流、CHANGELOG 与 docs 核对。当前源码版本 1.2.3，已从旧 Vue 改为 React + Ant Design。

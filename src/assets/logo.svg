@@ -1,19 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ZPanel">
-  <defs>
-    <linearGradient id="zpanel-bg" x1="88" y1="72" x2="424" y2="440" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#67E8F9"/>
-      <stop offset="0.48" stop-color="#0A84FF"/>
-      <stop offset="1" stop-color="#5856D6"/>
-    </linearGradient>
-    <linearGradient id="zpanel-pane" x1="154" y1="138" x2="358" y2="378" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.96"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.72"/>
-    </linearGradient>
-  </defs>
-  <rect x="64" y="64" width="384" height="384" rx="112" fill="url(#zpanel-bg)"/>
-  <rect x="144" y="142" width="96" height="96" rx="30" fill="url(#zpanel-pane)"/>
-  <rect x="272" y="142" width="96" height="96" rx="30" fill="url(#zpanel-pane)" opacity="0.88"/>
-  <rect x="144" y="270" width="96" height="96" rx="30" fill="url(#zpanel-pane)" opacity="0.82"/>
-  <rect x="272" y="270" width="96" height="96" rx="30" fill="url(#zpanel-pane)"/>
-  <path d="M250 190h12v128h-12zM192 250h128v12H192z" fill="#0A84FF" opacity="0.34"/>
+  <rect width="512" height="512" rx="144" fill="#5266EB"/>
+  <path d="M172 157h168v40L224 316h119v39H169v-39l117-119H172z" fill="#FFF"/>
 </svg>

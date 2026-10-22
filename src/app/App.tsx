@@ -15,6 +15,7 @@ import { useAuth, useSite } from '@/lib/queries'
 import { ApiError } from '@/lib/api'
 import { usePreferences } from './store'
 import { Loading, QueryError, StatusState } from '@/components/shared'
+import defaultSiteIcon from '@/assets/logo.svg?no-inline'
 const Login = lazy(() => import('@/features/auth/Login'))
 const Home = lazy(() => import('@/features/home/Home'))
 const Settings = lazy(() => import('@/features/settings/Settings'))
@@ -32,7 +33,12 @@ function SiteCustomization() {
 	useEffect(() => {
 		document.title = siteTitle || 'ZPanel'
 		const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
-		if (icon) icon.href = siteIcon || '/favicon.svg'
+		// Resolve stored default paths to the same fingerprinted logo used by the HTML entry.
+		if (icon) {
+			icon.href =
+				!siteIcon || ['/favicon.svg', '/favicon.ico'].includes(siteIcon) ? defaultSiteIcon : siteIcon
+			icon.removeAttribute('type')
+		}
 	}, [siteTitle, siteIcon])
 	useEffect(() => {
 		if (safe) return

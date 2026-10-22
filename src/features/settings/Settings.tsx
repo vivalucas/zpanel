@@ -16,6 +16,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import type { AuthInfo } from '@/lib/api'
 import { usePanel } from '@/lib/queries'
 import { Loading, StatusState } from '@/components/shared'
+import { BrandMark } from '@/components/BrandMark'
 import { useTranslation } from 'react-i18next'
 const Appearance = lazy(() => import('./Appearance'))
 const Groups = lazy(() => import('./Groups'))
@@ -67,7 +68,7 @@ export default function Settings({ auth }: { auth: AuthInfo }) {
 			<div className="settings-window">
 				<aside className="settings-sidebar">
 					<a className="brand" href="#/">
-						<span className="brand-mark small">Z</span>
+						<BrandMark small />
 						<strong>ZPanel</strong>
 					</a>
 					<div className="sidebar-label">{t('ui.settings')}</div>

@@ -12,6 +12,7 @@ import { usePreferences } from '@/app/store'
 import { languageOptions } from '@/locales'
 import { Loading, QueryError } from '@/components/shared'
 import { SafeHtml } from '@/components/SafeHtml'
+import { BrandMark } from '@/components/BrandMark'
 export default function Login() {
 	const request = useSessionRequest()
 	const site = useSite()
@@ -32,7 +33,7 @@ export default function Login() {
 	return (
 		<main className="login-page">
 			<div className="login-art">
-				<div className="brand-mark">Z</div>
+				<BrandMark />
 				<h1>{settings.loginTitle || 'ZPanel'}</h1>
 				<>{settings.loginSubtitle && <p>{settings.loginSubtitle}</p>}</>
 				<div className="login-orbit" />
@@ -56,7 +57,7 @@ export default function Login() {
 					</Button>
 				)}
 				<div className="login-form">
-					<div className="brand-mark small">Z</div>
+					<BrandMark small />
 					<Typography.Title level={2}>{t('login.welcomeMessage')}</Typography.Title>
 					<Form
 						layout="vertical"

@@ -1,11 +1,10 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Alert, Button, Dropdown, Empty, Input, Modal, Select, Space, Tooltip } from 'antd'
+import { Alert, Button, Dropdown, Empty, Input, Modal, Select, Space, Tooltip, theme } from 'antd'
 import {
 	AppstoreOutlined,
-	DownOutlined,
 	EllipsisOutlined,
 	GlobalOutlined,
 	LoginOutlined,
@@ -13,6 +12,7 @@ import {
 	SearchOutlined,
 	SettingOutlined,
 	SwapOutlined,
+	UploadOutlined,
 } from '@ant-design/icons'
 import { Icon } from '@iconify/react'
 import { useNavigate } from 'react-router-dom'
@@ -25,6 +25,8 @@ import { SafeHtml } from '@/components/SafeHtml'
 import { SortableGrid } from '@/components/Sortable'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 import ItemEditor from './ItemEditor'
+import { useWallpaperAppearance } from './useWallpaperAppearance'
+import { iconForeground } from '@/lib/iconColor'
 const MonitorCards = lazy(() => import('./MonitorCards'))
 function Clock({ seconds, color }: { seconds?: boolean; color?: string }) {
 	const [now, setNow] = useState(() => new Date())
@@ -47,11 +49,17 @@ function Clock({ seconds, color }: { seconds?: boolean; color?: string }) {
 		</div>
 	)
 }
-export function ItemIcon({ item }: { item: Panel.ItemInfo }) {
+export function ItemIcon({ item, tone }: { item: Panel.ItemInfo; tone?: 'light' | 'dark' }) {
 	const icon = item.icon
 	const [failed, setFailed] = useState(false)
+	const { token } = theme.useToken()
+	const backdrop = tone ? (tone === 'light' ? '#fafbfd' : '#0a0f17') : token.colorBgLayout
+	const foreground = useMemo(
+		() => iconForeground(icon?.backgroundColor, backdrop),
+		[icon?.backgroundColor, backdrop],
+	)
 	return (
-		<span className="item-icon" style={{ background: icon?.backgroundColor || undefined }}>
+		<span className="item-icon" style={{ background: icon?.backgroundColor || undefined, color: foreground }}>
 			{icon?.itemType === 2 && icon.src && !failed ? (
 				<img src={icon.src} alt="" loading="lazy" onError={() => setFailed(true)} />
 			) : icon?.itemType === 3 && icon.text ? (
@@ -66,6 +74,11 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const request = useSessionRequest()
 	const groups = useGroups()
 	const panel = usePanel()
+	const wallpaperAppearance = useWallpaperAppearance(
+		panel.isSuccess && groups.isSuccess ? panel.data.panel.backgroundImageSrc : undefined,
+		panel.data?.panel.backgroundMaskNumber ?? 0,
+		panel.data?.panel.backgroundBlur ?? 0,
+	)
 	const searchConfig = useSearchConfig()
 	const navigate = useNavigate()
 	const client = useQueryClient()
@@ -96,6 +109,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const wallpaper = config.backgroundImageSrc
 	const homeTextColor =
 		config.iconTextColor?.trim().toLowerCase() === '#1f2937' ? undefined : config.iconTextColor || undefined
+	const showEditHint = editable && groups.data.length > 0 && !preferences.homeEditHintDismissed
 	const configSearchEnabled = config.searchBoxSearchIcon
 	const filtered = (groups.data || [])
 		.map((group) => ({
@@ -167,7 +181,12 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		}
 	}
 	return (
-		<main className={`home-page ${wallpaper ? 'has-wallpaper' : ''}`}>
+		<main
+			className={`home-page ${wallpaper ? 'has-wallpaper' : ''} ${showEditHint ? 'show-edit-hint' : ''}`}
+			data-wallpaper-tone={wallpaper ? wallpaperAppearance.tone : undefined}
+			data-wallpaper-mixed={wallpaper ? wallpaperAppearance.mixed : undefined}
+			style={wallpaper ? ({ '--wallpaper-scrim': wallpaperAppearance.scrim } as CSSProperties) : undefined}
+		>
 			<div
 				className="home-background"
 				style={
@@ -175,6 +194,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						? {
 								backgroundImage: `url(${JSON.stringify(wallpaper)})`,
 								filter: `blur(${config.backgroundBlur || 0}px)`,
+								inset: `${-2 * (config.backgroundBlur || 0)}px`,
 							}
 						: undefined
 				}
@@ -187,6 +207,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 					}}
 				/>
 			)}
+			{wallpaper && <div className="home-contrast-mask" aria-hidden="true" />}
 			<div className="home-tools">
 				{config.netModeChangeButtonShow && (
 					<Tooltip
@@ -258,6 +279,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 							<SearchOutlined aria-hidden="true" />
 							<Input
 								variant="borderless"
+								styles={{ root: { outline: 'none' } }}
 								aria-label={t('ui.search')}
 								placeholder={t(configSearchEnabled ? 'ui.searchPlaceholder' : 'ui.webSearchPlaceholder')}
 								value={search}
@@ -277,12 +299,10 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 							/>
 							<Select
 								aria-label={t('ui.searchEngine')}
-								suffixIcon={
-									wallpaper ? <DownOutlined style={{ color: '#fff' }} aria-hidden="true" /> : undefined
-								}
 								disabled={engineSaving}
 								loading={engineSaving}
 								variant="borderless"
+								styles={{ root: { outline: 'none' } }}
 								value={engine || searchConfig.data?.currentSearchEngine.url}
 								onChange={async (url) => {
 									setEngine(url)
@@ -323,23 +343,35 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						<MonitorCards showTitle={config.systemMonitorShowTitle} />
 					</Suspense>
 				)}
+				{showEditHint && (
+					<aside className="home-edit-hint">
+						<span>{t('ui.homeEditHint')}</span>
+						<Button
+							type="text"
+							size="small"
+							onClick={() => preferences.setPreference({ homeEditHintDismissed: true })}
+						>
+							{t('ui.gotIt')}
+						</Button>
+					</aside>
+				)}
 				{!groups.data.length ? (
 					<div className="empty-collection">
 						<Empty
-							image={
-								<AppstoreOutlined aria-hidden="true" style={{ fontSize: 44, color: 'var(--primary)' }} />
-							}
+							image={<AppstoreOutlined aria-hidden="true" style={{ fontSize: 36, color: 'inherit' }} />}
 							description={t('ui.emptyCollection')}
 						>
 							{editable && (
-								<Button type="primary" onClick={() => navigate('/settings/groups')}>
+								<Button className="home-action" onClick={() => navigate('/settings/groups')}>
 									{t('ui.createFirstGroup')}
 								</Button>
 							)}
 						</Empty>
 					</div>
 				) : !filtered.length ? (
-					<Empty description={t('ui.noResults')} />
+					<div className="empty-collection">
+						<Empty description={t('ui.noResults')} />
+					</div>
 				) : (
 					filtered.map((group) => (
 						<section
@@ -358,7 +390,8 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											onClick={() => setEditor({ groupId: group.id })}
 										/>
 										<Button
-											type={sortingGroupId === group.id ? 'primary' : 'text'}
+											type="text"
+											aria-pressed={sortingGroupId === group.id}
 											size="small"
 											aria-label={`${group.title} ${t(sortingGroupId === group.id ? 'common.done' : 'ui.sort')}`}
 											icon={<SwapOutlined aria-hidden="true" />}
@@ -401,7 +434,11 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											aria-disabled={sortingGroupId === group.id}
 											aria-label={item.title}
 										>
-											<ItemIcon key={item.icon?.src} item={item} />
+											<ItemIcon
+												key={item.icon?.src}
+												item={item}
+												tone={wallpaper ? wallpaperAppearance.tone : undefined}
+											/>
 											<div className="app-copy">
 												{!(config.iconStyle === 1 && config.iconTextIconHideTitle) && (
 													<strong>{item.title}</strong>
@@ -427,11 +464,21 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 							</SortableGrid>
 							{!group.items.length && (
 								<div className="empty-group">
-									<p>{t('ui.emptyGroup')}</p>
+									<span className="empty-group-message">{t('ui.emptyGroup')}</span>
 									{editable && (
 										<Space wrap>
-											<Button onClick={() => setEditor({ groupId: group.id })}>{t('review.firstApp')}</Button>
-											<Button type="link" onClick={() => navigate('/settings/backup')}>
+											<Button
+												className="home-action"
+												icon={<PlusOutlined aria-hidden="true" />}
+												onClick={() => setEditor({ groupId: group.id })}
+											>
+												{t('review.firstApp')}
+											</Button>
+											<Button
+												className="home-action home-action-secondary"
+												icon={<UploadOutlined aria-hidden="true" />}
+												onClick={() => navigate('/settings/backup')}
+											>
 												{t('ui.import')}
 											</Button>
 										</Space>
@@ -441,7 +488,9 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						</section>
 					))
 				)}
-				<SafeHtml className="home-footer" html={config.footerHtml} />
+				<footer className="home-footer">
+					<SafeHtml className="home-footer-content" html={config.footerHtml} />
+				</footer>
 			</div>
 			{editor && <ItemEditor {...editor} groups={groups.data} onClose={() => setEditor(null)} />}
 			<Modal

@@ -73,6 +73,7 @@ export default function Settings({ auth }: { auth: AuthInfo }) {
 					</a>
 					<div className="sidebar-label">{t('ui.settings')}</div>
 					<Menu
+						styles={{ root: { borderInlineEnd: 0 } }}
 						selectedKeys={[section]}
 						items={sections}
 						onClick={({ key }) => navigate(`/settings/${key}`)}

@@ -56,17 +56,19 @@ export default function Groups() {
 				>
 					{(group) => (
 						<div className="group-row">
-							<div>
-								<strong>{group.title}</strong>
+							<div className="group-row-info">
+								<strong title={group.title}>{group.title}</strong>
 								<Tag>{group.items.length}</Tag>
 							</div>
-							<Space>
+							<Space className="group-row-actions">
 								<Button
+									type="text"
 									aria-label={t('common.edit')}
 									icon={<EditOutlined aria-hidden="true" />}
 									onClick={() => edit(group)}
 								/>
 								<Button
+									type="text"
 									danger
 									aria-label={t('common.delete')}
 									icon={<DeleteOutlined aria-hidden="true" />}

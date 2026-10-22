@@ -11,7 +11,10 @@ interface Preferences {
 	network: 'lan' | 'wan'
 	token: string | null
 	accounts: Account[]
-	setPreference: (patch: Partial<Pick<Preferences, 'theme' | 'language' | 'network'>>) => void
+	homeEditHintDismissed: boolean
+	setPreference: (
+		patch: Partial<Pick<Preferences, 'theme' | 'language' | 'network' | 'homeEditHintDismissed'>>,
+	) => void
 	signIn: (account: Account) => void
 	selectAccount: (token: string | null) => void
 	forgetAccount: (token: string) => void
@@ -24,6 +27,7 @@ export const usePreferences = create<Preferences>()(
 			network: 'wan',
 			token: null,
 			accounts: [],
+			homeEditHintDismissed: false,
 			setPreference: (patch) => set(patch),
 			signIn: (account) =>
 				set((s) => ({

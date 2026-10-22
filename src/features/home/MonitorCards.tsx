@@ -66,8 +66,8 @@ function MonitorCard({ item }: { item: MonitorItem }) {
 					<Progress
 						percent={Math.min(100, query.data.percent)}
 						showInfo={false}
-						strokeColor={style?.progressColor || 'var(--primary)'}
-						railColor={style?.progressRailColor}
+						strokeColor={style?.progressColor || 'var(--home-ink)'}
+						railColor={style?.progressRailColor || 'var(--home-action-bg)'}
 						size="small"
 					/>
 					<span className="monitor-detail">{query.data.detail}</span>

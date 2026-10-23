@@ -21,6 +21,7 @@ export default function ItemEditor({
 	const [form] = Form.useForm<Panel.ItemInfo>()
 	const [busy, setBusy] = useState(false)
 	const [faviconBusy, setFaviconBusy] = useState(false)
+	const [uploading, setUploading] = useState(false)
 	const { t, error, message } = useFeedback()
 	const client = useQueryClient()
 	const type = Form.useWatch(['icon', 'itemType'], form)
@@ -40,6 +41,7 @@ export default function ItemEditor({
 			}}
 			cancelButtonProps={{ disabled: busy }}
 			confirmLoading={busy}
+			okButtonProps={{ disabled: uploading || faviconBusy }}
 			onOk={() => form.submit()}
 			destroyOnHidden
 		>
@@ -60,6 +62,7 @@ export default function ItemEditor({
 				layout="vertical"
 				requiredMark={false}
 				onFinish={async (values) => {
+					if (busy || uploading || faviconBusy) return
 					setBusy(true)
 					try {
 						await request('/panel/itemIcon/edit', { ...item, ...values })
@@ -130,17 +133,28 @@ export default function ItemEditor({
 							<Input />
 						</Form.Item>
 						<Space wrap>
-							<ImageUpload onChange={(url) => form.setFieldValue(['icon', 'src'], url)} />
+							<ImageUpload
+								disabled={busy || faviconBusy}
+								onUploadingChange={setUploading}
+								onChange={(url) => form.setFieldValue(['icon', 'src'], url)}
+							/>
 							<Button
 								loading={faviconBusy}
+								disabled={busy || uploading}
 								onClick={async () => {
 									const url = form.getFieldValue('url') || form.getFieldValue('lanUrl')
+									const previousIcon = form.getFieldValue(['icon', 'src'])
 									if (!isSafeNavigationUrl(url || '')) return error(new Error(t('review.invalidUrl')))
 									setFaviconBusy(true)
 									try {
 										const data = await request<{ iconUrl: string }>('/panel/itemIcon/getSiteFavicon', { url })
 										if (!data.iconUrl) throw new Error(t('iconItem.geticonFail'))
-										form.setFieldValue(['icon', 'src'], data.iconUrl)
+										if (
+											form.getFieldValue(['icon', 'itemType']) === 2 &&
+											(form.getFieldValue('url') || form.getFieldValue('lanUrl')) === url &&
+											form.getFieldValue(['icon', 'src']) === previousIcon
+										)
+											form.setFieldValue(['icon', 'src'], data.iconUrl)
 									} catch (err) {
 										error(err)
 									} finally {

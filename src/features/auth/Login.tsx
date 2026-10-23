@@ -1,7 +1,7 @@
 import { useSessionRequest } from '@/lib/session'
 import { randomId } from '@/lib/id'
 import { useFeedback } from '@/lib/feedback'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button, Form, Input, Select, Typography } from 'antd'
 import { ArrowLeftOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -20,6 +20,7 @@ export default function Login() {
 	const location = useLocation()
 	const { t, error } = useFeedback()
 	const [busy, setBusy] = useState(false)
+	const submittingRef = useRef(false)
 	const [captchaId, setCaptchaId] = useState(() => randomId())
 	const { language, setPreference, signIn } = usePreferences()
 	if (site.isPending) return <Loading />
@@ -60,9 +61,12 @@ export default function Login() {
 					<BrandMark small />
 					<Typography.Title level={2}>{t('login.welcomeMessage')}</Typography.Title>
 					<Form
+						disabled={busy}
 						layout="vertical"
 						requiredMark={false}
 						onFinish={async (values: { username: string; password: string; vcode?: string }) => {
+							if (submittingRef.current) return
+							submittingRef.current = true
 							setBusy(true)
 							try {
 								const user = await request<User.Info & { token: string }>(
@@ -78,6 +82,7 @@ export default function Login() {
 								error(err)
 								setCaptchaId(randomId())
 							} finally {
+								submittingRef.current = false
 								setBusy(false)
 							}
 						}}
@@ -106,6 +111,7 @@ export default function Login() {
 									<button
 										type="button"
 										className="captcha"
+										disabled={busy}
 										aria-label={t('ui.refreshCaptcha')}
 										onClick={() => setCaptchaId(randomId())}
 									>

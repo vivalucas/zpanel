@@ -18,16 +18,21 @@ export default function Account({ user }: { user: User.Info }) {
 	const { t, error, message, modal } = useFeedback()
 	const [saving, setSaving] = useState(false)
 	const [passwordBusy, setPasswordBusy] = useState(false)
+	const [uploading, setUploading] = useState(false)
 	const [form] = Form.useForm()
 	const [dirty, setDirty] = useState(false)
-	useUnsavedChanges(dirty)
+	const [passwordDirty, setPasswordDirty] = useState(false)
+	const allowNavigation = useUnsavedChanges(dirty || passwordDirty)
 	const switchAccount = (token: string) => {
 		const proceed = () => {
+			allowNavigation()
 			setDirty(false)
+			setPasswordDirty(false)
 			prefs.selectAccount(token)
 			navigate('/')
 		}
-		if (dirty) modal.confirm({ title: t('ui.leaveUnsaved'), content: t('review.unsaved'), onOk: proceed })
+		if (dirty || passwordDirty)
+			modal.confirm({ title: t('ui.leaveUnsaved'), content: t('review.unsaved'), onOk: proceed })
 		else proceed()
 	}
 	return (
@@ -40,6 +45,7 @@ export default function Account({ user }: { user: User.Info }) {
 					layout="vertical"
 					onValuesChange={() => setDirty(true)}
 					onFinish={async (values) => {
+						if (saving || uploading) return
 						setSaving(true)
 						try {
 							await request('/user/updateInfo', values)
@@ -66,12 +72,13 @@ export default function Account({ user }: { user: User.Info }) {
 					<div className="form-actions">
 						<ImageUpload
 							disabled={saving}
+							onUploadingChange={setUploading}
 							onChange={(url) => {
 								form.setFieldValue('headImage', url)
 								setDirty(true)
 							}}
 						/>
-						<Button type="primary" htmlType="submit" loading={saving}>
+						<Button type="primary" htmlType="submit" loading={saving} disabled={uploading}>
 							{t('common.save')}
 						</Button>
 					</div>
@@ -117,11 +124,15 @@ export default function Account({ user }: { user: User.Info }) {
 			<Section title={t('settingUserInfo.updatePassword')} description={t('ui.passwordDescription')}>
 				<Form
 					layout="vertical"
+					onValuesChange={() => setPasswordDirty(true)}
 					disabled={passwordBusy}
 					onFinish={async (values) => {
+						if (passwordBusy) return
 						setPasswordBusy(true)
 						try {
 							await request('/user/updatePassword', values)
+							allowNavigation()
+							setPasswordDirty(false)
 							if (prefs.token) prefs.forgetAccount(prefs.token)
 							navigate('/login')
 							void message.success(t('ui.passwordUpdated'))
@@ -173,6 +184,7 @@ export default function Account({ user }: { user: User.Info }) {
 						onOk: async () => {
 							try {
 								await request('/logout')
+								allowNavigation()
 								if (prefs.token) prefs.forgetAccount(prefs.token)
 								navigate('/login')
 							} catch (err) {

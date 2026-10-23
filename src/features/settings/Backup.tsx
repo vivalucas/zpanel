@@ -1,7 +1,7 @@
 import { useSessionRequest } from '@/lib/session'
 import { randomId } from '@/lib/id'
 import { useFeedback } from '@/lib/feedback'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, Button, Checkbox, Radio, Space, Upload } from 'antd'
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
@@ -19,10 +19,19 @@ export default function Backup() {
 	const [icons, setIcons] = useState(true)
 	const [style, setStyle] = useState(true)
 	const [busy, setBusy] = useState(false)
+	const [confirming, setConfirming] = useState(false)
+	const selectionRef = useRef(0)
+	useEffect(
+		() => () => {
+			selectionRef.current++
+		},
+		[],
+	)
 	const receiptRef = useRef<{ payload: string; requestId: string } | null>(null)
 	const client = useQueryClient()
 	const { t, error, message, modal } = useFeedback()
 	const doImport = async () => {
+		if (busy) return
 		const data = {
 			mode,
 			...(icons && selected?.hasProperty('icons') ? { icons: selected.geticons() } : {}),
@@ -51,17 +60,25 @@ export default function Backup() {
 		<>
 			<Section title={t('ui.export')} description={t('review.configOnly')}>
 				<Space direction="vertical">
-					<Checkbox disabled={busy} checked={icons} onChange={(e) => setIcons(e.target.checked)}>
+					<Checkbox
+						disabled={busy || confirming}
+						checked={icons}
+						onChange={(e) => setIcons(e.target.checked)}
+					>
 						{t('ui.navigationData')}
 					</Checkbox>
-					<Checkbox disabled={busy} checked={style} onChange={(e) => setStyle(e.target.checked)}>
+					<Checkbox
+						disabled={busy || confirming}
+						checked={style}
+						onChange={(e) => setStyle(e.target.checked)}
+					>
 						{t('apps.baseSettings.appName')}
 					</Checkbox>
 					<Button
 						type="primary"
 						icon={<DownloadOutlined aria-hidden="true" />}
 						loading={busy}
-						disabled={!icons && !style}
+						disabled={confirming || (!icons && !style)}
 						onClick={async () => {
 							setBusy(true)
 							try {
@@ -100,12 +117,15 @@ export default function Backup() {
 			<Section title={t('ui.import')} description={t('review.importModeHelp')}>
 				<Upload
 					accept=".json,.zpanel.json"
-					disabled={busy}
+					disabled={busy || confirming}
 					showUploadList={false}
 					beforeUpload={async (file) => {
+						const current = ++selectionRef.current
+						setSelected(null)
 						try {
 							if (file.size > 5 * 1024 * 1024) throw new Error(t('review.importSize'))
 							const parsed = importJsonString(await file.text())
+							if (current !== selectionRef.current) return false
 							if (!parsed || !parsed.isPassCheckMd5() || !parsed.isPassCheckConfigVersionBest())
 								throw new Error(t('ui.invalidBackup'))
 							receiptRef.current = null
@@ -114,6 +134,7 @@ export default function Backup() {
 							setIcons(parsed.hasProperty('icons'))
 							setStyle(!!parsed.getStyleConfig())
 						} catch (err) {
+							if (current !== selectionRef.current) return false
 							error(err)
 							setSelected(null)
 						}
@@ -137,20 +158,20 @@ export default function Backup() {
 						<Space direction="vertical" className="spaced">
 							<Checkbox
 								checked={icons}
-								disabled={busy || !selected.hasProperty('icons')}
+								disabled={busy || confirming || !selected.hasProperty('icons')}
 								onChange={(e) => setIcons(e.target.checked)}
 							>
 								{t('ui.navigationData')}
 							</Checkbox>
 							<Checkbox
 								checked={style}
-								disabled={busy || !selected.getStyleConfig()}
+								disabled={busy || confirming || !selected.getStyleConfig()}
 								onChange={(e) => setStyle(e.target.checked)}
 							>
 								{t('apps.baseSettings.appName')}
 							</Checkbox>
 							<Radio.Group
-								disabled={busy}
+								disabled={busy || confirming}
 								value={mode}
 								onChange={(e) => {
 									setMode(e.target.value)
@@ -191,17 +212,20 @@ export default function Backup() {
 								loading={busy}
 								disabled={
 									busy ||
+									confirming ||
 									(mode === 'replace' && icons && (!existing.data || !!existing.error)) ||
 									(!(icons && selected.hasProperty('icons')) && !(style && selected.getStyleConfig()))
 								}
 								onClick={() => {
-									if (mode === 'replace' && icons)
+									if (mode === 'replace' && icons) {
+										setConfirming(true)
 										modal.confirm({
 											title: t('review.replaceWarning'),
 											okButtonProps: { danger: true },
 											onOk: doImport,
+											afterClose: () => setConfirming(false),
 										})
-									else void doImport().catch(() => {})
+									} else void doImport().catch(() => {})
 								}}
 							>
 								{t('ui.import')}

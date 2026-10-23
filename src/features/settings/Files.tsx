@@ -125,6 +125,7 @@ export default function Files({ user }: { user: User.Info }) {
 											</Button>
 											<Button
 												size="small"
+												disabled={busy}
 												onClick={() => {
 													setSelected(file)
 													setReplacement(undefined)
@@ -185,7 +186,10 @@ export default function Files({ user }: { user: User.Info }) {
 				open={!!selected}
 				title={t('review.usage')}
 				footer={null}
-				onCancel={() => setSelected(null)}
+				closable={{ disabled: busy }}
+				onCancel={() => {
+					if (!busy) setSelected(null)
+				}}
 				destroyOnHidden
 			>
 				{usage.isPending ? (
@@ -212,8 +216,8 @@ export default function Files({ user }: { user: User.Info }) {
 								<Tabs
 									activeKey={replacementTab}
 									items={[
-										{ key: 'own', label: t('ui.myFiles') },
-										{ key: 'public', label: t('ui.publicGallery') },
+										{ key: 'own', label: t('ui.myFiles'), disabled: busy },
+										{ key: 'public', label: t('ui.publicGallery'), disabled: busy },
 									]}
 									onChange={(value) => {
 										setReplacementTab(value)
@@ -229,6 +233,7 @@ export default function Files({ user }: { user: User.Info }) {
 									value={replacement}
 									placeholder={t('ui.selectReplacement')}
 									loading={replacements.isFetching}
+									disabled={busy}
 									options={replacements.data?.list
 										.filter((file) => file.id !== selected?.id)
 										.map((file) => ({ value: file.id, label: file.originalName }))}
@@ -239,6 +244,7 @@ export default function Files({ user }: { user: User.Info }) {
 									className="spaced"
 									size="small"
 									current={replacementPage}
+									disabled={busy}
 									pageSize={24}
 									total={replacements.data?.count}
 									showSizeChanger={false}
@@ -252,6 +258,7 @@ export default function Files({ user }: { user: User.Info }) {
 									loading={busy}
 									disabled={!replacement}
 									onClick={async () => {
+										if (busy || !selected || !replacement) return
 										setBusy(true)
 										try {
 											await request('/file/replace', { id: selected?.id, replacementId: replacement })

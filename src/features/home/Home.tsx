@@ -1,6 +1,6 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Alert, Button, Dropdown, Empty, Input, Modal, Select, Space, Tooltip, theme } from 'antd'
 import {
@@ -90,6 +90,14 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const [sortingGroupId, setSortingGroupId] = useState<number | null>(null)
 	const [savingSort, setSavingSort] = useState(false)
 	const [editor, setEditor] = useState<{ item?: Panel.ItemInfo; groupId?: number } | null>(null)
+	const editorTriggerRef = useRef<HTMLElement | number | null>(null)
+	const itemTriggersRef = useRef(new Map<number, HTMLElement>())
+	useEffect(() => {
+		if (!editor) {
+			const trigger = editorTriggerRef.current
+			;(typeof trigger === 'number' ? itemTriggersRef.current.get(trigger) : trigger)?.focus()
+		}
+	}, [editor])
 	const [frame, setFrame] = useState<{ url: string; title: string } | null>(null)
 	const editable = auth.visitMode === 0
 	if (panel.isPending || groups.isPending) return <Loading />
@@ -115,7 +123,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		.map((group) => ({
 			...group,
 			items: group.items.filter((item) =>
-				`${item.title} ${item.description || ''} ${item.url}`
+				`${item.title} ${item.description || ''} ${item.url} ${item.lanUrl || ''}`
 					.toLowerCase()
 					.includes((configSearchEnabled ? search : '').toLowerCase()),
 			),
@@ -146,8 +154,10 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 				: []),
 		],
 		onClick: ({ key }: { key: string }) => {
-			if (key === 'edit') setEditor({ item })
-			else if (key === 'delete')
+			if (key === 'edit') {
+				editorTriggerRef.current = item.id || null
+				setEditor({ item })
+			} else if (key === 'delete')
 				modal.confirm({
 					title: t('ui.deleteItem'),
 					content: item.title,
@@ -305,6 +315,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 								styles={{ root: { outline: 'none' } }}
 								value={engine || searchConfig.data?.currentSearchEngine.url}
 								onChange={async (url) => {
+									const previous = engine
 									setEngine(url)
 									if (!editable || !searchConfig.data) return
 									const selected = searchConfig.data.searchEngineList.find((e) => e.url === url)
@@ -317,6 +328,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 										})
 										await client.invalidateQueries({ queryKey: ['search'] })
 									} catch (err) {
+										setEngine(previous)
 										error(err)
 									} finally {
 										setEngineSaving(false)
@@ -387,7 +399,10 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											size="small"
 											aria-label={`${group.title} ${t('iconItem.add')}`}
 											icon={<PlusOutlined aria-hidden="true" />}
-											onClick={() => setEditor({ groupId: group.id })}
+											onClick={(event) => {
+												editorTriggerRef.current = event.currentTarget
+												setEditor({ groupId: group.id })
+											}}
 										/>
 										<Button
 											type="text"
@@ -452,6 +467,10 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											<Dropdown menu={menu(item)} trigger={['click']}>
 												<Button
 													className="item-menu"
+													ref={(node) => {
+														if (node) itemTriggersRef.current.set(item.id!, node)
+														else itemTriggersRef.current.delete(item.id!)
+													}}
 													type="text"
 													size="small"
 													aria-label={`${t('ui.more')} ${item.title}`}
@@ -470,7 +489,10 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											<Button
 												className="home-action"
 												icon={<PlusOutlined aria-hidden="true" />}
-												onClick={() => setEditor({ groupId: group.id })}
+												onClick={(event) => {
+													editorTriggerRef.current = event.currentTarget
+													setEditor({ groupId: group.id })
+												}}
 											>
 												{t('review.firstApp')}
 											</Button>

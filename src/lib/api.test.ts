@@ -87,4 +87,43 @@ describe('aPI contract and session boundaries', () => {
 		})
 		expect(fetch).not.toHaveBeenCalled()
 	})
+	it('discards explicit anonymous login results if the issuing session has changed', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockImplementation(async () => {
+				state.token = 'another-account'
+				return response(0, { token: 'late-login' })
+			}),
+		)
+		await expect(request('/login', {}, { token: null, sessionToken: 'current-token' })).rejects.toMatchObject(
+			{ name: 'AbortError' },
+		)
+	})
+	it('does not start a request after its page lifetime has ended', async () => {
+		const fetch = vi.fn()
+		vi.stubGlobal('fetch', fetch)
+		const controller = new AbortController()
+		controller.abort()
+		await expect(request('/delete', {}, { signal: controller.signal })).rejects.toMatchObject({
+			name: 'AbortError',
+		})
+		expect(fetch).not.toHaveBeenCalled()
+	})
+	it('discards response bodies which finish decoding after page cancellation', async () => {
+		const controller = new AbortController()
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => {
+					controller.abort()
+					return { code: 0, data: { title: 'Late response' } }
+				},
+			}),
+		)
+		await expect(request('/read', {}, { signal: controller.signal })).rejects.toMatchObject({
+			name: 'AbortError',
+		})
+		expect(state.forgetAccount).not.toHaveBeenCalled()
+	})
 })

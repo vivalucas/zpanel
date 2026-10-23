@@ -12,7 +12,7 @@ import {
 	TeamOutlined,
 	UserOutlined,
 } from '@ant-design/icons'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { AuthInfo } from '@/lib/api'
 import { usePanel } from '@/lib/queries'
 import { Loading, StatusState } from '@/components/shared'
@@ -67,10 +67,10 @@ export default function Settings({ auth }: { auth: AuthInfo }) {
 			/>
 			<div className="settings-window">
 				<aside className="settings-sidebar">
-					<a className="brand" href="#/">
+					<Link className="brand" to="/">
 						<BrandMark small />
 						<strong>ZPanel</strong>
-					</a>
+					</Link>
 					<div className="sidebar-label">{t('ui.settings')}</div>
 					<Menu
 						styles={{ root: { borderInlineEnd: 0 } }}

@@ -30,7 +30,12 @@ export default function Groups() {
 			title={t('ui.groups')}
 			description={t('ui.groupsDescription')}
 			extra={
-				<Button type="primary" icon={<PlusOutlined aria-hidden="true" />} onClick={() => edit({})}>
+				<Button
+					type="primary"
+					disabled={busy}
+					icon={<PlusOutlined aria-hidden="true" />}
+					onClick={() => edit({})}
+				>
 					{t('common.add')}
 				</Button>
 			}
@@ -64,6 +69,7 @@ export default function Groups() {
 								<Button
 									type="text"
 									aria-label={t('common.edit')}
+									disabled={busy}
 									icon={<EditOutlined aria-hidden="true" />}
 									onClick={() => edit(group)}
 								/>
@@ -98,7 +104,7 @@ export default function Groups() {
 				confirmLoading={busy}
 				okButtonProps={{ danger: moveToGroupId === 0 }}
 				onOk={async () => {
-					if (!deleting) return
+					if (!deleting || busy) return
 					setBusy(true)
 					try {
 						await request('/panel/itemIconGroup/deletes', {
@@ -142,8 +148,13 @@ export default function Groups() {
 			<Modal
 				open={!!editing}
 				title={t(editing?.id ? 'common.edit' : 'common.add')}
-				onCancel={() => setEditing(null)}
-				onOk={() => form.submit()}
+				onCancel={() => {
+					if (!busy) setEditing(null)
+				}}
+				cancelButtonProps={{ disabled: busy }}
+				onOk={() => {
+					if (!busy) form.submit()
+				}}
 				confirmLoading={busy}
 			>
 				<Form
@@ -151,6 +162,7 @@ export default function Groups() {
 					disabled={busy}
 					layout="vertical"
 					onFinish={async (values) => {
+						if (busy) return
 						setBusy(true)
 						try {
 							await request('/panel/itemIconGroup/edit', { id: editing?.id, ...values })

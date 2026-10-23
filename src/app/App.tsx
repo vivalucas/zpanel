@@ -21,6 +21,7 @@ const Home = lazy(() => import('@/features/home/Home'))
 const Settings = lazy(() => import('@/features/settings/Settings'))
 
 let executedCustomJs: string | undefined
+let hasExecutedCustomJs = false
 function SiteCustomization() {
 	const site = useSite().data?.siteSetting
 	const route = useLocation()
@@ -51,12 +52,13 @@ function SiteCustomization() {
 	useEffect(() => {
 		// Removing a script tag cannot undo listeners/timers installed by custom code.
 		if (safe) {
-			if (executedCustomJs) location.reload()
+			if (hasExecutedCustomJs) location.reload()
 			return
 		}
 		if (site?.customJs === undefined || executedCustomJs === site.customJs) return
 		executedCustomJs = site.customJs
 		if (!site.customJs) return
+		hasExecutedCustomJs = true
 		const script = document.createElement('script')
 		script.id = 'zpanel-custom-js'
 		script.textContent = site.customJs

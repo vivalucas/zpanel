@@ -1,6 +1,6 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button, Input, Modal, Select, Space, Table, Tag } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
@@ -9,6 +9,7 @@ export default function Docker() {
 	const request = useSessionRequest()
 	const [filter, setFilter] = useState('')
 	const [pending, setPending] = useState<string[]>([])
+	const confirmingRef = useRef(new Set<string>())
 	const [logsId, setLogsId] = useState<string | null>(null)
 	const [lines, setLines] = useState(200)
 	const { t, error, modal, message } = useFeedback()
@@ -24,17 +25,21 @@ export default function Docker() {
 	})
 	const logs = useQuery({
 		queryKey: ['docker-logs', logsId, lines],
+		staleTime: 0,
 		enabled: !!logsId,
 		queryFn: ({ signal }) =>
 			request<{ logs: string }>('/system/docker/logs', { id: logsId, lines }, { signal }),
 	})
 	const refresh = () =>
 		Promise.all([containers.refetch(), ...(containers.data?.list.length ? [stats.refetch()] : [])])
-	const action = (row: System.DockerContainer, name: string) =>
+	const action = (row: System.DockerContainer, name: string) => {
+		if (confirmingRef.current.has(row.id)) return
+		confirmingRef.current.add(row.id)
 		modal.confirm({
 			title: t(`apps.dockerManager.${name}`),
 			content: t('review.dockerConfirm', { name: row.names, action: t(`apps.dockerManager.${name}`) }),
 			okButtonProps: { danger: ['stop', 'restart', 'pause'].includes(name) },
+			afterClose: () => confirmingRef.current.delete(row.id),
 			onOk: async () => {
 				setPending((ids) => [...ids, row.id])
 				try {
@@ -49,6 +54,7 @@ export default function Docker() {
 				}
 			},
 		})
+	}
 	return (
 		<Section
 			title="Docker"

@@ -26,6 +26,7 @@ export default function Appearance() {
 	const panel = usePanel()
 	const [form] = Form.useForm<Panel.panelConfig>()
 	const [saving, setSaving] = useState(false)
+	const [uploading, setUploading] = useState(false)
 	const [dirty, setDirty] = useState(false)
 	const wallpaper = Form.useWatch('backgroundImageSrc', form)
 	const logoText = Form.useWatch('logoText', form)
@@ -52,6 +53,7 @@ export default function Appearance() {
 			layout="vertical"
 			onValuesChange={() => setDirty(true)}
 			onFinish={async (values) => {
+				if (saving || uploading) return
 				setSaving(true)
 				try {
 					await request('/panel/userConfig/set', { ...panel.data, panel: { ...panel.data.panel, ...values } })
@@ -122,6 +124,8 @@ export default function Appearance() {
 						<Input allowClear />
 					</Form.Item>
 					<ImageUpload
+						disabled={saving}
+						onUploadingChange={setUploading}
 						onChange={(url) => {
 							form.setFieldValue('backgroundImageSrc', url)
 							setDirty(true)
@@ -141,7 +145,7 @@ export default function Appearance() {
 						<Form.Item name="iconStyle" label={t('ui.cardStyle')}>
 							<Select
 								options={[
-									{ value: 0, label: t('apps.baseSettings.detailIcon') },
+									{ value: 2, label: t('apps.baseSettings.detailIcon') },
 									{ value: 1, label: t('apps.baseSettings.smallIcon') },
 								]}
 							/>
@@ -214,6 +218,7 @@ export default function Appearance() {
 				{dirty && <Alert type="info" title={t('review.unsaved')} />}
 				<Space>
 					<Button
+						disabled={saving || uploading}
 						onClick={() =>
 							modal.confirm({
 								title: t('ui.resetDefaultsConfirm'),
@@ -226,7 +231,7 @@ export default function Appearance() {
 					>
 						{t('ui.resetDefaults')}
 					</Button>
-					<Button type="primary" htmlType="submit" loading={saving}>
+					<Button type="primary" htmlType="submit" loading={saving} disabled={uploading}>
 						{t('common.save')}
 					</Button>
 				</Space>

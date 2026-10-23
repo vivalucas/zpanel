@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Space, Upload } from 'antd'
 import type { UploadFile } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
@@ -10,16 +10,25 @@ export function ImageUpload({
 	onChange,
 	multiple = false,
 	disabled = false,
+	onUploadingChange,
 }: {
 	onChange: (url: string) => void | Promise<void>
 	multiple?: boolean
 	disabled?: boolean
+	onUploadingChange?: (uploading: boolean) => void
 }) {
 	const { t, error } = useFeedback()
 	const request = useSessionRequest()
 	const [files, setFiles] = useState<UploadFile[]>([])
+	const pendingRef = useRef(new Set<string>())
 	const uploading = files.some((file) => file.status === 'uploading')
+	useEffect(() => {
+		onUploadingChange?.(uploading)
+		return () => onUploadingChange?.(false)
+	}, [uploading, onUploadingChange])
 	const upload = async (file: File, uid: string) => {
+		if (disabled || pendingRef.current.has(uid)) return
+		pendingRef.current.add(uid)
 		setFiles((list) => list.map((entry) => (entry.uid === uid ? { ...entry, status: 'uploading' } : entry)))
 		try {
 			const result = await uploadImage(file, request)
@@ -40,6 +49,8 @@ export function ImageUpload({
 			)
 			error(err)
 			throw err
+		} finally {
+			pendingRef.current.delete(uid)
 		}
 	}
 	return (

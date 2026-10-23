@@ -27,6 +27,7 @@ export async function request<T>(
 	} = {},
 ): Promise<T> {
 	const state = usePreferences.getState()
+	if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError')
 	const token = options.token === undefined ? state.token : options.token
 	if (options.sessionToken !== undefined && state.token !== options.sessionToken)
 		throw new DOMException('Session changed', 'AbortError')
@@ -41,10 +42,16 @@ export async function request<T>(
 		},
 		body: options.method === 'GET' ? undefined : form ? data : JSON.stringify(data ?? {}),
 	})
+	if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError')
+	if (options.sessionToken !== undefined && usePreferences.getState().token !== options.sessionToken)
+		throw new DOMException('Session changed', 'AbortError')
 	if (options.token === undefined && usePreferences.getState().token !== token)
 		throw new DOMException('Session changed', 'AbortError')
 	if (!response.ok) throw new ApiError(response.status, `HTTP ${response.status}`)
 	const result: ApiResponse<T> = await response.json()
+	if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError')
+	if (options.sessionToken !== undefined && usePreferences.getState().token !== options.sessionToken)
+		throw new DOMException('Session changed', 'AbortError')
 	if (options.token === undefined && usePreferences.getState().token !== token)
 		throw new DOMException('Session changed', 'AbortError')
 	if (result.code !== 0) {

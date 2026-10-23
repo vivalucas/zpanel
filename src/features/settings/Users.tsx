@@ -1,7 +1,7 @@
 import { useSessionRequest } from '@/lib/session'
 import { passwordRule } from '@/lib/password'
 import { useFeedback } from '@/lib/feedback'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Form, Input, Modal, Select, Space, Table, Tag } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -36,6 +36,12 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 			}
 		},
 	})
+	const lastPage = users.data ? Math.max(1, Math.ceil(users.data.count / 10)) : page
+	useEffect(() => {
+		// Keep the request page in sync when deletion removes the last row on a page.
+		// eslint-disable-next-line react/set-state-in-effect
+		if (page > lastPage) setPage(lastPage)
+	}, [page, lastPage])
 	const refresh = () =>
 		Promise.all([
 			client.invalidateQueries({ queryKey: ['users'] }),
@@ -51,7 +57,12 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 			title={t('adminSettingUsers.appName')}
 			description={t('ui.publicAccessHelp')}
 			extra={
-				<Button type="primary" icon={<PlusOutlined aria-hidden="true" />} onClick={() => edit({})}>
+				<Button
+					type="primary"
+					disabled={busy}
+					icon={<PlusOutlined aria-hidden="true" />}
+					onClick={() => edit({})}
+				>
 					{t('common.add')}
 				</Button>
 			}
@@ -154,25 +165,28 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 							title: t('common.action'),
 							render: (_, user) => (
 								<Space>
-									<Button size="small" onClick={() => edit(user)}>
+									<Button size="small" disabled={busy} onClick={() => edit(user)}>
 										{t('common.edit')}
 									</Button>
 									<Button
 										size="small"
 										danger
-										disabled={user.id === currentUser.id}
+										disabled={busy || user.id === currentUser.id}
 										onClick={() =>
 											modal.confirm({
 												title: t('ui.deleteUser'),
 												content: user.username,
 												okButtonProps: { danger: true },
 												onOk: async () => {
+													setBusy(true)
 													try {
 														await request('/panel/users/deletes', { userIds: [user.id] })
 														await refresh()
 													} catch (err) {
 														error(err)
 														throw err
+													} finally {
+														setBusy(false)
 													}
 												},
 											})
@@ -190,14 +204,20 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 				open={!!editing}
 				title={t(editing?.id ? 'common.edit' : 'common.add')}
 				confirmLoading={busy}
-				onCancel={() => setEditing(null)}
-				onOk={() => form.submit()}
+				onCancel={() => {
+					if (!busy) setEditing(null)
+				}}
+				cancelButtonProps={{ disabled: busy }}
+				onOk={() => {
+					if (!busy) form.submit()
+				}}
 			>
 				<Form
 					form={form}
 					disabled={busy}
 					layout="vertical"
 					onFinish={async (values) => {
+						if (busy) return
 						setBusy(true)
 						try {
 							await request(editing?.id ? '/panel/users/update' : '/panel/users/create', {

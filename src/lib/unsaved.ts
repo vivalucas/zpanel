@@ -1,9 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useBlocker } from 'react-router-dom'
 import { useFeedback } from './feedback'
 
 export function useUnsavedChanges(dirty: boolean) {
-	const blocker = useBlocker(dirty)
+	const allowNavigationRef = useRef(false)
+	const blocker = useBlocker(() => dirty && !allowNavigationRef.current)
+	useEffect(() => {
+		allowNavigationRef.current = false
+	}, [dirty])
 	const { modal, t } = useFeedback()
 	useEffect(() => {
 		if (!dirty) return
@@ -24,4 +28,9 @@ export function useUnsavedChanges(dirty: boolean) {
 		})
 		return () => confirm.destroy()
 	}, [blocker, modal, t])
+	// Explicit account transitions have already confirmed discarding the draft.
+	// Update the blocker synchronously before changing the session and navigating.
+	return () => {
+		allowNavigationRef.current = true
+	}
 }

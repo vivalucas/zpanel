@@ -7,7 +7,6 @@ import { Button, Form, Input, Select, Space, Switch } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMonitorConfig, useSearchConfig } from '@/lib/queries'
-import { saveModule } from '@/lib/api'
 import type { SearchConfig } from '@/lib/api'
 import { Loading, QueryError, Section } from '@/components/shared'
 import { isSafeNavigationUrl } from '@/utils/navigation'
@@ -69,10 +68,13 @@ export default function Modules() {
 								if (!engines?.length) return error(new Error(t('ui.oneEngineRequired')))
 								setBusy('search')
 								try {
-									await saveModule('deskModuleSearchBox', {
-										searchEngineList: engines,
-										currentSearchEngine: engines[values.selected] || engines[0],
-										newWindowOpen: values.newWindowOpen,
+									await request('/system/moduleConfig/save', {
+										name: 'module-deskModuleSearchBox',
+										value: {
+											searchEngineList: engines,
+											currentSearchEngine: engines[values.selected] || engines[0],
+											newWindowOpen: values.newWindowOpen,
+										},
 									})
 									await client.invalidateQueries({ queryKey: ['search'] })
 									setSearchDirty(false)
@@ -198,7 +200,7 @@ export default function Modules() {
 							onFinish={async (values) => {
 								setBusy('monitors')
 								try {
-									await saveModule('systemMonitor', values)
+									await request('/system/moduleConfig/save', { name: 'module-systemMonitor', value: values })
 									await client.invalidateQueries({ queryKey: ['monitors'] })
 									setMonitorDirty(false)
 									void message.success(t('common.success'))

@@ -93,6 +93,7 @@ export function exportJson(appVersion?: string): ExportJsonResult {
         link.href = URL.createObjectURL(blob)
         link.download = `ZPanel-Data${dayjs().format('YYYYMMDDHHmm')}.zpanel.json`
         link.click()
+        setTimeout(() => URL.revokeObjectURL(link.href), 0)
       }
     },
 

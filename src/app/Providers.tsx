@@ -82,10 +82,14 @@ export function Providers({ children }: { children: ReactNode }) {
 		return () => media.removeEventListener('change', listener)
 	}, [])
 	useEffect(() => {
+		let active = true
 		void setLanguage(language).catch(() => {
-			void i18n.changeLanguage('en-US')
+			if (active) void i18n.changeLanguage('en-US')
 		})
 		document.documentElement.lang = language
+		return () => {
+			active = false
+		}
 	}, [language])
 	const dark = preference === 'dark' || (preference === 'auto' && osDark)
 	useEffect(() => {

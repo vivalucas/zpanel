@@ -109,6 +109,15 @@ for (const tone of ['light', 'dark', 'mixed'] as const) {
 				await expect(page.locator('.home-identity')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
 				for (const group of await page.locator('.navigation-group').all())
 					await expect(group).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+				const heading = await page
+					.locator('.group-heading h2')
+					.first()
+					.evaluate((element) => getComputedStyle(element).color)
+				// Ant buttons animate their foreground after wallpaper analysis and theme changes.
+				// Wait for the intended ink before measuring contrast, rather than sampling a transition.
+				for (const action of await page.locator('.empty-group .ant-btn').all())
+					await expect(action).toHaveCSS('color', heading)
+				await expect(page.getByRole('textbox', { name: '搜索', exact: true })).toHaveCSS('color', heading)
 				const contrast = await page.locator('.home-page').evaluate((root, kind) => {
 					const context = document.createElement('canvas').getContext('2d')!
 					const rgba = (value: string) => {
@@ -148,12 +157,6 @@ for (const tone of ['light', 'dark', 'mixed'] as const) {
 				}, tone)
 				for (const value of contrast)
 					expect(value.ratio, `${theme} ${width} ${value.text}`).toBeGreaterThanOrEqual(4.5)
-				const heading = await page
-					.locator('.group-heading h2')
-					.first()
-					.evaluate((element) => getComputedStyle(element).color)
-				await expect(page.getByRole('button', { name: '导入配置', exact: true })).toHaveCSS('color', heading)
-				await expect(page.getByRole('textbox', { name: '搜索', exact: true })).toHaveCSS('color', heading)
 				await page.screenshot({
 					path: info.outputPath(`${tone}-${theme}-${width}.png`),
 					animations: 'disabled',

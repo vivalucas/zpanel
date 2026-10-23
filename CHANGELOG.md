@@ -15,7 +15,7 @@ All notable changes to ZPanel will be documented in this file.
 
 - Prevented stale page and session callbacks from affecting a different account or a newly opened page. Hardened anonymous login, uploads, settings saves, password drafts and account switching.
 - Fixed backup ordering, pagination, search and appearance validation, focus handling, and safe-mode/language error boundaries.
-- Made the native-link browser regression use the platform's new-tab modifier on macOS and Linux.
+- Made native-link browser tests use the platform's new-tab modifier and wait for the intended button colors before measuring wallpaper contrast, retaining the 4.5:1 threshold.
 
 ## 1.2.4 - 2026-10-07
 

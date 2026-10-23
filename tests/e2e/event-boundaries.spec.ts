@@ -114,7 +114,7 @@ test('native modified and middle clicks bypass iframe interception and retain li
 	)
 	await enter(page)
 	const link = page.getByRole('link', { name: 'Boundary native link', exact: true })
-	for (const options of [{ button: 'middle' as const }, { modifiers: ['Meta'] as 'Meta'[] }]) {
+	for (const options of [{ button: 'middle' as const }, { modifiers: ['ControlOrMeta'] as 'ControlOrMeta'[] }]) {
 		const opened = context.waitForEvent('page')
 		await link.click(options)
 		const popup = await opened

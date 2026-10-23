@@ -4,6 +4,19 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.5 - 2026-10-24
+
+### Appearance
+
+- Unified the Z logo across the favicon, login, settings, default avatar and PWA icons.
+- Refined the wallpaper desktop layout and glass settings window, with responsive controls, adaptive text contrast and readable text icons. Preserved explicit appearance overrides and conservative fallbacks for remote wallpapers.
+
+### Reliability
+
+- Prevented stale page and session callbacks from affecting a different account or a newly opened page. Hardened anonymous login, uploads, settings saves, password drafts and account switching.
+- Fixed backup ordering, pagination, search and appearance validation, focus handling, and safe-mode/language error boundaries.
+- Made the native-link browser regression use the platform's new-tab modifier on macOS and Linux.
+
 ## 1.2.4 - 2026-10-07
 
 ### Security and Reliability

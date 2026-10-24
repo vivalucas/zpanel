@@ -103,7 +103,12 @@ export default function ItemActionMenu({
 		const focusTarget = first || element.querySelector<HTMLElement>('[role="menu"]')
 		focusTarget?.focus({ preventScroll: true })
 		const outside = (event: Event) => {
-			if (!(event.target instanceof Node) || !element.contains(event.target)) onClose(false)
+			const toggleTarget =
+				event.target instanceof Node &&
+				target.trigger.matches('.item-menu') &&
+				target.trigger.contains(event.target)
+			if (!(event.target instanceof Node) || (!element.contains(event.target) && !toggleTarget))
+				onClose(false)
 		}
 		const dismiss = () => onClose(false)
 		document.addEventListener('pointerdown', outside, true)
@@ -126,9 +131,12 @@ export default function ItemActionMenu({
 			style={{
 				left: target.x,
 				top: target.y,
-				background: token.colorBgElevated,
-				color: token.colorText,
-				boxShadow: token.boxShadowSecondary,
+				background: 'var(--glass-popup)',
+				color: 'var(--glass-popup-text)',
+				border: '1px solid var(--glass-popup-line)',
+				boxShadow: 'var(--glass-popup-shadow)',
+				backdropFilter: 'var(--glass-popup-blur)',
+				WebkitBackdropFilter: 'var(--glass-popup-blur)',
 				borderRadius: token.borderRadiusLG,
 				zIndex: token.zIndexPopupBase + 50,
 			}}

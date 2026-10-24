@@ -7,6 +7,7 @@ import { PlusOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@/lib/api'
 import { QueryError, Section } from '@/components/shared'
+import { isAccessError } from '@/lib/queryState'
 export default function Users({ currentUser }: { currentUser: User.Info }) {
 	const request = useSessionRequest()
 	const [page, setPage] = useState(1)
@@ -52,9 +53,12 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 		form.setFieldsValue({ username: '', name: '', role: 2, ...user, password: '' })
 		setEditing(user)
 	}
+	const accessQuery = isAccessError(users.error) ? users : isAccessError(publicUser.error) ? publicUser : null
+	if (accessQuery) return <QueryError error={accessQuery.error} retry={() => accessQuery.refetch()} />
 	return (
 		<Section
 			title={t('adminSettingUsers.appName')}
+			hideTitle
 			description={t('ui.publicAccessHelp')}
 			extra={
 				<Button
@@ -94,7 +98,7 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 					rowKey="id"
 					loading={users.isPending}
 					dataSource={users.data?.list}
-					scroll={{ x: 660 }}
+					scroll={{ x: 732 }}
 					pagination={{
 						current: page,
 						pageSize: 10,
@@ -106,17 +110,19 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 						{
 							title: t('common.username'),
 							dataIndex: 'username',
+							width: 220,
 							render: (value, user) => (
-								<Space>
-									{value}
+								<div className="user-table-identity">
+									<span title={value}>{value}</span>
 									{user.id === currentUser.id && <Tag>{t('adminSettingUsers.currentUseUsername')}</Tag>}
-								</Space>
+								</div>
 							),
 						},
-						{ title: t('common.nikeName'), dataIndex: 'name' },
+						{ title: t('common.nikeName'), dataIndex: 'name', width: 160, ellipsis: true },
 						{
 							title: t('adminSettingUsers.role'),
 							dataIndex: 'role',
+							width: 100,
 							render: (role) => (
 								<Tag color={role === 1 ? 'blue' : 'default'}>
 									{t(role === 1 ? 'common.role.admin' : 'common.role.regularUser')}
@@ -125,6 +131,7 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 						},
 						{
 							title: t('ui.publicAccess'),
+							width: 120,
 							render: (_, user) => (
 								<Button
 									size="small"
@@ -163,6 +170,8 @@ export default function Users({ currentUser }: { currentUser: User.Info }) {
 						},
 						{
 							title: t('common.action'),
+							fixed: 'right',
+							width: 132,
 							render: (_, user) => (
 								<Space>
 									<Button size="small" disabled={busy} onClick={() => edit(user)}>

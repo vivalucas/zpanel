@@ -508,6 +508,19 @@
     "selectImportData": "请选择要导入的数据。",
     "aboutDescription": "自托管导航面板",
     "backendVersion": "后端版本",
-    "leaveUnsaved": "放弃未保存的修改并离开？"
+    "leaveUnsaved": "放弃未保存的修改并离开？",
+    "unsavedChanges": "有未儲存的變更",
+    "widthUnit": "寬度單位",
+    "advancedColors": "進階配色",
+    "uploadFirstImage": "還沒有圖片，點擊上方「本機上傳」新增。",
+    "emptyPublicGallery": "公共圖庫暫無圖片。",
+    "sortInstructions": "按空格拾起項目，使用方向鍵調整位置，再按空格放下；按 Esc 取消。",
+    "sortHandle": "{name}：拖曳排序，也可按空格和方向鍵操作",
+    "sortRole": "可排序項目",
+    "sortStart": "已拾起{name}，目前位置第 {position} 項，共 {count} 項。",
+    "sortMove": "{name}已移到第 {position} 項，共 {count} 項。",
+    "sortEnd": "{name}已放到第 {position} 項，共 {count} 項。",
+    "sortCancel": "已取消{name}的排序，仍在第 {position} 項，共 {count} 項。",
+    "sortOutside": "{name}目前不在可放置位置。按 Esc 取消。"
   }
 }

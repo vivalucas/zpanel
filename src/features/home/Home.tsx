@@ -16,7 +16,7 @@ import {
 import { Icon } from '@iconify/react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import type { AuthInfo, Group } from '@/lib/api'
+import type { AuthInfo, Engine, Group } from '@/lib/api'
 import { useGroups, usePanel, useSearchConfig } from '@/lib/queries'
 import { usePreferences } from '@/app/store'
 import { Loading, QueryError } from '@/components/shared'
@@ -28,6 +28,8 @@ import ItemActionMenu from './ItemActionMenu'
 import type { ItemMenuTarget } from './ItemActionMenu'
 import { useWallpaperAppearance } from './useWallpaperAppearance'
 import { iconForeground } from '@/lib/iconColor'
+import { findSearchEngineIndex } from '@/lib/searchEngine'
+import { isAccessError } from '@/lib/queryState'
 const MonitorCards = lazy(() => import('./MonitorCards'))
 function Clock({ seconds, color }: { seconds?: boolean; color?: string }) {
 	const [now, setNow] = useState(() => new Date())
@@ -76,7 +78,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const groups = useGroups()
 	const panel = usePanel()
 	const wallpaperAppearance = useWallpaperAppearance(
-		panel.isSuccess && groups.isSuccess ? panel.data.panel.backgroundImageSrc : undefined,
+		panel.data && groups.data ? panel.data.panel.backgroundImageSrc : undefined,
 		panel.data?.panel.backgroundMaskNumber ?? 0,
 		panel.data?.panel.backgroundBlur ?? 0,
 	)
@@ -86,7 +88,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const { t, error, modal, message } = useFeedback()
 	const preferences = usePreferences()
 	const [search, setSearch] = useState('')
-	const [engine, setEngine] = useState<string>()
+	const [engine, setEngine] = useState<Engine>()
 	const [engineSaving, setEngineSaving] = useState(false)
 	const [sortingGroupId, setSortingGroupId] = useState<number | null>(null)
 	const [savingSort, setSavingSort] = useState(false)
@@ -123,7 +125,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const [frame, setFrame] = useState<{ url: string; title: string } | null>(null)
 	const editable = auth.visitMode === 0
 	if (panel.isPending || groups.isPending) return <Loading />
-	if (panel.error || groups.error)
+	if (!panel.data || !groups.data || isAccessError(panel.error) || isAccessError(groups.error))
 		return (
 			<div className="error-page">
 				<QueryError
@@ -136,6 +138,10 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 			</div>
 		)
 	const config = panel.data.panel
+	const searchData = isAccessError(searchConfig.error) ? undefined : searchConfig.data
+	const engineIndex = searchData
+		? findSearchEngineIndex(searchData.searchEngineList, engine || searchData.currentSearchEngine)
+		: -1
 	const wallpaper = config.backgroundImageSrc
 	const homeTextColor =
 		config.iconTextColor?.trim().toLowerCase() === '#1f2937' ? undefined : config.iconTextColor || undefined
@@ -156,6 +162,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		return url && isSafeNavigationUrl(url) ? url : undefined
 	}
 	const open = (item: Panel.ItemInfo, override?: string, method = item.openMethod) => {
+		setItemMenu(null)
 		const url =
 			override ?? (preferences.network === 'lan' ? item.lanUrl || item.url : item.url || item.lanUrl)
 		if (!url || !isSafeNavigationUrl(url)) return error(new Error(t('review.invalidUrl')))
@@ -305,6 +312,14 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 					} as CSSProperties
 				}
 			>
+				{(panel.error || groups.error) && (
+					<QueryError
+						error={panel.error || groups.error}
+						title={t('ui.refreshFailedWithPreviousData')}
+						compact
+						retry={() => Promise.all([panel.refetch(), groups.refetch()])}
+					/>
+				)}
 				{editable && !!panel.data.panelWarnings.length && (
 					<Alert
 						className="spaced"
@@ -341,34 +356,35 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 								}}
 								onPressEnter={(e) => {
 									if (e.nativeEvent.isComposing || !search.trim()) return
-									const selected = engine || searchConfig.data?.currentSearchEngine.url
+									if (isAccessError(searchConfig.error)) return
+									const selected = (engine || searchData?.currentSearchEngine)?.url
 									if (!selected) return
 									const url = selected.includes('%s')
 										? selected.replace('%s', encodeURIComponent(search))
 										: selected + encodeURIComponent(search)
 									if (!isSafeNavigationUrl(url)) return error(new Error(t('review.invalidUrl')))
-									if (searchConfig.data?.newWindowOpen) window.open(url, '_blank', 'noopener,noreferrer')
+									if (searchData?.newWindowOpen) window.open(url, '_blank', 'noopener,noreferrer')
 									else location.assign(url)
 								}}
 							/>
 							<Select
 								aria-label={t('ui.searchEngine')}
-								disabled={engineSaving}
+								disabled={engineSaving || !searchData}
 								loading={engineSaving}
 								variant="borderless"
 								styles={{ root: { outline: 'none' } }}
-								value={engine || searchConfig.data?.currentSearchEngine.url}
-								onChange={async (url) => {
+								value={engineIndex >= 0 ? engineIndex : undefined}
+								onChange={async (index) => {
+									const selected = searchData?.searchEngineList[index]
+									if (!selected || !searchData) return
 									const previous = engine
-									setEngine(url)
-									if (!editable || !searchConfig.data) return
-									const selected = searchConfig.data.searchEngineList.find((e) => e.url === url)
-									if (!selected) return
+									setEngine(selected)
+									if (!editable) return
 									setEngineSaving(true)
 									try {
 										await request('/system/moduleConfig/save', {
 											name: 'module-deskModuleSearchBox',
-											value: { ...searchConfig.data, currentSearchEngine: selected },
+											value: { ...searchData, currentSearchEngine: selected },
 										})
 										await client.invalidateQueries({ queryKey: ['search'] })
 									} catch (err) {
@@ -378,20 +394,25 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 										setEngineSaving(false)
 									}
 								}}
-								options={searchConfig.data?.searchEngineList.map((e) => ({
+								options={searchData?.searchEngineList.map((e, index) => ({
 									label: (
 										<Space>
 											{e.iconSrc && <img src={e.iconSrc} width={18} height={18} alt="" />}
 											{e.title}
 										</Space>
 									),
-									value: e.url,
+									value: index,
 								}))}
 							/>
 						</div>
 					)}
 					{searchConfig.error && config.searchBoxShow && (
-						<QueryError error={searchConfig.error} compact retry={() => searchConfig.refetch()} />
+						<QueryError
+							error={searchConfig.error}
+							title={searchData ? t('ui.refreshFailedWithPreviousData') : undefined}
+							compact
+							retry={() => searchConfig.refetch()}
+						/>
 					)}
 				</section>
 				{config.systemMonitorShow && (editable || config.systemMonitorPublicVisitModeShow) && (
@@ -466,6 +487,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 							<SortableGrid
 								className={`app-grid ${config.iconStyle === 1 ? 'icon-grid' : ''}`}
 								items={group.items as (Panel.ItemInfo & { id: number })[]}
+								getItemLabel={(item) => item.title}
 								disabled={sortingGroupId !== group.id || savingSort || !!search}
 								onSort={(sorted) => void saveSort(group, sorted)}
 							>

@@ -1,6 +1,6 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Avatar, Button, Form, Input, Select, Space, Tag } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -22,6 +22,7 @@ export default function Account({ user }: { user: User.Info }) {
 	const [form] = Form.useForm()
 	const [dirty, setDirty] = useState(false)
 	const [passwordDirty, setPasswordDirty] = useState(false)
+	const avatarRevisionRef = useRef(0)
 	const allowNavigation = useUnsavedChanges(dirty || passwordDirty)
 	const switchAccount = (token: string) => {
 		const proceed = () => {
@@ -43,7 +44,10 @@ export default function Account({ user }: { user: User.Info }) {
 					disabled={saving}
 					initialValues={user}
 					layout="vertical"
-					onValuesChange={() => setDirty(true)}
+					onValuesChange={(changed) => {
+						if ('headImage' in changed) avatarRevisionRef.current++
+						setDirty(true)
+					}}
 					onFinish={async (values) => {
 						if (saving || uploading) return
 						setSaving(true)
@@ -62,7 +66,15 @@ export default function Account({ user }: { user: User.Info }) {
 					}}
 				>
 					<div className="form-grid">
-						<Form.Item name="name" label={t('common.nikeName')} rules={[{ required: true, min: 3, max: 15 }]}>
+						<Form.Item
+							name="name"
+							label={t('common.nikeName')}
+							rules={[
+								{ required: true },
+								// Existing nicknames remain valid until the user edits them.
+								({ getFieldValue }) => (getFieldValue('name') === user.name ? {} : { min: 3, max: 15 }),
+							]}
+						>
 							<Input />
 						</Form.Item>
 						<Form.Item name="headImage" label={t('ui.avatarUrl')}>
@@ -73,11 +85,21 @@ export default function Account({ user }: { user: User.Info }) {
 						<ImageUpload
 							disabled={saving}
 							onUploadingChange={setUploading}
-							onChange={(url) => {
-								form.setFieldValue('headImage', url)
-								setDirty(true)
+							onStart={() => {
+								const revision = avatarRevisionRef.current
+								return (url) => {
+									if (avatarRevisionRef.current !== revision) return
+									avatarRevisionRef.current++
+									form.setFieldValue('headImage', url)
+									setDirty(true)
+								}
 							}}
 						/>
+						{dirty && (
+							<span className="settings-draft-hint" role="status">
+								{t('ui.unsavedChanges')}
+							</span>
+						)}
 						<Button type="primary" htmlType="submit" loading={saving} disabled={uploading}>
 							{t('common.save')}
 						</Button>
@@ -97,7 +119,7 @@ export default function Account({ user }: { user: User.Info }) {
 				<div className="account-list">
 					{prefs.accounts.map((account) => (
 						<div className="account-row" key={account.token}>
-							<Avatar src={account.user.headImage}>
+							<Avatar src={account.user.headImage || undefined}>
 								{(account.user.name || account.user.username || 'Z').slice(0, 1)}
 							</Avatar>
 							<div className="account-copy">
@@ -170,6 +192,11 @@ export default function Account({ user }: { user: User.Info }) {
 						<Input.Password autoComplete="new-password" />
 					</Form.Item>
 					<div className="form-actions">
+						{passwordDirty && (
+							<span className="settings-draft-hint" role="status">
+								{t('ui.unsavedChanges')}
+							</span>
+						)}
 						<Button type="primary" htmlType="submit" loading={passwordBusy}>
 							{t('settingUserInfo.updatePassword')}
 						</Button>

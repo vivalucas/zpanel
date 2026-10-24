@@ -4,6 +4,26 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.6 - 2026-10-24
+
+### Appearance and Navigation
+
+- Unified glass menus, dialogs, dropdowns and feedback in light and dark themes, with solid-surface accessibility fallbacks and fixed actions in long dialogs.
+- Refined homepage density and toolbar spacing. Added a shared application context menu with address-specific actions while preserving native browser link behavior.
+- Simplified settings headings, aligned mobile switches, added live wallpaper blur/shade previews and collapsible monitor colors, and kept mobile account actions reachable.
+
+### Reliability and Accessibility
+
+- Prevented late image uploads and concurrent failed-upload retries from replacing newer drafts; protected unsaved application edits.
+- Preserved usable cached content on temporary refresh failures while hiding it on access denial. Kept newly saved appearance, site, search and monitor values when follow-up reads fail.
+- Fixed menu toggling and stale menus after embedded applications close, and distinguished search engines that share a URL.
+- Improved localized keyboard sorting, input names, captcha association, login contrast and narrow multilingual layouts. Allowed avatar updates to preserve unchanged legacy nicknames without relaxing validation for renamed values.
+
+### Verification
+
+- Added regression coverage for upload ordering, saved-data recovery, access-denied cache handling, mobile controls and shared glass surfaces; the complete local suite contains 132 browser checks and 36 frontend unit tests.
+- Real mobile devices, Safari/Firefox, Docker/MySQL/Redis integration, PWA installation and full restore remain outside the verified scope.
+
 ## 1.2.5 - 2026-10-24
 
 ### Appearance

@@ -105,17 +105,19 @@ export function Section({
 	description,
 	children,
 	extra,
+	hideTitle = false,
 }: {
 	title: string
 	description?: string
 	children: ReactNode
 	extra?: ReactNode
+	hideTitle?: boolean
 }) {
 	return (
 		<section className="settings-section">
 			<div className="section-heading">
 				<div>
-					<h2>{title}</h2>
+					{!hideTitle && <h2>{title}</h2>}
 					{description && <p>{description}</p>}
 				</div>
 				{extra}

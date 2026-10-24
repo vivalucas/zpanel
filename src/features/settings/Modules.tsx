@@ -4,12 +4,31 @@ import { randomId } from '@/lib/id'
 import { useFeedback } from '@/lib/feedback'
 import { useEffect, useState } from 'react'
 import { Button, Form, Input, Select, Space, Switch } from 'antd'
+import type { InputProps } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMonitorConfig, useSearchConfig } from '@/lib/queries'
 import type { SearchConfig } from '@/lib/api'
 import { Loading, QueryError, Section } from '@/components/shared'
 import { isSafeNavigationUrl } from '@/utils/navigation'
+import { findSearchEngineIndex } from '@/lib/searchEngine'
+import { isAccessError } from '@/lib/queryState'
+
+function ColorInput({ value, ...props }: InputProps) {
+	return (
+		<Input
+			{...props}
+			value={value}
+			suffix={
+				<span
+					className="color-preview"
+					aria-hidden="true"
+					style={{ backgroundColor: typeof value === 'string' && value ? value : undefined }}
+				/>
+			}
+		/>
+	)
+}
 export default function Modules() {
 	const request = useSessionRequest()
 	const search = useSearchConfig()
@@ -32,20 +51,19 @@ export default function Modules() {
 		if (search.data && !searchDirty)
 			searchForm.setFieldsValue({
 				...search.data,
-				selected: search.data.searchEngineList.findIndex(
-					(e) => e.url === search.data.currentSearchEngine.url,
-				),
+				selected: findSearchEngineIndex(search.data.searchEngineList, search.data.currentSearchEngine),
 			})
 	}, [search.data, searchForm, searchDirty])
 	useEffect(() => {
 		if (monitors.data && !monitorDirty) monitorForm.setFieldsValue(monitors.data)
 	}, [monitors.data, monitorForm, monitorDirty])
+	const monitorError = isAccessError(paths.error) ? paths.error : monitors.error
 	return (
 		<>
 			<Section title={t('ui.searchEngines')} description={t('ui.searchEnginesDescription')}>
 				{search.isPending ? (
 					<Loading />
-				) : search.error && !search.data ? (
+				) : search.error && (!search.data || isAccessError(search.error)) ? (
 					<QueryError error={search.error} retry={() => search.refetch()} />
 				) : (
 					<>
@@ -66,16 +84,18 @@ export default function Modules() {
 							onFinish={async (values) => {
 								const engines = values.searchEngineList as SearchConfig['searchEngineList']
 								if (!engines?.length) return error(new Error(t('ui.oneEngineRequired')))
+								const value: SearchConfig = {
+									searchEngineList: engines,
+									currentSearchEngine: engines[values.selected] || engines[0],
+									newWindowOpen: values.newWindowOpen,
+								}
 								setBusy('search')
 								try {
 									await request('/system/moduleConfig/save', {
 										name: 'module-deskModuleSearchBox',
-										value: {
-											searchEngineList: engines,
-											currentSearchEngine: engines[values.selected] || engines[0],
-											newWindowOpen: values.newWindowOpen,
-										},
+										value,
 									})
+									client.setQueryData(['search'], value)
 									await client.invalidateQueries({ queryKey: ['search'] })
 									setSearchDirty(false)
 									void message.success(t('common.success'))
@@ -160,6 +180,10 @@ export default function Modules() {
 								/>
 							</Form.Item>
 							<Form.Item
+								className="setting-toggle"
+								layout="horizontal"
+								labelCol={{ xs: { span: 18 } }}
+								wrapperCol={{ xs: { span: 6 } }}
 								name="newWindowOpen"
 								label={t('deskModule.searchBox.openWithNewOpen')}
 								valuePropName="checked"
@@ -167,6 +191,11 @@ export default function Modules() {
 								<Switch />
 							</Form.Item>
 							<div className="form-actions">
+								{searchDirty && (
+									<span className="settings-draft-hint" role="status">
+										{t('ui.unsavedChanges')}
+									</span>
+								)}
 								<Button type="primary" htmlType="submit" loading={busy === 'search'}>
 									{t('common.save')}
 								</Button>
@@ -178,8 +207,11 @@ export default function Modules() {
 			<Section title={t('apps.baseSettings.systemMonitorStatus')} description={t('ui.monitorDescription')}>
 				{monitors.isPending ? (
 					<Loading />
-				) : monitors.error && !monitors.data ? (
-					<QueryError error={monitors.error} retry={() => monitors.refetch()} />
+				) : monitorError && (!monitors.data || isAccessError(monitorError)) ? (
+					<QueryError
+						error={monitorError}
+						retry={() => (isAccessError(paths.error) ? paths.refetch() : monitors.refetch())}
+					/>
 				) : (
 					<>
 						{monitors.error && (
@@ -201,6 +233,7 @@ export default function Modules() {
 								setBusy('monitors')
 								try {
 									await request('/system/moduleConfig/save', { name: 'module-systemMonitor', value: values })
+									client.setQueryData(['monitors'], values)
 									await client.invalidateQueries({ queryKey: ['monitors'] })
 									setMonitorDirty(false)
 									void message.success(t('common.success'))
@@ -278,19 +311,29 @@ export default function Modules() {
 															)
 														}
 													</Form.Item>
-													{['progressColor', 'progressRailColor', 'color', 'backgroundColor'].map((key) => (
-														<Form.Item
-															key={key}
-															name={[field.name, 'extendParam', key]}
-															label={t(`ui.${key}`)}
-														>
-															<Input allowClear placeholder={t('ui.followTheme')} />
-														</Form.Item>
-													))}
 												</div>
+												<details className="monitor-advanced">
+													<summary>{t('ui.advancedColors')}</summary>
+													<div className="form-grid">
+														{['progressColor', 'progressRailColor', 'color', 'backgroundColor'].map((key) => (
+															<Form.Item
+																key={key}
+																name={[field.name, 'extendParam', key]}
+																label={t(`ui.${key}`)}
+															>
+																<ColorInput allowClear placeholder={t('ui.followTheme')} />
+															</Form.Item>
+														))}
+													</div>
+												</details>
 											</div>
 										))}
 										<div className="form-actions">
+											{monitorDirty && (
+												<span className="settings-draft-hint" role="status">
+													{t('ui.unsavedChanges')}
+												</span>
+											)}
 											<Button
 												icon={<PlusOutlined aria-hidden="true" />}
 												onClick={() =>

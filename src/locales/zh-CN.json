@@ -508,6 +508,19 @@
     "selectImportData": "请选择要导入的数据。",
     "aboutDescription": "自托管导航面板",
     "backendVersion": "后端版本",
-    "leaveUnsaved": "放弃未保存的修改并离开？"
+    "leaveUnsaved": "放弃未保存的修改并离开？",
+    "unsavedChanges": "有未保存的更改",
+    "widthUnit": "宽度单位",
+    "advancedColors": "高级配色",
+    "uploadFirstImage": "还没有图片，点击上方「本地上传」添加。",
+    "emptyPublicGallery": "公共图库暂无图片。",
+    "sortInstructions": "按空格拾起项目，使用方向键调整位置，再按空格放下；按 Esc 取消。",
+    "sortHandle": "{name}：拖动排序，也可按空格和方向键操作",
+    "sortRole": "可排序项目",
+    "sortStart": "已拾起{name}，当前位置第 {position} 项，共 {count} 项。",
+    "sortMove": "{name}已移到第 {position} 项，共 {count} 项。",
+    "sortEnd": "{name}已放到第 {position} 项，共 {count} 项。",
+    "sortCancel": "已取消{name}的排序，仍在第 {position} 项，共 {count} 项。",
+    "sortOutside": "{name}当前不在可放置位置。按 Esc 取消。"
   }
 }

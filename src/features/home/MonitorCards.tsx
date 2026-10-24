@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import type { MonitorItem } from '@/lib/api'
 import { useMonitorConfig } from '@/lib/queries'
 import { QueryError } from '@/components/shared'
+import { isAccessError } from '@/lib/queryState'
 function MonitorCard({ item }: { item: MonitorItem }) {
 	const request = useSessionRequest()
 	const { t } = useTranslation()
@@ -53,12 +54,17 @@ function MonitorCard({ item }: { item: MonitorItem }) {
 			</div>
 			{query.isPending ? (
 				<Skeleton.Input active size="small" />
-			) : query.error ? (
-				<Tooltip title={query.error.message}>
+			) : !query.data || isAccessError(query.error) ? (
+				<Tooltip title={query.error?.message}>
 					<span className="muted">{t('ui.unavailable')}</span>
 				</Tooltip>
 			) : (
 				<>
+					{query.error && (
+						<span className="monitor-stale" role="status">
+							{t('ui.refreshFailedWithPreviousData')}
+						</span>
+					)}
 					<strong>
 						{query.data.percent.toFixed(1)}
 						<small>%</small>
@@ -79,9 +85,18 @@ function MonitorCard({ item }: { item: MonitorItem }) {
 export default function MonitorCards({ showTitle }: { showTitle?: boolean }) {
 	const config = useMonitorConfig()
 	const { t } = useTranslation()
-	if (config.error) return <QueryError error={config.error} retry={() => config.refetch()} />
+	if (config.error && (!config.data || isAccessError(config.error)))
+		return <QueryError error={config.error} retry={() => config.refetch()} />
 	return (
 		<section className="monitor-section">
+			{config.error && (
+				<QueryError
+					error={config.error}
+					title={t('ui.refreshFailedWithPreviousData')}
+					compact
+					retry={() => config.refetch()}
+				/>
+			)}
 			{showTitle && (
 				<div className="group-heading">
 					<h2>{t('deskModule.systemMonitor.systemState')}</h2>

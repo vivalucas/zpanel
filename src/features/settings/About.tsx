@@ -3,7 +3,7 @@ import { useFeedback } from '@/lib/feedback'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Descriptions } from 'antd'
 import MarkdownIt from 'markdown-it'
-import { QueryError, Section } from '@/components/shared'
+import { Loading, QueryError, Section } from '@/components/shared'
 import { SafeHtml } from '@/components/SafeHtml'
 const markdown = new MarkdownIt({ html: false, linkify: false, typographer: false })
 export default function About() {
@@ -29,7 +29,15 @@ export default function About() {
 						label: t('apps.about.frontVersionText'),
 						children: import.meta.env.VITE_APP_VERSION,
 					},
-					{ key: 'backend', label: t('ui.backendVersion'), children: version.data?.versionName || '—' },
+					{
+						key: 'backend',
+						label: t('ui.backendVersion'),
+						children: version.isPending ? (
+							<span role="status">{t('ui.loading')}</span>
+						) : (
+							version.data?.versionName || '—'
+						),
+					},
 				]}
 			/>
 			{version.error && <QueryError error={version.error} compact retry={() => version.refetch()} />}
@@ -38,7 +46,9 @@ export default function About() {
 					GitHub ↗
 				</a>
 			</p>
-			{description.error ? (
+			{description.isPending ? (
+				<Loading />
+			) : description.error ? (
 				<QueryError error={description.error} compact retry={() => description.refetch()} />
 			) : (
 				<>

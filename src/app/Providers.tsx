@@ -1,6 +1,6 @@
 import { LoadingOutlined } from '@ant-design/icons'
 import { Component, useEffect, useState } from 'react'
-import type { ErrorInfo, ReactNode } from 'react'
+import type { CSSProperties, ErrorInfo, ReactNode } from 'react'
 import { App as AntApp, Button, ConfigProvider, Result, theme } from 'antd'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import zhCN from 'antd/locale/zh_CN'
@@ -16,6 +16,16 @@ import ptBR from 'antd/locale/pt_BR'
 import ruRU from 'antd/locale/ru_RU'
 import { usePreferences } from './store'
 import i18n, { setLanguage } from '@/locales'
+
+// Root theme variables also reach surfaces portaled outside .app-root.
+const popupSurface: CSSProperties = {
+	background: 'var(--glass-popup)',
+	color: 'var(--glass-popup-text)',
+	border: '1px solid var(--glass-popup-line)',
+	boxShadow: 'var(--glass-popup-shadow)',
+	backdropFilter: 'var(--glass-popup-blur)',
+	WebkitBackdropFilter: 'var(--glass-popup-blur)',
+}
 const locales = {
 	'zh-CN': zhCN,
 	'zh-TW': zhTW,
@@ -99,6 +109,49 @@ export function Providers({ children }: { children: ReactNode }) {
 	return (
 		<ConfigProvider
 			button={{ autoInsertSpace: false, loadingIcon: <LoadingOutlined spin aria-hidden="true" /> }}
+			modal={{
+				centered: true,
+				classNames: {
+					container: 'glass-modal-container',
+					header: 'glass-modal-header',
+					body: 'glass-modal-body',
+					footer: 'glass-modal-footer',
+				},
+				styles: {
+					container: popupSurface,
+					header: { background: 'transparent' },
+					footer: { background: 'transparent' },
+					mask: { background: 'var(--glass-mask)' },
+				},
+			}}
+			dropdown={{
+				classNames: { root: 'glass-dropdown' },
+				styles: {
+					root: { ...popupSurface, background: undefined, borderRadius: 14 },
+				},
+			}}
+			select={{
+				classNames: { popup: { root: 'glass-select-popup' } },
+				styles: { popup: { root: { ...popupSurface, borderRadius: 14 } } },
+			}}
+			tooltip={{
+				arrow: false,
+				classNames: { container: 'glass-tooltip' },
+				styles: { container: { ...popupSurface, borderRadius: 10 } },
+			}}
+			popover={{
+				arrow: false,
+				classNames: { container: 'glass-popover' },
+				styles: { container: { ...popupSurface, borderRadius: 14 } },
+			}}
+			message={{
+				classNames: { root: 'glass-message' },
+				styles: { root: { ...popupSurface, borderRadius: 12 } },
+			}}
+			notification={{
+				classNames: { root: 'glass-notification' },
+				styles: { root: { ...popupSurface, borderRadius: 16 } },
+			}}
 			locale={locales[language as keyof typeof locales] || enUS}
 			theme={{
 				algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
@@ -110,6 +163,7 @@ export function Providers({ children }: { children: ReactNode }) {
 				},
 				components: {
 					Modal: { borderRadiusLG: 18 },
+					Dropdown: { colorBgElevated: 'var(--glass-popup)', boxShadowSecondary: 'none', borderRadiusLG: 14 },
 					Card: { borderRadiusLG: 16 },
 					Button: { fontWeight: 500 },
 				},

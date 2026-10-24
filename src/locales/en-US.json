@@ -508,6 +508,19 @@
     "selectImportData": "Select data to import.",
     "aboutDescription": "Self-hosted dashboard",
     "backendVersion": "Backend version",
-    "leaveUnsaved": "Discard unsaved changes and leave?"
+    "leaveUnsaved": "Discard unsaved changes and leave?",
+    "unsavedChanges": "Unsaved changes",
+    "widthUnit": "Width unit",
+    "advancedColors": "Advanced colors",
+    "uploadFirstImage": "No images yet. Use “Upload” above to add one.",
+    "emptyPublicGallery": "No public images yet.",
+    "sortInstructions": "Press Space to pick up an item, use the arrow keys to move it, and press Space again to drop it. Press Escape to cancel.",
+    "sortHandle": "Reorder {name} with drag, or use Space and the arrow keys",
+    "sortRole": "Sortable item",
+    "sortStart": "Picked up {name}, position {position} of {count}.",
+    "sortMove": "{name} moved to position {position} of {count}.",
+    "sortEnd": "Dropped {name} at position {position} of {count}.",
+    "sortCancel": "Reordering {name} cancelled. Returned to position {position} of {count}.",
+    "sortOutside": "{name} is outside a drop position. Press Escape to cancel."
   }
 }

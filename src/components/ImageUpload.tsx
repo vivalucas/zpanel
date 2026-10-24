@@ -6,17 +6,23 @@ import { uploadImage } from '@/lib/api'
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
 
-export function ImageUpload({
-	onChange,
-	multiple = false,
-	disabled = false,
-	onUploadingChange,
-}: {
-	onChange: (url: string) => void | Promise<void>
+type UploadResultHandler = (url: string) => void | Promise<void>
+type ImageUploadProps = {
 	multiple?: boolean
 	disabled?: boolean
 	onUploadingChange?: (uploading: boolean) => void
-}) {
+} & (
+	| { onChange: UploadResultHandler; onStart?: () => UploadResultHandler }
+	| { onChange?: UploadResultHandler; onStart: () => UploadResultHandler }
+)
+
+export function ImageUpload({
+	onChange,
+	onStart,
+	multiple = false,
+	disabled = false,
+	onUploadingChange,
+}: ImageUploadProps) {
 	const { t, error } = useFeedback()
 	const request = useSessionRequest()
 	const [files, setFiles] = useState<UploadFile[]>([])
@@ -31,6 +37,8 @@ export function ImageUpload({
 		pendingRef.current.add(uid)
 		setFiles((list) => list.map((entry) => (entry.uid === uid ? { ...entry, status: 'uploading' } : entry)))
 		try {
+			// Capture the caller's draft before sending, including when retrying an upload.
+			const applyResult = onStart?.() || onChange
 			const result = await uploadImage(file, request)
 			setFiles((list) =>
 				list.map((entry) =>
@@ -38,7 +46,7 @@ export function ImageUpload({
 				),
 			)
 			try {
-				await onChange(result.imageUrl)
+				await applyResult?.(result.imageUrl)
 			} catch (err) {
 				error(err)
 			}
@@ -81,7 +89,7 @@ export function ImageUpload({
 						{file.status === 'error' && (
 							<Button
 								size="small"
-								disabled={disabled}
+								disabled={disabled || (!multiple && uploading)}
 								onClick={() => {
 									if (file.originFileObj) void upload(file.originFileObj, file.uid).catch(() => {})
 								}}

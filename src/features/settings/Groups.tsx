@@ -28,6 +28,7 @@ export default function Groups() {
 	return (
 		<Section
 			title={t('ui.groups')}
+			hideTitle
 			description={t('ui.groupsDescription')}
 			extra={
 				<Button
@@ -44,6 +45,7 @@ export default function Groups() {
 				<SortableGrid
 					className="group-list"
 					items={groups.data}
+					getItemLabel={(group) => group.title || t('ui.groups')}
 					disabled={busy}
 					onSort={async (sorted) => {
 						setBusy(true)

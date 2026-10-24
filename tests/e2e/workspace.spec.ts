@@ -98,7 +98,7 @@ test('login, create a group and app, edit, search and keyboard-sort with persist
 	await expect(appInSort).toHaveAttribute('aria-disabled', 'true')
 	await appInSort.dispatchEvent('click')
 	await expect(page.getByRole('dialog')).toHaveCount(0)
-	const handle = page.getByRole('button', { name: '拖动排序，也可按空格和方向键操作' }).first()
+	const handle = page.getByRole('button', { name: /拖动排序，也可按空格和方向键操作/ }).first()
 	await handle.focus()
 	await page.keyboard.press('Space', { delay: 100 })
 	await expect(handle).toHaveAttribute('aria-pressed', 'true')

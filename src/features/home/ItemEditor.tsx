@@ -1,11 +1,12 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button, Form, Input, Modal, Select, Space } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
 import type { Group } from '@/lib/api'
 import { ImageUpload } from '@/components/ImageUpload'
 import { isSafeNavigationUrl } from '@/utils/navigation'
+import { useUnsavedChanges } from '@/lib/unsaved'
 export default function ItemEditor({
 	item,
 	groupId,
@@ -22,9 +23,26 @@ export default function ItemEditor({
 	const [busy, setBusy] = useState(false)
 	const [faviconBusy, setFaviconBusy] = useState(false)
 	const [uploading, setUploading] = useState(false)
-	const { t, error, message } = useFeedback()
+	const [dirty, setDirty] = useState(false)
+	const iconDraftVersionRef = useRef(0)
+	const discardOpenRef = useRef(false)
+	const { t, error, message, modal } = useFeedback()
 	const client = useQueryClient()
 	const type = Form.useWatch(['icon', 'itemType'], form)
+	useUnsavedChanges(dirty || uploading || faviconBusy)
+	const requestClose = () => {
+		if (busy || discardOpenRef.current) return
+		if (!dirty && !uploading && !faviconBusy) return onClose()
+		discardOpenRef.current = true
+		modal.confirm({
+			title: t('ui.leaveUnsaved'),
+			content: t('review.unsaved'),
+			onOk: onClose,
+			afterClose: () => {
+				discardOpenRef.current = false
+			},
+		})
+	}
 
 	const urlRule = {
 		validator: (_: unknown, value: string) =>
@@ -35,10 +53,15 @@ export default function ItemEditor({
 	return (
 		<Modal
 			open
-			title={t(item ? 'iconItem.edit' : 'iconItem.add')}
-			onCancel={() => {
-				if (!busy) onClose()
+			className="item-editor-modal"
+			classNames={{
+				container: 'item-editor-container',
+				header: 'item-editor-header',
+				body: 'item-editor-body',
+				footer: 'item-editor-footer',
 			}}
+			title={t(item ? 'iconItem.edit' : 'iconItem.add')}
+			onCancel={requestClose}
 			cancelButtonProps={{ disabled: busy }}
 			confirmLoading={busy}
 			okButtonProps={{ disabled: uploading || faviconBusy }}
@@ -61,6 +84,11 @@ export default function ItemEditor({
 				}
 				layout="vertical"
 				requiredMark={false}
+				onValuesChange={(changed) => {
+					setDirty(true)
+					if (changed.icon && ('src' in changed.icon || 'itemType' in changed.icon))
+						iconDraftVersionRef.current++
+				}}
 				onFinish={async (values) => {
 					if (busy || uploading || faviconBusy) return
 					setBusy(true)
@@ -136,7 +164,18 @@ export default function ItemEditor({
 							<ImageUpload
 								disabled={busy || faviconBusy}
 								onUploadingChange={setUploading}
-								onChange={(url) => form.setFieldValue(['icon', 'src'], url)}
+								onStart={() => {
+									const version = iconDraftVersionRef.current
+									return (url) => {
+										if (
+											form.getFieldValue(['icon', 'itemType']) !== 2 ||
+											iconDraftVersionRef.current !== version
+										)
+											return
+										form.setFieldValue(['icon', 'src'], url)
+										setDirty(true)
+									}
+								}}
 							/>
 							<Button
 								loading={faviconBusy}
@@ -144,6 +183,7 @@ export default function ItemEditor({
 								onClick={async () => {
 									const url = form.getFieldValue('url') || form.getFieldValue('lanUrl')
 									const previousIcon = form.getFieldValue(['icon', 'src'])
+									const version = iconDraftVersionRef.current
 									if (!isSafeNavigationUrl(url || '')) return error(new Error(t('review.invalidUrl')))
 									setFaviconBusy(true)
 									try {
@@ -152,9 +192,12 @@ export default function ItemEditor({
 										if (
 											form.getFieldValue(['icon', 'itemType']) === 2 &&
 											(form.getFieldValue('url') || form.getFieldValue('lanUrl')) === url &&
-											form.getFieldValue(['icon', 'src']) === previousIcon
-										)
+											form.getFieldValue(['icon', 'src']) === previousIcon &&
+											iconDraftVersionRef.current === version
+										) {
 											form.setFieldValue(['icon', 'src'], data.iconUrl)
+											setDirty(true)
+										}
 									} catch (err) {
 										error(err)
 									} finally {

@@ -71,9 +71,13 @@ func (a *UserApi) UpdateInfo(c *gin.Context) {
 		return
 	}
 
-	if errMsg, err := base.ValidateInputStruct(&params); err != nil {
-		apiReturn.ErrorParamFomat(c, errMsg)
-		return
+	// Legacy/default nicknames may exceed today's limits. Updating an avatar
+	// preserves an unchanged non-empty name; every renamed value still validates.
+	if params.Name != userInfo.Name || params.Name == "" {
+		if errMsg, err := base.ValidateInputStruct(&params); err != nil {
+			apiReturn.ErrorParamFomat(c, errMsg)
+			return
+		}
 	}
 
 	mUser := models.User{}

@@ -2,6 +2,7 @@ import { useSessionRequest } from '@/lib/session'
 import { randomId } from '@/lib/id'
 import { useFeedback } from '@/lib/feedback'
 import { useRef, useState } from 'react'
+import type { ComponentProps } from 'react'
 import { Button, Form, Input, Select, Typography } from 'antd'
 import { ArrowLeftOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -13,6 +14,35 @@ import { languageOptions } from '@/locales'
 import { Loading, QueryError } from '@/components/shared'
 import { SafeHtml } from '@/components/SafeHtml'
 import { BrandMark } from '@/components/BrandMark'
+
+function CaptchaInput({
+	image,
+	refreshLabel,
+	imageLabel,
+	onRefresh,
+	...input
+}: ComponentProps<typeof Input> & {
+	image: string
+	refreshLabel: string
+	imageLabel: string
+	onRefresh: () => void
+}) {
+	return (
+		<div className="captcha-row">
+			<Input {...input} />
+			<button
+				type="button"
+				className="captcha"
+				disabled={input.disabled}
+				aria-label={refreshLabel}
+				onClick={onRefresh}
+			>
+				<img alt={imageLabel} src={image} />
+			</button>
+		</div>
+	)
+}
+
 export default function Login() {
 	const request = useSessionRequest()
 	const site = useSite()
@@ -40,23 +70,25 @@ export default function Login() {
 				<div className="login-orbit" />
 			</div>
 			<div className="login-content">
-				<Select
-					className="login-language"
-					aria-label={t('ui.language')}
-					value={language}
-					options={languageOptions}
-					onChange={(value) => setPreference({ language: value })}
-				/>
-				{location.state?.fromPublicHome && (
-					<Button
-						className="login-back"
-						type="text"
-						icon={<ArrowLeftOutlined aria-hidden="true" />}
-						onClick={() => navigate('/')}
-					>
-						{t('exception.goHome')}
-					</Button>
-				)}
+				<div className="login-toolbar">
+					{location.state?.fromPublicHome && (
+						<Button
+							className="login-back"
+							type="text"
+							icon={<ArrowLeftOutlined aria-hidden="true" />}
+							onClick={() => navigate('/')}
+						>
+							{t('exception.goHome')}
+						</Button>
+					)}
+					<Select
+						className="login-language"
+						aria-label={t('ui.language')}
+						value={language}
+						options={languageOptions}
+						onChange={(value) => setPreference({ language: value })}
+					/>
+				</div>
 				<div className="login-form">
 					<BrandMark small />
 					<Typography.Title level={2}>{t('login.welcomeMessage')}</Typography.Title>
@@ -103,24 +135,20 @@ export default function Login() {
 							/>
 						</Form.Item>
 						{site.data.loginCaptcha && (
-							<Form.Item label={t('verification.title')}>
-								<div className="captcha-row">
-									<Form.Item name="vcode" noStyle rules={[{ required: true }]}>
-										<Input autoComplete="off" maxLength={6} />
-									</Form.Item>
-									<button
-										type="button"
-										className="captcha"
-										disabled={busy}
-										aria-label={t('ui.refreshCaptcha')}
-										onClick={() => setCaptchaId(randomId())}
-									>
-										<img
-											alt={t('verification.title')}
-											src={`${apiBase}/captcha/getImageByCaptchaId/${captchaId}/120/40`}
-										/>
-									</button>
-								</div>
+							<Form.Item
+								name="vcode"
+								label={t('verification.title')}
+								rules={[{ required: true, message: t('verification.required') }]}
+							>
+								<CaptchaInput
+									autoComplete="off"
+									maxLength={6}
+									disabled={busy}
+									image={`${apiBase}/captcha/getImageByCaptchaId/${captchaId}/120/40`}
+									imageLabel={t('verification.title')}
+									refreshLabel={t('ui.refreshCaptcha')}
+									onRefresh={() => setCaptchaId(randomId())}
+								/>
 							</Form.Item>
 						)}
 						<Button type="primary" htmlType="submit" size="large" block loading={busy}>

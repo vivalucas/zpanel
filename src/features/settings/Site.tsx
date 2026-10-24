@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { Alert, Button, Form, Input, Switch } from 'antd'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loading, QueryError, Section } from '@/components/shared'
+import { isAccessError } from '@/lib/queryState'
 export default function Site() {
 	const request = useSessionRequest()
 	const query = useQuery({
@@ -27,7 +28,8 @@ export default function Site() {
 			form.setFieldsValue({ ...query.data.siteSetting, loginCaptcha: query.data.loginCaptcha })
 	}, [query.data, form, dirty])
 	if (query.isPending) return <Loading />
-	if (query.error) return <QueryError error={query.error} retry={() => query.refetch()} />
+	if (query.error && (!query.data || isAccessError(query.error)))
+		return <QueryError error={query.error} retry={() => query.refetch()} />
 	return (
 		<Form
 			className="settings-form"
@@ -39,6 +41,9 @@ export default function Site() {
 				setSaving(true)
 				try {
 					await request('/system/siteSetting/set', values)
+					const { loginCaptcha, ...siteSetting } = values
+					client.setQueryData(['site-admin'], { siteSetting, loginCaptcha })
+					client.setQueryData(['site'], { siteSetting, loginCaptcha })
 					await Promise.all([
 						client.invalidateQueries({ queryKey: ['site'] }),
 						client.invalidateQueries({ queryKey: ['site-admin'] }),
@@ -53,6 +58,14 @@ export default function Site() {
 			}}
 		>
 			<div className="settings-form-content">
+				{query.error && (
+					<QueryError
+						compact
+						error={query.error}
+						title={t('ui.refreshFailedWithPreviousData')}
+						retry={() => query.refetch()}
+					/>
+				)}
 				<Section title={t('apps.baseSettings.siteAndLogin')} description={t('ui.siteDescription')}>
 					<div className="form-grid">
 						{['siteTitle', 'siteIcon', 'loginTitle', 'loginSubtitle'].map((key) => (
@@ -64,7 +77,15 @@ export default function Site() {
 					<Form.Item name="loginFooter" label={t('apps.baseSettings.loginFooter')}>
 						<Input.TextArea rows={3} />
 					</Form.Item>
-					<Form.Item name="loginCaptcha" label={t('apps.baseSettings.loginCaptcha')} valuePropName="checked">
+					<Form.Item
+						className="setting-toggle"
+						layout="horizontal"
+						labelCol={{ xs: { span: 18 } }}
+						wrapperCol={{ xs: { span: 6 } }}
+						name="loginCaptcha"
+						label={t('apps.baseSettings.loginCaptcha')}
+						valuePropName="checked"
+					>
 						<Switch />
 					</Form.Item>
 				</Section>
@@ -79,6 +100,11 @@ export default function Site() {
 				</Section>
 			</div>
 			<div className="save-bar">
+				{dirty && (
+					<span className="settings-draft-hint" role="status">
+						{t('ui.unsavedChanges')}
+					</span>
+				)}
 				<Button type="primary" htmlType="submit" loading={saving}>
 					{t('common.save')}
 				</Button>

@@ -5,6 +5,7 @@ import { Button, Input, Modal, Select, Space, Table, Tag } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import { QueryError, Section } from '@/components/shared'
+import { isAccessError } from '@/lib/queryState'
 export default function Docker() {
 	const request = useSessionRequest()
 	const [filter, setFilter] = useState('')
@@ -55,9 +56,18 @@ export default function Docker() {
 			},
 		})
 	}
+	const accessQuery = isAccessError(containers.error)
+		? containers
+		: isAccessError(stats.error)
+			? stats
+			: isAccessError(logs.error)
+				? logs
+				: null
+	if (accessQuery) return <QueryError error={accessQuery.error} retry={() => accessQuery.refetch()} />
 	return (
 		<Section
 			title="Docker"
+			hideTitle
 			description={t('ui.dockerDescription')}
 			extra={
 				!containers.error && (

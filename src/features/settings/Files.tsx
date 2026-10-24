@@ -60,6 +60,7 @@ export default function Files({ user }: { user: User.Info }) {
 	return (
 		<Section
 			title={t('ui.files')}
+			hideTitle
 			description={t('ui.filesDescription')}
 			extra={
 				<ImageUpload
@@ -87,7 +88,7 @@ export default function Files({ user }: { user: User.Info }) {
 			) : files.isPending ? (
 				<Loading />
 			) : !files.data.list.length ? (
-				<Empty />
+				<Empty description={t(tab === 'own' ? 'ui.uploadFirstImage' : 'ui.emptyPublicGallery')} />
 			) : (
 				<>
 					<Image.PreviewGroup>
@@ -172,7 +173,7 @@ export default function Files({ user }: { user: User.Info }) {
 					</Image.PreviewGroup>
 				</>
 			)}
-			{files.data && (
+			{!!files.data?.count && (
 				<Pagination
 					className="spaced"
 					current={page}

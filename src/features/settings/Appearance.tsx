@@ -1,7 +1,7 @@
 import { useUnsavedChanges } from '@/lib/unsaved'
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
 	Alert,
 	Button,
@@ -18,6 +18,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { defaultPanel } from '@/lib/api'
 import { usePanel } from '@/lib/queries'
+import { isAccessError } from '@/lib/queryState'
 import { usePreferences } from '@/app/store'
 import { Loading, QueryError, Section } from '@/components/shared'
 import { ImageUpload } from '@/components/ImageUpload'
@@ -29,6 +30,9 @@ export default function Appearance() {
 	const [uploading, setUploading] = useState(false)
 	const [dirty, setDirty] = useState(false)
 	const wallpaper = Form.useWatch('backgroundImageSrc', form)
+	const wallpaperBlur = Form.useWatch('backgroundBlur', form) || 0
+	const wallpaperShade = Form.useWatch('backgroundMaskNumber', form) || 0
+	const wallpaperRevisionRef = useRef(0)
 	const logoText = Form.useWatch('logoText', form)
 	const logoImage = Form.useWatch('logoImageSrc', form)
 	useUnsavedChanges(dirty)
@@ -39,9 +43,18 @@ export default function Appearance() {
 		if (panel.data && !dirty) form.setFieldsValue(panel.data.panel)
 	}, [panel.data, form, dirty])
 	if (panel.isPending) return <Loading />
-	if (panel.error) return <QueryError error={panel.error} retry={() => panel.refetch()} />
+	if (panel.error && (!panel.data || isAccessError(panel.error)))
+		return <QueryError error={panel.error} retry={() => panel.refetch()} />
 	const toggle = (name: keyof Panel.panelConfig, label: string) => (
-		<Form.Item className="setting-toggle" name={name} label={t(label)} valuePropName="checked">
+		<Form.Item
+			className="setting-toggle"
+			layout="horizontal"
+			labelCol={{ xs: { span: 18 } }}
+			wrapperCol={{ xs: { span: 6 } }}
+			name={name}
+			label={t(label)}
+			valuePropName="checked"
+		>
 			<Switch />
 		</Form.Item>
 	)
@@ -51,12 +64,20 @@ export default function Appearance() {
 			form={form}
 			disabled={saving}
 			layout="vertical"
-			onValuesChange={() => setDirty(true)}
+			onValuesChange={(changed) => {
+				if ('backgroundImageSrc' in changed) wallpaperRevisionRef.current++
+				setDirty(true)
+			}}
 			onFinish={async (values) => {
 				if (saving || uploading) return
 				setSaving(true)
 				try {
 					await request('/panel/userConfig/set', { ...panel.data, panel: { ...panel.data.panel, ...values } })
+					client.setQueryData(['panel'], {
+						...panel.data,
+						panel: { ...panel.data.panel, ...values },
+						panelWarnings: [],
+					})
 					await client.invalidateQueries({ queryKey: ['panel'] })
 					setDirty(false)
 					void message.success(t('common.success'))
@@ -68,6 +89,14 @@ export default function Appearance() {
 			}}
 		>
 			<div className="settings-form-content">
+				{panel.error && (
+					<QueryError
+						compact
+						error={panel.error}
+						title={t('ui.refreshFailedWithPreviousData')}
+						retry={() => panel.refetch()}
+					/>
+				)}
 				{!!panel.data.panelWarnings.length && (
 					<Alert className="spaced" type="warning" showIcon title={t('review.panelRepairSave')} />
 				)}
@@ -111,14 +140,23 @@ export default function Appearance() {
 					</div>
 				</Section>
 				<Section title={t('apps.baseSettings.wallpaper')} description={t('ui.wallpaperDescription')}>
-					<div
-						className="wallpaper-preview"
-						aria-hidden="true"
-						style={wallpaper ? { backgroundImage: `url(${JSON.stringify(wallpaper)})` } : undefined}
-					>
-						<span />
-						<span />
-						<span />
+					<div className="wallpaper-preview" aria-hidden="true">
+						<div
+							className="wallpaper-preview-image"
+							style={{
+								...(wallpaper ? { backgroundImage: `url(${JSON.stringify(wallpaper)})` } : {}),
+								filter: `blur(${wallpaperBlur}px)`,
+							}}
+						/>
+						<div
+							className="wallpaper-preview-shade"
+							style={{ backgroundColor: `rgba(0, 0, 0, ${wallpaperShade})` }}
+						/>
+						<div className="wallpaper-preview-icons">
+							<span />
+							<span />
+							<span />
+						</div>
 					</div>
 					<Form.Item name="backgroundImageSrc" label={t('ui.imageUrl')}>
 						<Input allowClear />
@@ -126,17 +164,22 @@ export default function Appearance() {
 					<ImageUpload
 						disabled={saving}
 						onUploadingChange={setUploading}
-						onChange={(url) => {
-							form.setFieldValue('backgroundImageSrc', url)
-							setDirty(true)
+						onStart={() => {
+							const revision = wallpaperRevisionRef.current
+							return (url) => {
+								if (revision !== wallpaperRevisionRef.current) return
+								wallpaperRevisionRef.current++
+								form.setFieldValue('backgroundImageSrc', url)
+								setDirty(true)
+							}
 						}}
 					/>
 					<div className="form-grid spaced">
 						<Form.Item name="backgroundBlur" label={t('ui.wallpaperBlur')}>
-							<Slider min={0} max={30} />
+							<Slider min={0} max={30} ariaLabelForHandle={t('ui.wallpaperBlur')} />
 						</Form.Item>
 						<Form.Item name="backgroundMaskNumber" label={t('ui.wallpaperShade')}>
-							<Slider min={0} max={1} step={0.05} />
+							<Slider min={0} max={1} step={0.05} ariaLabelForHandle={t('ui.wallpaperShade')} />
 						</Form.Item>
 					</div>
 				</Section>
@@ -153,13 +196,14 @@ export default function Appearance() {
 						<Form.Item name="iconTextColor" label={t('ui.textColor')}>
 							<Input placeholder={t('ui.followTheme')} allowClear />
 						</Form.Item>
-						<Form.Item label={t('apps.baseSettings.maxWidth')}>
+						<Form.Item label={t('apps.baseSettings.maxWidth')} htmlFor="maxWidth">
 							<Space.Compact>
 								<Form.Item name="maxWidth" noStyle rules={[{ required: true }]}>
-									<InputNumber min={1} max={3000} />
+									<InputNumber min={1} max={3000} aria-label={t('apps.baseSettings.maxWidth')} />
 								</Form.Item>
 								<Form.Item name="maxWidthUnit" noStyle>
 									<Select
+										aria-label={t('ui.widthUnit')}
 										style={{ width: 80 }}
 										options={[
 											{ value: 'px', label: 'px' },
@@ -211,12 +255,16 @@ export default function Appearance() {
 				</Section>
 				<Section title={t('apps.baseSettings.customFooter')} description={t('ui.footerDescription')}>
 					<Form.Item name="footerHtml">
-						<Input.TextArea rows={3} />
+						<Input.TextArea rows={3} aria-label={t('apps.baseSettings.customFooter')} />
 					</Form.Item>
 				</Section>
 			</div>
 			<div className="save-bar">
-				{dirty && <Alert type="info" title={t('review.unsaved')} />}
+				{dirty && (
+					<span className="settings-draft-hint" role="status">
+						{t('ui.unsavedChanges')}
+					</span>
+				)}
 				<Space>
 					<Button
 						disabled={saving || uploading}
@@ -224,6 +272,7 @@ export default function Appearance() {
 							modal.confirm({
 								title: t('ui.resetDefaultsConfirm'),
 								onOk: () => {
+									wallpaperRevisionRef.current++
 									form.setFieldsValue(defaultPanel)
 									setDirty(true)
 								},

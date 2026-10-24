@@ -180,6 +180,7 @@ export default function Appearance() {
 							name="marginTop"
 							rules={[{ required: true }]}
 							label={`${t('apps.baseSettings.topMargin')} (%)`}
+							extra={t('ui.topMarginDescription')}
 						>
 							<InputNumber min={0} max={50} />
 						</Form.Item>

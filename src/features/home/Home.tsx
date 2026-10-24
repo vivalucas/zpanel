@@ -298,7 +298,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 				style={
 					{
 						maxWidth: `${config.maxWidth || 1200}${config.maxWidthUnit === '%' ? '%' : 'px'}`,
-						marginTop: `${config.marginTop ?? 10}%`,
+						'--home-margin-top': config.marginTop ?? 10,
 						marginBottom: `${config.marginBottom ?? 10}%`,
 						paddingInline: `${10 + (config.marginX ?? 5)}px`,
 						'--home-text': homeTextColor,

@@ -6,21 +6,23 @@
 
 本轮统一浅深主题的厚磨砂浮层、居中限高弹窗、内容内滚动与固定动作；设置开关在 320px 仍同行，移除重复分区标题，监控配色收进高级区，壁纸模糊/暗度实时预览，统一草稿反馈、空图库与手机账号操作。修复缓存刷新丢首页、三处慢上传覆盖新草稿、菜单二次点击及关闭内嵌后旧菜单重现、重复 URL 搜索默认项漂移、控件名称/排序播报/验证码关联和登录对比。再次自查补修失败重试与新文件上传并发覆盖、搜索/监控保存后重取失败恢复旧值，并补齐模块/账号管理/Docker 的鉴权失败隐藏缓存和操作，普通刷新失败仍保留可用数据。只改头像可保留既有非空昵称，真正改名仍执行原约束，不改写存量数据或 schema。
 
-用户现已授权推进至 1.2.6、提交全部本地修改并推送 GitHub `main`、打 `v1.2.6`。发行准备进行中：同步前后端版本、发布说明和使用文档，验证后提交并推送 main，待 CI 通过再推 tag；tag 将触发既有 Release 与镜像流水线。本次开工 fetch 成功，`main` 与 `origin/main` 均为 `910be9d`、无提交差异。生产部署另行授权。
+按用户本次授权，全部本地修改与版本资料已随发行提交 `eb51f9c` 推送 GitHub `main`；待该提交 CI 全部通过后推送了注释标签 `v1.2.6`，标签精确指向同一发行提交，远端 tag 对象及目标提交已通过 GitHub API 核对。后续仅回写发行状态文档，不改变该发行代码。生产部署另行授权。
 
 ## 已有验证与待验范围
 
 最终补修构建在固定 Node.js 24.15.0/pnpm 11.1.3/Go 1.26.3 下通过普通/PWA 构建、类型检查、零警告 ESLint、36 项 Vitest、test:review、Go 全部测试，以及全新隔离 SQLite 服务上的 132 项 macOS Chrome 浏览器回归（4.3 分钟）。新增的 10 项上传互斥、保存缓存及鉴权链路回归均先在旧候选准确失败，再随最终全量通过；全量无运行时错误/页面溢出检查也通过。文档校验 0 错误，仅 14/16 保留既有篇幅提醒，`git diff --check` 通过；未改工具链、锁文件或环境配置。
 
-推进 1.2.6 后重新通过普通/PWA 构建、类型/零警告静态检查、36 项 Vitest、test:review 和 Go 测试；隔离服务的前端关于页及后端版本接口均确认 1.2.6。业务代码仍为上述已通过 132 项本地回归的补修基线，提交后的 Ubuntu 全量 CI 待 GitHub 执行。
+推进 1.2.6 后重新通过普通/PWA 构建、类型/零警告静态检查、36 项 Vitest、test:review 和 Go 测试；隔离服务的前端关于页及后端版本接口均确认 1.2.6，服务已退出。发行提交的 [Ubuntu CI](https://github.com/vivalucas/zpanel/actions/runs/40080337233) 全部成功，包含 132 项浏览器回归（4.8 分钟）、36 项单元测试和 Go 测试/发行编译；不再仅依赖 macOS 的本地验证。
 
 本次再次逐张实际查看桌面/390px 全页及底部 32 张截图及 640×360 深色短窗口编辑窗，复核首页与 10 个设置页面的入口、排版、底部操作和错误/加载状态；桌面 Docker 截图仅覆盖加载态，手机截图覆盖连接错误态。另实际操作隔离服务的登录、首页、设置和居中弹窗；短窗口动作可见、取消离开保留草稿、手机分类键盘导航、验证码请求字段，以及浏览器模拟高对比度/强制颜色降级通过。系统偏好和辅助技术仍需实机验证。最终保留普通 dist 和验收截图，PWA 产物未混入普通构建；本次隔离服务及临时浏览器已退出，未访问开发数据库或真实 Docker。
 
-本轮尚未验证 Safari/Firefox、真实手机/软键盘/读屏、系统透明度偏好、Windows/Ubuntu、真实 Docker/MySQL/Redis/NAS 集成或 PWA 安装升级。长期实机缺口还包括完整恢复、多实例一致性、跨设备真实磁盘指标和全部语言母语校对；历史 Ubuntu CI、服务器构建或登录页检查不能替代本轮这些验证。配置 JSON 只迁移导航与外观，不包含上传文件、账号或模块配置，不能作为整站备份。
+本轮尚未验证 Safari/Firefox、真实手机/软键盘/读屏、系统透明度偏好、Windows、Ubuntu 桌面与实机部署、真实 Docker/MySQL/Redis/NAS 集成或 PWA 安装升级。Ubuntu 已覆盖上述 CI 构建与浏览器回归，不能替代真实设备、Docker 管理和恢复验证。长期实机缺口还包括完整恢复、多实例一致性、跨设备真实磁盘指标和全部语言母语校对。配置 JSON 只迁移导航与外观，不包含上传文件、账号或模块配置，不能作为整站备份。
 
 ## 当前发行与生产部署
 
-当前源码版本为 1.2.6，正在按上述授权准备发行。既有 `v1.2.5` 和[正式 Release](https://github.com/vivalucas/zpanel/releases/tag/v1.2.5) 已发布，发版基线为 `54724d1`，两份部署包校验和通过。[当时的 Ubuntu CI](https://github.com/vivalucas/zpanel/actions/runs/40040076895) 包含 71 项浏览器回归；[容器流水线](https://github.com/vivalucas/zpanel/actions/runs/40040433642) 已发布 linux/amd64 与 linux/arm64 的 GHCR/Docker Hub 1.2.5/latest 镜像。该历史发行不包含本轮 UI 优化，生产环境仍为以下 1.2.5 部署。
+当前源码版本及标签为 1.2.6 / `v1.2.6`，发行基线 `eb51f9c`。[正式 Release](https://github.com/vivalucas/zpanel/releases/tag/v1.2.6) 已发布，Linux amd64 的 tar.gz、zip 和 SHA256SUMS 三项资产均已上传；[Release 流水线](https://github.com/vivalucas/zpanel/actions/runs/40080797675) 成功。[容器流水线](https://github.com/vivalucas/zpanel/actions/runs/40080797640) 成功，已发布 linux/amd64 与 linux/arm64 的 GHCR/Docker Hub 1.2.6/latest 镜像。本轮核对了工作流及发行资产状态，没有升级生产环境。
+
+生产仍使用既有 [1.2.5 Release](https://github.com/vivalucas/zpanel/releases/tag/v1.2.5)，基线 `54724d1`，当时两份部署包校验和通过。[1.2.5 Ubuntu CI](https://github.com/vivalucas/zpanel/actions/runs/40040076895) 包含 71 项浏览器回归；[1.2.5 容器流水线](https://github.com/vivalucas/zpanel/actions/runs/40040433642) 成功。该历史发行不包含本轮 UI 优化，实机状态见下文。
 
 m5 已于 2026-10-24 从 1.2.4 更新至 1.2.5：按精确 Tag 在服务器以 Go 1.26.3 构建并通过 Linux amd64 全部 Go 测试，前端取自校验通过的正式部署包，固定本地镜像 `zpanel:1.2.5-local-54724d1`。m5 下载 GHCR blob 曾超时，后续使用公共镜像前须核对下载连通性。
 

@@ -374,6 +374,13 @@
     "deleteGroupTitle": "Delete group"
   },
   "ui": {
+    "itemMenuNewTab": "Open in new tab",
+    "itemMenuFrame": "Open embedded",
+    "itemMenuCopy": "Copy address",
+    "itemMenuOpen": "Open {address}",
+    "itemMenuCopied": "Address copied",
+    "itemMenuManualCopy": "Copy address manually",
+    "itemMenuManualCopyHint": "Automatic copying is unavailable. Copy the address below.",
     "retry": "Retry",
     "contentUnavailable": "Content is temporarily unavailable",
     "loadFailedHint": "Try again shortly. If this continues, check the service connection.",

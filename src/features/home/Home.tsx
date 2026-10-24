@@ -1,8 +1,8 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Alert, Button, Dropdown, Empty, Input, Modal, Select, Space, Tooltip, theme } from 'antd'
+import { Alert, Button, Empty, Input, Modal, Select, Space, Tooltip, theme } from 'antd'
 import {
 	AppstoreOutlined,
 	EllipsisOutlined,
@@ -12,7 +12,6 @@ import {
 	SearchOutlined,
 	SettingOutlined,
 	SwapOutlined,
-	UploadOutlined,
 } from '@ant-design/icons'
 import { Icon } from '@iconify/react'
 import { useNavigate } from 'react-router-dom'
@@ -25,6 +24,8 @@ import { SafeHtml } from '@/components/SafeHtml'
 import { SortableGrid } from '@/components/Sortable'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 import ItemEditor from './ItemEditor'
+import ItemActionMenu from './ItemActionMenu'
+import type { ItemMenuTarget } from './ItemActionMenu'
 import { useWallpaperAppearance } from './useWallpaperAppearance'
 import { iconForeground } from '@/lib/iconColor'
 const MonitorCards = lazy(() => import('./MonitorCards'))
@@ -92,6 +93,27 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const [editor, setEditor] = useState<{ item?: Panel.ItemInfo; groupId?: number } | null>(null)
 	const editorTriggerRef = useRef<HTMLElement | number | null>(null)
 	const itemTriggersRef = useRef(new Map<number, HTMLElement>())
+	const [itemMenu, setItemMenu] = useState<ItemMenuTarget | null>(null)
+	const activeRef = useRef(true)
+	const copySequenceRef = useRef(0)
+	useEffect(() => {
+		activeRef.current = true
+		return () => {
+			activeRef.current = false
+		}
+	}, [])
+	const closeItemMenu = useCallback(
+		(restoreFocus: boolean) => {
+			setItemMenu(null)
+			if (restoreFocus && itemMenu) {
+				const trigger = itemMenu.trigger.isConnected
+					? itemMenu.trigger
+					: itemTriggersRef.current.get(itemMenu.id)
+				trigger?.focus({ preventScroll: true })
+			}
+		},
+		[itemMenu],
+	)
 	useEffect(() => {
 		if (!editor) {
 			const trigger = editorTriggerRef.current
@@ -133,48 +155,67 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		const url = preferences.network === 'lan' ? item.lanUrl || item.url : item.url || item.lanUrl
 		return url && isSafeNavigationUrl(url) ? url : undefined
 	}
-	const open = (item: Panel.ItemInfo, override?: string) => {
+	const open = (item: Panel.ItemInfo, override?: string, method = item.openMethod) => {
 		const url =
-			override || (preferences.network === 'lan' ? item.lanUrl || item.url : item.url || item.lanUrl)
+			override ?? (preferences.network === 'lan' ? item.lanUrl || item.url : item.url || item.lanUrl)
 		if (!url || !isSafeNavigationUrl(url)) return error(new Error(t('review.invalidUrl')))
-		if (item.openMethod === 3) setFrame({ url, title: item.title })
-		else if (item.openMethod === 1) location.assign(url)
+		if (method === 3) setFrame({ url, title: item.title })
+		else if (method === 1) location.assign(url)
 		else window.open(url, '_blank', 'noopener,noreferrer')
 	}
-	const menu = (item: Panel.ItemInfo) => ({
-		items: [
-			{ key: 'wan', label: t('panelHome.openWanUrl'), disabled: !item.url },
-			{ key: 'lan', label: t('panelHome.openLanUrl'), disabled: !item.lanUrl },
-			...(editable
-				? [
-						{ type: 'divider' as const },
-						{ key: 'edit', label: t('common.edit') },
-						{ key: 'delete', label: t('common.delete'), danger: true },
-					]
-				: []),
-		],
-		onClick: ({ key }: { key: string }) => {
-			if (key === 'edit') {
-				editorTriggerRef.current = item.id || null
-				setEditor({ item })
-			} else if (key === 'delete')
-				modal.confirm({
-					title: t('ui.deleteItem'),
-					content: item.title,
-					okButtonProps: { danger: true },
-					onOk: async () => {
-						try {
-							await request('/panel/itemIcon/deletes', { ids: [item.id] })
-							await client.invalidateQueries({ queryKey: ['groups'] })
-						} catch (err) {
-							error(err)
-							throw err
-						}
-					},
-				})
-			else open(item, key === 'lan' ? item.lanUrl : item.url)
-		},
-	})
+	const copyAddress = async (url: string) => {
+		if (!isSafeNavigationUrl(url)) return error(new Error(t('review.invalidUrl')))
+		const address = new URL(url.trim(), location.href).href
+		const sequence = ++copySequenceRef.current
+		try {
+			await navigator.clipboard.writeText(address)
+			if (activeRef.current && sequence === copySequenceRef.current)
+				void message.success(t('ui.itemMenuCopied'))
+		} catch {
+			if (!activeRef.current || sequence !== copySequenceRef.current) return
+			modal.confirm({
+				title: t('ui.itemMenuManualCopy'),
+				icon: null,
+				content: (
+					<>
+						<p>{t('ui.itemMenuManualCopyHint')}</p>
+						<Input
+							aria-label={t('iconItem.url')}
+							value={address}
+							readOnly
+							autoFocus
+							onFocus={(event) => event.target.select()}
+						/>
+					</>
+				),
+				autoFocusButton: null,
+				okText: t('common.confirm'),
+				cancelButtonProps: { hidden: true },
+			})
+		}
+	}
+	const deleteItem = (item: Panel.ItemInfo) => {
+		modal.confirm({
+			title: t('ui.deleteItem'),
+			content: item.title,
+			okButtonProps: { danger: true },
+			onOk: async () => {
+				try {
+					await request('/panel/itemIcon/deletes', { ids: [item.id] })
+					await client.invalidateQueries({ queryKey: ['groups'] })
+				} catch (err) {
+					error(err)
+					throw err
+				}
+			},
+		})
+	}
+	const activeMenuItem = filtered
+		.filter((group) => group.id !== sortingGroupId)
+		.flatMap((group) => group.items)
+		.find((item) => item.id === itemMenu?.id)
+	// Discard a removed/filtered/sorted target so it cannot reopen when the list returns.
+	if (itemMenu && !activeMenuItem) setItemMenu(null)
 	const saveSort = async (group: Group, sorted: (Panel.ItemInfo & { id: number })[]) => {
 		setSavingSort(true)
 		try {
@@ -294,7 +335,10 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 								placeholder={t(configSearchEnabled ? 'ui.searchPlaceholder' : 'ui.webSearchPlaceholder')}
 								value={search}
 								allowClear
-								onChange={(e) => setSearch(e.target.value)}
+								onChange={(e) => {
+									setItemMenu(null)
+									setSearch(e.target.value)
+								}}
 								onPressEnter={(e) => {
 									if (e.nativeEvent.isComposing || !search.trim()) return
 									const selected = engine || searchConfig.data?.currentSearchEngine.url
@@ -426,7 +470,36 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 								onSort={(sorted) => void saveSort(group, sorted)}
 							>
 								{(item) => (
-									<article className="navigation-card">
+									<article
+										className="navigation-card"
+										onContextMenu={(event) => {
+											if (event.shiftKey || (event.nativeEvent as PointerEvent).pointerType === 'touch') {
+												closeItemMenu(false)
+												return
+											}
+											if (sortingGroupId === group.id) return
+											event.preventDefault()
+											const trigger = event.currentTarget.querySelector<HTMLElement>('.app-link')!
+											const rect = trigger.getBoundingClientRect()
+											setItemMenu({
+												id: item.id!,
+												trigger,
+												x: event.clientX || rect.left,
+												y: event.clientY || rect.bottom,
+											})
+										}}
+										onKeyDown={(event) => {
+											if (
+												sortingGroupId === group.id ||
+												!(event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))
+											)
+												return
+											event.preventDefault()
+											const trigger = event.target as HTMLElement
+											const rect = trigger.getBoundingClientRect()
+											setItemMenu({ id: item.id!, trigger, x: rect.left, y: rect.bottom })
+										}}
+									>
 										<a
 											className="app-link"
 											href={destination(item)}
@@ -464,19 +537,28 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											</div>
 										</a>
 										{sortingGroupId !== group.id && (
-											<Dropdown menu={menu(item)} trigger={['click']}>
-												<Button
-													className="item-menu"
-													ref={(node) => {
-														if (node) itemTriggersRef.current.set(item.id!, node)
-														else itemTriggersRef.current.delete(item.id!)
-													}}
-													type="text"
-													size="small"
-													aria-label={`${t('ui.more')} ${item.title}`}
-													icon={<EllipsisOutlined aria-hidden="true" />}
-												/>
-											</Dropdown>
+											<Button
+												className="item-menu"
+												ref={(node) => {
+													if (node) itemTriggersRef.current.set(item.id!, node)
+													else itemTriggersRef.current.delete(item.id!)
+												}}
+												type="text"
+												size="small"
+												aria-label={`${t('ui.more')} ${item.title}`}
+												aria-haspopup="menu"
+												aria-expanded={activeMenuItem?.id === item.id}
+												onClick={(event) => {
+													const trigger = event.currentTarget
+													const rect = trigger.getBoundingClientRect()
+													setItemMenu(
+														activeMenuItem?.id === item.id
+															? null
+															: { id: item.id!, trigger, x: rect.right - 232, y: rect.bottom + 4 },
+													)
+												}}
+												icon={<EllipsisOutlined aria-hidden="true" />}
+											/>
 										)}
 									</article>
 								)}
@@ -496,13 +578,6 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											>
 												{t('review.firstApp')}
 											</Button>
-											<Button
-												className="home-action home-action-secondary"
-												icon={<UploadOutlined aria-hidden="true" />}
-												onClick={() => navigate('/settings/backup')}
-											>
-												{t('ui.import')}
-											</Button>
 										</Space>
 									)}
 								</div>
@@ -514,6 +589,24 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 					<SafeHtml className="home-footer-content" html={config.footerHtml} />
 				</footer>
 			</div>
+			{itemMenu && activeMenuItem && !editor && !frame && (
+				<ItemActionMenu
+					item={activeMenuItem}
+					target={itemMenu}
+					editable={editable}
+					onClose={closeItemMenu}
+					onOpen={(url, method) => open(activeMenuItem, url, method)}
+					onCopy={(url) => void copyAddress(url)}
+					onEdit={() => {
+						if (!editable) return
+						editorTriggerRef.current = activeMenuItem.id!
+						setEditor({ item: activeMenuItem })
+					}}
+					onDelete={() => {
+						if (editable) deleteItem(activeMenuItem)
+					}}
+				/>
+			)}
 			{editor && <ItemEditor {...editor} groups={groups.data} onClose={() => setEditor(null)} />}
 			<Modal
 				open={!!frame}

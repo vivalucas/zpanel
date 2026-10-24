@@ -585,9 +585,56 @@ a {
 	font-size: 13px;
 	font-weight: 500;
 }
-.home-page .home-action-secondary {
+.item-action-popup {
+	position: fixed;
+	width: 232px;
+	max-width: calc(100vw - 16px);
+	max-height: calc(100dvh - 16px);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 6px;
+}
+.item-action-popup .ant-menu {
+	border: 0 !important;
 	background: transparent;
-	box-shadow: none;
+}
+.item-action-popup .ant-menu-item-group-title {
+	display: none;
+}
+.item-action-popup .ant-menu-item-group-list {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 4px;
+	margin: 0 0 6px;
+}
+.item-action-popup .ant-menu-item {
+	margin: 0;
+	width: 100%;
+	padding-inline: 12px !important;
+	min-height: 44px;
+	line-height: 44px;
+}
+.item-action-popup .item-action-open {
+	grid-column: 1 / -1;
+	font-weight: 600;
+}
+.item-action-popup .item-action-shortcut {
+	text-align: center;
+	padding-inline: 0 !important;
+}
+.item-action-shortcut .ant-menu-title-content > span {
+	display: block;
+	font-size: 18px;
+}
+.item-action-label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
 }
 .home-page .empty-group .home-action {
 	background: transparent;

@@ -374,6 +374,13 @@
     "deleteGroupTitle": "Delete group"
   },
   "ui": {
+    "itemMenuNewTab": "在新分頁開啟",
+    "itemMenuFrame": "嵌入開啟",
+    "itemMenuCopy": "複製網址",
+    "itemMenuOpen": "開啟{address}",
+    "itemMenuCopied": "網址已複製",
+    "itemMenuManualCopy": "手動複製網址",
+    "itemMenuManualCopyHint": "瀏覽器無法自動複製，請複製下方網址。",
     "retry": "重试",
     "contentUnavailable": "内容暂时无法加载",
     "loadFailedHint": "请稍后重试；如持续出现，请检查服务连接。",

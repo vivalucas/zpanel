@@ -163,7 +163,9 @@ for (const tone of ['light', 'dark', 'mixed'] as const) {
 				})
 			}
 		}
-		await page.getByRole('button', { name: '导入配置', exact: true }).click()
+		await expect(page.getByRole('button', { name: '导入配置', exact: true })).toHaveCount(0)
+		await page.getByRole('button', { name: '设置', exact: true }).click()
+		await page.getByRole('menuitem', { name: '导入与导出', exact: true }).click()
 		await expect(page).toHaveURL(/settings\/backup/)
 		expect(errors).toEqual([])
 	})
@@ -334,7 +336,7 @@ test('public visitors see neither editing controls nor the editing hint', async 
 	await expect(page.locator('.home-edit-hint')).toHaveCount(0)
 	await expect(page.locator('.group-actions')).toHaveCount(0)
 	await page.locator('.item-menu').click()
-	await expect(page.getByRole('menuitem')).toHaveCount(2)
+	await expect(page.getByRole('menuitem')).toHaveCount(4)
 	await expect(page.getByRole('menuitem', { name: '编辑', exact: true })).toHaveCount(0)
 	await expect(page.getByRole('menuitem', { name: '删除', exact: true })).toHaveCount(0)
 })
@@ -352,5 +354,6 @@ test('partial search and monitor failures keep readable neutral retry controls',
 			'rgb(245, 247, 250)',
 		)
 	}
-	await expect(page.getByRole('button', { name: '导入配置', exact: true })).toBeVisible()
+	await expect(page.getByRole('button', { name: '导入配置', exact: true })).toHaveCount(0)
+	await expect(page.getByRole('button', { name: '添加第一个应用', exact: true })).toBeVisible()
 })

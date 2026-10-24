@@ -4,12 +4,15 @@
 
 范围包括 `src/app`、`components`、`features`、`lib`、`locales`、`utils`、入口和相关测试；保留现有视觉方向、数据及权限语义，不升级依赖。实施阶段保留改动供原任务验收；验收完成后，用户另明确授权提交并推送到 origin/main，不包含发版或部署。浏览器仅访问 `scripts/e2e-server.mjs` 创建的临时 SQLite 服务，Docker 指向不存在的测试 socket；Docker 成功响应及竞态故障使用浏览器拦截。
 
+2026-10-24 首页菜单增量由当前 AI 实施和自查，未计入上述 2026-10-23 独立验收。配置导入入口、应用右键与复制边界以当前前端说明及 [菜单专项回归](../tests/e2e/item-menu.spec.ts) 为准，实际执行结果见 01。
+
 ## 证据与覆盖矩阵
 
 下表事件相关实现均已逐个阅读；纯函数、配置和语言资源按静态核查及相应自动检查覆盖。E = [events.spec.ts](../tests/e2e/events.spec.ts)，B = [event-boundaries.spec.ts](../tests/e2e/event-boundaries.spec.ts)，A = [audit.spec.ts](../tests/e2e/audit.spec.ts)，W = [workspace.spec.ts](../tests/e2e/workspace.spec.ts)，P = [project-review.spec.ts](../tests/e2e/project-review.spec.ts)，H = [home-appearance.spec.ts](../tests/e2e/home-appearance.spec.ts)，L = [settings-layout.spec.ts](../tests/e2e/settings-layout.spec.ts)。表中短语可在对应文件中搜索测试名称；整套实际结果见下节。静态核查不能视为真实设备的操作验收。
 
 | 入口/文件 | 事件及正常行为 | 失败、取消、禁用及加载 | 证据 | 未覆盖或复核边界 |
 | --- | --- | --- | --- | --- |
+| `home/ItemActionMenu.tsx`（2026-10-24 增量） | 右键/更多/键盘共用菜单；地址分区、临时打开方式、复制、编辑与删除；按视口定位 | 缺失地址隐藏、非法地址禁用、访客隐藏管理项、排序/过滤关闭、Esc/Tab 恢复焦点；剪贴板失败手动复制、迟到结果丢弃；内嵌保留外开入口 | `item-menu.spec.ts`；E 编辑/跨组焦点；H 首页与设置入口 | HTTP 非安全来源与模拟拒绝分别覆盖；真实手机、Safari/Firefox 与所有外站嵌入策略仍需实机 |
 | `app/App.tsx` | Hash 路由、公开/登录/管理入口，CSS 随内容更新、JS 同内容不重复执行，安全模式重新加载清除脚本副作用 | 认证读取重试、403/404、路由异常恢复入口；空 JS 后仍记住执行历史 | A unknown routes/custom JavaScript；W ordinary users；E safe mode clears script；P repair path；异常页恢复按钮静态核查 | 未人为制造所有 React 渲染异常；线上自定义脚本不在测试环境执行 |
 | `app/Providers.tsx`、`store.ts`、`main.tsx` | 会话独立 QueryClient；主题/系统主题、账号增删选、语言即时变化 | 取消旧查询/清缓存；系统监听器清理；过期语言失败不覆盖最新选择；顶层错误可刷新 | W appearance/account switching；E failed old language；B confirmed switching/logout；系统 media listener 及 ErrorBoundary 静态核查 | 未覆盖多标签页存储冲突、系统级 PWA 安装升级 |
 | `auth/Login.tsx` | 点击/Enter 登录、语言选择、验证码按钮/键盘刷新，公开来路返回首页 | 业务失败换验证码；忙时锁表单/验证码及同步提交锁；离页或切会话后的成功不再登录/跳转 | A HTTP LAN/captcha；W login；E login locks fields/late anonymous login；API 单元显式匿名会话检查 | 验证码图像识别不自动化；真实手机输入法待验 |
@@ -33,7 +36,7 @@
 | `components/SafeHtml.tsx`、`BrandMark.tsx` | 净化 HTML/Markdown 链接、装饰图标；无业务写事件 | 过滤危险 HTML/style；装饰图标不污染按钮名称 | W/A 页面 smoke；DOMPurify 与链接实现静态核查；test:review URL 校验 | 外部链接目标可用性不属于本地验收 |
 | `lib/api.ts`、`session.ts`、`queries.ts`、`feedback.ts`、`unsaved.ts` | 请求/会话/取消、业务错误/重试、确认框与 beforeunload 生命周期 | 页面 scope 和调用方信号合并并清理监听；fetch 前/响应/JSON 后均检取消与会话；匿名请求也绑定发起会话；卸载销毁旧确认、忽略旧错误；显式放弃后同步放行导航 | `api.test.ts` 新增 3 项；E orphan/login；B switching/logout；A save/leave；信号合并不依赖 AbortSignal.any | 取消客户端等待不代表回滚服务端已完成写入；未承诺撤销已发送动作 |
 | `lib/format.ts`、`iconColor.ts`、`id.ts`、`panelConfig.ts`、`password.ts`、`wallpaper.ts`、`utils/navigation.ts` | 事件调用的纯函数：格式、对比、请求 ID、配置修复、UTF-8 密码、壁纸和安全 URL | 缺省/非法/上下界回退或校验；HTTP 不依赖 randomUUID | Vitest；test:review；P invalid style；H contrast；未改函数逐文件静态核查 | 所有语言母语质量和所有 CSS 色值组合未人工逐项检查 |
-| `locales/index.ts`、全部 11 个 JSON | 异步语言包仅最后选择生效；与 Ant Design/文档 lang 同步 | 旧加载失败不再触发全局英文回退；全部 locale key 对齐 | E failed old language；A login language；test:review locale parity；动态资源加载静态核查 | 非中英母语质量沿用已有缺口，无新增文案 |
+| `locales/index.ts`、全部 11 个 JSON | 异步语言包仅最后选择生效；与 Ant Design/文档 lang 同步 | 旧加载失败不再触发全局英文回退；全部 locale key 对齐 | E failed old language；A login language；test:review locale parity；动态资源加载静态核查 | 2026-10-24 新增菜单文案已补齐全部语言；非中英母语质量仍待复核 |
 
 ## 确认问题、触发条件及修复
 

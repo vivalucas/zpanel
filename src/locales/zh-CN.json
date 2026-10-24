@@ -374,6 +374,13 @@
     "deleteGroupTitle": "删除分组"
   },
   "ui": {
+    "itemMenuNewTab": "新标签页打开",
+    "itemMenuFrame": "内嵌打开",
+    "itemMenuCopy": "复制地址",
+    "itemMenuOpen": "打开{address}",
+    "itemMenuCopied": "地址已复制",
+    "itemMenuManualCopy": "手动复制地址",
+    "itemMenuManualCopyHint": "浏览器无法自动复制，请复制下方地址。",
     "retry": "重试",
     "contentUnavailable": "内容暂时无法加载",
     "loadFailedHint": "请稍后重试；如持续出现，请检查服务连接。",

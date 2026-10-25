@@ -6,9 +6,9 @@ async function api(request: APIRequestContext, path: string, data: unknown = {})
 	expect(result.code, `${path}: ${result.msg}`).toBe(0)
 	return result.data
 }
-async function enter(page: Page, path: string) {
+async function enter(page: Page, path: string, theme: 'light' | 'dark' = 'light') {
 	await page.addInitScript(
-		(user) =>
+		({ user, theme }) =>
 			localStorage.setItem(
 				'zpanel-preferences',
 				JSON.stringify({
@@ -16,13 +16,13 @@ async function enter(page: Page, path: string) {
 					state: {
 						token: user.token,
 						accounts: [{ token: user.token, user }],
-						theme: 'light',
+						theme,
 						language: 'zh-CN',
 						network: 'wan',
 					},
 				}),
 			),
-		admin,
+		{ user: admin, theme },
 	)
 	await page.goto(`/#${path}`)
 }
@@ -228,11 +228,107 @@ test('Docker action confirmation, failed action retry and log controls match the
 	await row.getByRole('button', { name: '日志', exact: true }).click()
 	await expect(page.locator('.log-output')).toContainText('audit log 200')
 })
+test('Docker log errors fit long details inside the mobile dialog and recover on retry', async ({
+	page,
+}, testInfo) => {
+	let logsFail = true
+	let logRequests = 0
+	const diagnostic = `Docker logs temporarily unavailable.\n${'/very-long-container-log-path'.repeat(30)}`
+	await page.route('**/api/system/docker/containers', (route) =>
+		route.fulfill({
+			json: {
+				code: 0,
+				data: {
+					count: 1,
+					list: [
+						{
+							id: 'abc123',
+							names: 'logs-container',
+							image: 'nginx',
+							state: 'running',
+							status: 'Up',
+							ports: '80/tcp',
+						},
+					],
+				},
+			},
+		}),
+	)
+	await page.route('**/api/system/docker/stats', (route) => route.fulfill({ json: { code: 0, data: [] } }))
+	await page.route('**/api/system/docker/logs', (route) => {
+		logRequests += 1
+		expect(route.request().postDataJSON()).toEqual({ id: 'abc123', lines: 200 })
+		return route.fulfill({
+			json: logsFail ? { code: -1, msg: diagnostic } : { code: 0, data: { logs: 'recovered container log' } },
+		})
+	})
+	await page.setViewportSize({ width: 320, height: 900 })
+	await enter(page, '/settings/docker', 'dark')
+	await page
+		.getByRole('row')
+		.filter({ hasText: 'logs-container' })
+		.getByRole('button', { name: '日志', exact: true })
+		.click()
+	const dialog = page.getByRole('dialog')
+	const failure = dialog.getByRole('alert')
+	await expect(failure).toContainText('日志暂时无法加载')
+	await expect(failure.locator('details')).not.toHaveAttribute('open')
+	await failure.getByText('技术详情').click()
+	await expect(failure.locator('code')).toHaveText(diagnostic)
+	await expect(dialog).not.toHaveClass(/ant-zoom-(enter|appear)(-\S+)?/)
+	await expect
+		.poll(() =>
+			dialog.evaluate(async (el) => {
+				const style = getComputedStyle(el)
+				if (style.transform !== 'none' || style.opacity !== '1') return false
+				if (el.getAnimations().some((animation) => animation.playState === 'running')) return false
+				const before = el.getBoundingClientRect()
+				await new Promise<void>((resolve) =>
+					requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+				)
+				const after = el.getBoundingClientRect()
+				return (['x', 'y', 'width', 'height'] as const).every(
+					(key) => Math.abs(before[key] - after[key]) < 0.5,
+				)
+			}),
+		)
+		.toBe(true)
+	const layout = await dialog.evaluate((el) => {
+		const bounds = el.getBoundingClientRect()
+		const error = el.querySelector('[role="alert"]')!
+		const code = error.querySelector('code')!
+		return {
+			dialogFits: bounds.left >= 0 && bounds.right <= window.innerWidth,
+			dialogOverflows: el.scrollWidth > el.clientWidth + 1,
+			errorOverflows: error.scrollWidth > error.clientWidth + 1,
+			codeOverflows: code.scrollWidth > code.clientWidth + 1,
+		}
+	})
+	expect(layout).toEqual({
+		dialogFits: true,
+		dialogOverflows: false,
+		errorOverflows: false,
+		codeOverflows: false,
+	})
+	await expect(failure.getByRole('button', { name: '重试' })).toBeInViewport({ ratio: 1 })
+	await page.screenshot({ path: testInfo.outputPath('docker-log-error-dark-320.png') })
+	logsFail = false
+	await failure.getByRole('button', { name: '重试' }).click()
+	await expect(dialog.getByRole('alert')).toHaveCount(0)
+	await expect(dialog.locator('.log-output')).toHaveText('recovered container log')
+	expect(logRequests).toBe(2)
+})
 test('Docker read failures replace the empty table and recover in place', async ({ page }) => {
 	let containersFail = true
 	let statsFail = true
-	await page.route('**/api/system/docker/containers', (route) =>
-		route.fulfill({
+	let holdRetry = false
+	let releaseRetry: (() => void) | undefined
+	await page.route('**/api/system/docker/containers', async (route) => {
+		if (holdRetry)
+			await new Promise<void>((resolve) => {
+				releaseRetry = resolve
+			})
+		await route.fulfill({
 			json: containersFail
 				? { code: -1, msg: 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock' }
 				: {
@@ -251,8 +347,8 @@ test('Docker read failures replace the empty table and recover in place', async 
 							],
 						},
 					},
-		}),
-	)
+		})
+	})
 	await page.route('**/api/system/docker/stats', (route) =>
 		route.fulfill({
 			json: statsFail
@@ -272,7 +368,13 @@ test('Docker read failures replace the empty table and recover in place', async 
 		failure.getByText('Cannot connect to the Docker daemon at unix:///var/run/docker.sock'),
 	).toBeVisible()
 	containersFail = false
-	await failure.getByRole('button', { name: '重试' }).click()
+	holdRetry = true
+	const retryButton = failure.getByRole('button', { name: '重试' })
+	await retryButton.click()
+	await expect(retryButton).toHaveClass(/ant-btn-loading/)
+	await expect.poll(() => !!releaseRetry).toBe(true)
+	holdRetry = false
+	releaseRetry!()
 	await expect(page.getByRole('row').filter({ hasText: 'recovered-container' })).toBeVisible()
 	const partialFailure = page.getByRole('alert')
 	await expect(partialFailure).toContainText('资源信息暂时无法加载')
@@ -288,6 +390,43 @@ test('Docker read failures replace the empty table and recover in place', async 
 	await page.getByRole('alert').getByRole('button', { name: '重试' }).click()
 	await expect(page.getByRole('alert')).toHaveCount(0)
 })
+for (const theme of ['light', 'dark'] as const) {
+	for (const width of [1440, 320]) {
+		test(`Docker connection errors fit long diagnostics in ${theme} at ${width}px`, async ({
+			page,
+		}, testInfo) => {
+			const diagnostic = `Cannot connect to the Docker daemon at unix:///var/run/docker.sock.\n${'/very-long-socket-path'.repeat(30)}`
+			await page.route('**/api/system/docker/containers', (route) =>
+				route.fulfill({ json: { code: -1, msg: diagnostic } }),
+			)
+			await page.setViewportSize({ width, height: 900 })
+			await enter(page, '/settings/docker', theme)
+			await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+			const failure = page.getByRole('alert')
+			await expect(failure).toContainText('容器列表暂时无法加载')
+			await expect(failure.locator('details')).not.toHaveAttribute('open')
+			if (width === 1440) {
+				const bounds = await failure.boundingBox()
+				expect(bounds!.height).toBeLessThan(180)
+			}
+			await page.screenshot({ path: testInfo.outputPath(`docker-error-${theme}-${width}.png`) })
+			await failure.getByText('技术详情').click()
+			await expect(failure.locator('code')).toHaveText(diagnostic)
+			const layout = await failure.evaluate((el) => {
+				const bounds = el.getBoundingClientRect()
+				const code = el.querySelector('code')!
+				return {
+					cardFits: bounds.left >= 0 && bounds.right <= window.innerWidth,
+					cardOverflows: el.scrollWidth > el.clientWidth + 1,
+					codeOverflows: code.scrollWidth > code.clientWidth + 1,
+				}
+			})
+			expect(layout).toEqual({ cardFits: true, cardOverflows: false, codeOverflows: false })
+			await expect(failure.getByRole('button', { name: '重试' })).toBeInViewport()
+			await page.screenshot({ path: testInfo.outputPath(`docker-error-details-${theme}-${width}.png`) })
+		})
+	}
+}
 test('unknown settings routes return 404 and both mobile admin routes fit', async ({ page }) => {
 	await enter(page, '/settings/missing-page')
 	await expect(page.getByText('404', { exact: true })).toBeVisible()

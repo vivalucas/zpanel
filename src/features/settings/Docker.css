@@ -1,0 +1,72 @@
+.docker-read-error {
+	/* Log dialogs are portaled outside the app's theme variable scope. */
+	--docker-error-soft: var(--soft, color-mix(in srgb, var(--glass-popup-text) 6%, transparent));
+	--docker-error-muted: var(--muted, color-mix(in srgb, var(--glass-popup-text) 72%, transparent));
+	--docker-error-primary: var(--primary, #5266eb);
+	margin: 0 0 18px;
+	border-radius: 16px;
+	background: var(--settings-row, var(--docker-error-soft));
+	box-shadow: var(--settings-row-shadow, none);
+}
+[data-theme='dark'] .docker-read-error {
+	--docker-error-primary: var(--primary, #8b98ff);
+}
+.docker-read-error .status-state {
+	display: grid;
+	grid-template-columns: 36px minmax(0, 1fr) auto;
+	gap: 12px 16px;
+	padding: 20px;
+}
+.docker-read-error .status-state-icon {
+	width: 36px;
+	height: 36px;
+	border: 0;
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--docker-error-primary) 9%, transparent);
+	color: var(--docker-error-primary);
+	font-size: 16px;
+}
+.docker-read-error .status-state-copy {
+	max-width: none;
+}
+.docker-read-error .status-state-copy strong {
+	font-size: 15px;
+	line-height: 1.6;
+}
+.docker-read-error .status-state-copy p {
+	margin-top: 4px;
+	color: var(--docker-error-muted);
+}
+.docker-read-error .status-state-copy details {
+	margin-top: 12px;
+	color: var(--docker-error-muted);
+}
+.docker-read-error .status-state-copy code {
+	max-height: 180px;
+	overflow: auto;
+	padding: 12px;
+	border-radius: 10px;
+	background: var(--docker-error-soft);
+	white-space: pre-wrap;
+	line-height: 1.6;
+}
+.docker-read-error .status-state-action {
+	padding-top: 2px;
+}
+@media (max-width: 640px) {
+	.docker-read-error .status-state {
+		grid-template-columns: 32px minmax(0, 1fr);
+		gap: 12px;
+		padding: 16px;
+	}
+	.docker-read-error .status-state-icon {
+		width: 32px;
+		height: 32px;
+		border-radius: 10px;
+	}
+	.docker-read-error .status-state-action {
+		grid-column: 2;
+		margin: 0;
+		padding: 0;
+	}
+}

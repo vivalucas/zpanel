@@ -1,11 +1,22 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
 import { useRef, useState } from 'react'
+import type { ComponentProps } from 'react'
 import { Button, Input, Modal, Select, Space, Table, Tag } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import { QueryError, Section } from '@/components/shared'
 import { isAccessError } from '@/lib/queryState'
+import './Docker.css'
+
+function DockerReadError(props: Omit<ComponentProps<typeof QueryError>, 'compact'>) {
+	return (
+		<div className="docker-read-error">
+			<QueryError {...props} compact />
+		</div>
+	)
+}
+
 export default function Docker() {
 	const request = useSessionRequest()
 	const [filter, setFilter] = useState('')
@@ -63,7 +74,7 @@ export default function Docker() {
 			: isAccessError(logs.error)
 				? logs
 				: null
-	if (accessQuery) return <QueryError error={accessQuery.error} retry={() => accessQuery.refetch()} />
+	if (accessQuery) return <DockerReadError error={accessQuery.error} retry={() => accessQuery.refetch()} />
 	return (
 		<Section
 			title="Docker"
@@ -82,7 +93,7 @@ export default function Docker() {
 			}
 		>
 			{containers.error && !containers.data ? (
-				<QueryError
+				<DockerReadError
 					error={containers.error}
 					title={t('ui.dockerListUnavailable')}
 					description={t('ui.dockerConnectionHint')}
@@ -92,9 +103,8 @@ export default function Docker() {
 			) : (
 				<>
 					{containers.error && (
-						<QueryError
+						<DockerReadError
 							error={containers.error}
-							compact
 							title={t('ui.refreshFailedWithPreviousData')}
 							description={t('ui.refreshPreviousDataHint')}
 							diagnostic
@@ -109,9 +119,8 @@ export default function Docker() {
 						onChange={(e) => setFilter(e.target.value)}
 					/>
 					{stats.error && !!containers.data?.list.length && (
-						<QueryError
+						<DockerReadError
 							error={stats.error}
-							compact
 							title={t('ui.dockerStatsUnavailable')}
 							description={t('ui.dockerConnectionHint')}
 							diagnostic
@@ -213,10 +222,9 @@ export default function Docker() {
 					</Button>
 				</Space>
 				{logs.error ? (
-					<QueryError
+					<DockerReadError
 						error={logs.error}
 						title={t('ui.dockerLogsUnavailable')}
-						compact
 						diagnostic
 						retry={() => logs.refetch()}
 					/>

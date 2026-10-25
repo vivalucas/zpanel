@@ -39,12 +39,15 @@ pnpm run lint
 pnpm test
 pnpm run test:review
 pnpm run build
+python3 scripts/docker-entrypoint-test.py
 pnpm exec playwright install chromium
 pnpm run test:e2e
 cd service && go test ./...
 ```
 
 Browser tests require Go and run the production build against a disposable SQLite database on port `16521`. They never target the development database. Docker success paths use mocked API responses; the test server cannot access the developer's Docker context. Add a regression test for changed data flows and error recovery, and distinguish mocked checks from real integrations in the PR.
+
+The entrypoint checks use disposable paths and mocked operating-system commands, including large Docker socket GIDs and optional setup failures. They do not contact Docker; also verify the resulting service UID/groups in an isolated Linux container before release.
 
 If Go is not installed locally, mention that in the pull request verification notes.
 

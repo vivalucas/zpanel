@@ -186,6 +186,10 @@ nano .env
 
 Add or update `DOCKER_GID=<the number printed above>` in `.env`, preserving other settings. Then run `docker compose up -d`. Use `sudo` for Docker commands if required on your host. Do not use `user: "0:0"` as a workaround: the image entrypoint always drops privileges to the `zpanel` user.
 
+The entrypoint preserves the mounted socket's group for `zpanel` when that GID is already in the container's startup group list; use `group_add` above to pass the host GID. Other startup groups are not copied. Large Linux GIDs are supported. If this optional setup fails, the site still starts and logs a warning; Docker management remains unavailable until its permissions are corrected.
+
+The published 1.2.6 image does not include this fix. If temporarily mounting an updated entrypoint, first run `chmod +x docker-entrypoint.sh`, then mount it read-only at `/app/docker-entrypoint.sh`. Remove that temporary mount when upgrading to an image that includes the fix.
+
 The official image includes `docker-cli`, and Docker management works by running `docker` commands inside the container against the mounted host socket. This gives ZPanel high-level control over Docker on the host. Only enable it in a trusted environment and keep the administrator account secure.
 
 ---

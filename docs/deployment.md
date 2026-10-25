@@ -1,6 +1,6 @@
 # Configuration and operations
 
-For first installation, use the [Compose quick start](../README.md#docker-compose). This guide targets 1.2.6, one instance, SQLite and the default paths. Docker deployment does not require Node.js, Go, MySQL or Redis on the host. Deployment verification and remaining recovery gaps are recorded in the [current status](../handbook/01-current-status.md).
+For first installation, use the [Compose quick start](../README.md#docker-compose). This guide targets 1.2.7, one instance, SQLite and the default paths. Docker deployment does not require Node.js, Go, MySQL or Redis on the host. Deployment verification and remaining recovery gaps are recorded in the [current status](../handbook/01-current-status.md).
 
 ## Configuration and persistence
 
@@ -70,7 +70,7 @@ If archiving fails the service may remain stopped: correct the error and retry, 
 ## Upgrade and rollback
 
 1. Record the running image and immutable ID: `sudo docker inspect zpanel --format '{{.Config.Image}} {{.Image}}'`. Record registry digests with `sudo docker image inspect "$(sudo docker inspect zpanel --format '{{.Image}}')" --format '{{json .RepoDigests}}'`. Preserve the old local image using `sudo docker image tag "$(sudo docker inspect zpanel --format '{{.Image}}')" zpanel:before-upgrade`; the next use replaces this local tag.
-2. Back up as above before editing the image version. Prefer a released version such as `vivalucas/zpanel:1.2.6` or its digest.
+2. Back up as above before editing the image version. Prefer a released version such as `vivalucas/zpanel:1.2.7` or its digest.
 3. Run `sudo docker compose config --quiet && sudo docker compose pull && sudo docker compose up -d`.
 4. Check `sudo docker compose ps` and `sudo docker compose logs --tail=100 zpanel`. For the default host-loopback mapping, run `curl --fail --show-error --connect-timeout 5 --max-time 10 http://127.0.0.1:6521/api/healthz`; expect `{"status":"ok"}`. Use your LAN IP when bound there. Also sign in and check navigation, images and settings.
 5. Retain the old image and backup until verified. Do not automatically run host-wide image pruning during upgrades.
@@ -103,7 +103,7 @@ Before starting, edit the restored `.env`/Compose host IP for the destination ma
 | Port occupied | `sudo docker ps`, `sudo ss -lntp`; change only the host port |
 | Permission/chown failure | Writable mounts, UID and filesystem restrictions; avoid world-writable permissions |
 | Restart loop/unhealthy | Compose logs, INI configuration, database connectivity, disk space and health-check port |
-| Docker manager unavailable | Socket mount, actual socket GID and `group_add`; `sudo docker compose exec zpanel docker version` |
+| Docker manager unavailable | Socket mount, actual socket GID and `group_add`; `sudo docker compose exec zpanel su-exec zpanel docker version` |
 
 To reset the first administrator password, run `sudo docker compose stop zpanel && sudo docker compose run --rm zpanel ./zpanel -password-reset`, inspect the printed account/result, then `sudo docker compose up -d`. The password becomes `12345678`; change it immediately. For broken custom CSS/JS, open `/?safeMode=1` on the actual service URL and remove the broken settings.
 

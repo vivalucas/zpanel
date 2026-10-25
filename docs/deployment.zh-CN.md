@@ -1,6 +1,6 @@
 # 部署配置与运维参考
 
-首次安装见 [Ubuntu 局域网指南](../README.zh-CN.md#ubuntu-局域网部署推荐)。本文对应 1.2.6，推荐单实例 Docker、SQLite、默认存储路径。默认部署不需要 Node.js、Go、MySQL 或 Redis。部署验证与恢复验收缺口见 [当前状态](../handbook/01-current-status.md)。
+首次安装见 [Ubuntu 局域网指南](../README.zh-CN.md#ubuntu-局域网部署推荐)。本文对应 1.2.7，推荐单实例 Docker、SQLite、默认存储路径。默认部署不需要 Node.js、Go、MySQL 或 Redis。部署验证与恢复验收缺口见 [当前状态](../handbook/01-current-status.md)。
 
 ## 配置来源与生效
 
@@ -107,7 +107,7 @@ db=0
 | `permission denied` / `chown` 失败 | 核对 conf/data 挂载、磁盘权限和文件系统；不要改成全员可写 |
 | 容器反复重启或 `unhealthy` | `sudo docker compose logs --tail=200 zpanel`，检查配置、数据库、端口和磁盘空间 |
 | HTTP 正常但页面/API 报错 | 核对代理上游、`/api` 路径、浏览器请求；健康接口只证明服务可响应 |
-| Docker 管理页无法连接 | 核对 socket 挂载、实际 GID 和 `group_add`，再在容器中执行 `sudo docker compose exec zpanel docker version` |
+| Docker 管理页无法连接 | 核对 socket 挂载、实际 GID 和 `group_add`，再在容器中执行 `sudo docker compose exec zpanel su-exec zpanel docker version` |
 
 Docker socket 管理权限非常高；只在需要时启用，配置见 README。默认入口会降权，`user: "0:0"` 不能作为组权限故障的解决办法。
 

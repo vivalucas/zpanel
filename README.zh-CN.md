@@ -297,10 +297,10 @@ sudo docker compose up -d
 重要环境建议固定版本：
 
 ```yaml
-image: vivalucas/zpanel:1.2.6
+image: vivalucas/zpanel:1.2.7
 ```
 
-`latest` 跟随最近一次成功发布的镜像；推送 GitHub `main` 不会自动更新镜像。发布是否完成请查看 [Releases](https://github.com/vivalucas/zpanel/releases) 和 [容器发布任务](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml)。GHCR 可作为另一个官方拉取渠道：`ghcr.io/vivalucas/zpanel:1.2.6`。
+`latest` 跟随最近一次成功发布的镜像；推送 GitHub `main` 不会自动更新镜像。发布是否完成请查看 [Releases](https://github.com/vivalucas/zpanel/releases) 和 [容器发布任务](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml)。GHCR 可作为另一个官方拉取渠道：`ghcr.io/vivalucas/zpanel:1.2.7`。
 
 升级按以下顺序操作：
 
@@ -410,13 +410,14 @@ nano .env
 
 入口脚本只保留容器启动组列表中已有的 socket 所属组，通过上面的 `group_add` 传入宿主机 GID，不复制其他启动组，并支持较大的 Linux GID。可选 Docker 权限初始化失败时会记录警告并继续启动站点，Docker 管理仍需修正权限后才能使用。
 
-已发布的 1.2.6 镜像不包含此修复。临时只读挂载更新后的脚本到 `/app/docker-entrypoint.sh` 前，先执行 `chmod +x docker-entrypoint.sh`；升级到已内置修复的镜像时移除该临时挂载。
+1.2.7 镜像已内置此修复。从 1.2.6 升级时移除旧的入口脚本临时挂载，使用新镜像内置脚本；如果继续使用 1.2.6 并只读挂载更新脚本到 `/app/docker-entrypoint.sh`，先执行 `chmod +x docker-entrypoint.sh`。
 
 应用并检查日志：
 
 ```bash
 sudo docker compose up -d
 sudo docker compose logs --tail=100 zpanel
+sudo docker compose exec zpanel su-exec zpanel docker version
 ```
 
 ## 适用场景

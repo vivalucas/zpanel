@@ -4,6 +4,27 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.7 - 2026-10-25
+
+### Appearance
+
+- Arranged the desktop homepage identity and clock beside search, aligned with navigation groups, with natural stacking on narrow screens and narrow configured content widths.
+- Reduced homepage whitespace while preserving wallpaper contrast, configured margins, navigation behavior and 70 px icons.
+- Replaced oversized Docker error states with compact theme-aware feedback, collapsed diagnostics, bounded long messages and reachable mobile retry controls, including log dialogs.
+
+### Docker Reliability
+
+- Preserved the mounted Docker socket's authorized group when dropping to the non-root service user.
+- Supported large Linux GIDs without BusyBox's numeric group-creation limit; reused existing groups and made repeated startup safe.
+- Kept the site available with a warning if optional Docker permission setup fails, while retaining fatal errors for configuration and data initialization.
+- Documented removal of temporary entrypoint mounts when upgrading from 1.2.6 and verification using the actual service identity.
+
+### Verification
+
+- Added 16 isolated entrypoint regressions to CI, alongside 138 browser checks, 36 frontend unit tests and the Go suite.
+- Verified actual BusyBox/su-exec behavior in isolated Linux containers for normal and large GIDs, existing groups, unavailable group files, unauthorized groups and Docker reads.
+- Real mobile devices, Safari/Firefox, MySQL/Redis/NAS, PWA installation/upgrades and complete restore remain outside this release's verified scope.
+
 ## 1.2.6 - 2026-10-24
 
 ### Appearance and Navigation

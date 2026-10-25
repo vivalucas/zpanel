@@ -335,9 +335,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 					<div className="home-identity">
 						{config.logoImageSrc && <img className="home-logo-image" src={config.logoImageSrc} alt="" />}
 						<strong className="home-logo-text">{config.logoText || 'ZPanel'}</strong>
-						<span className="home-identity-divider" aria-hidden="true">
-							|
-						</span>
+						<span className="home-identity-divider" aria-hidden="true" />
 						<Clock seconds={config.clockShowSecond} color={config.clockColor} />
 					</div>
 					{config.searchBoxShow && (

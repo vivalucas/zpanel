@@ -108,6 +108,19 @@ async function follows(before: Locator, after: Locator) {
 async function noHorizontalOverflow(page: Page) {
 	await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 }
+async function headerLayout(page: Page, width: number, sideBySide = width >= 1024) {
+	const identity = await box(page.locator('.home-identity'))
+	const search = await box(page.locator('.search-box'))
+	const leadingIdentity = await box(page.locator('.home-logo-image, .home-logo-text').first())
+	expect(leadingIdentity.x).toBeCloseTo(identity.x, 0)
+	if (sideBySide) {
+		expect(search.x).toBeGreaterThanOrEqual(identity.x + identity.width)
+		expect(Math.abs(identity.y + identity.height / 2 - search.y - search.height / 2)).toBeLessThanOrEqual(1)
+	} else {
+		await follows(page.locator('.home-identity'), page.locator('.search-box'))
+		expect(search.x).toBeCloseTo(identity.x, 0)
+	}
+}
 async function snapshot(page: Page, info: TestInfo, name: string) {
 	await page.screenshot({ path: info.outputPath(`${name}.png`), animations: 'disabled' })
 	await info.attach(`${name}-layout`, {
@@ -139,10 +152,10 @@ test('default home brings usable 70px icons into the first screen at desktop and
 	test.setTimeout(60_000)
 	await home(page)
 	for (const viewport of [
-		{ width: 1440, height: 900, iconTop: 360 },
-		{ width: 2557, height: 1229, iconTop: 430 },
-		{ width: 2560, height: 900, iconTop: 360 },
-		{ width: 1920, height: 720, iconTop: 330 },
+		{ width: 1440, height: 900, iconTop: 240 },
+		{ width: 2557, height: 1229, iconTop: 280 },
+		{ width: 2560, height: 900, iconTop: 250 },
+		{ width: 1920, height: 720, iconTop: 230 },
 		{ width: 320, height: 640, iconTop: 250 },
 		{ width: 390, height: 844, iconTop: 250 },
 		{ width: 844, height: 390, iconTop: 250 },
@@ -156,11 +169,21 @@ test('default home brings usable 70px icons into the first screen at desktop and
 		expect(icon.width).toBe(70)
 		expect(icon.height).toBe(70)
 		expect((await box(page.locator('.search-box'))).height).toBeGreaterThanOrEqual(44)
-		await follows(page.locator('.home-identity'), page.locator('.search-box'))
-		await follows(page.locator('.search-box'), page.locator('.navigation-group').first())
+		await headerLayout(page, viewport.width)
+		await follows(page.locator('.home-hero'), page.locator('.navigation-group').first())
 		await noHorizontalOverflow(page)
 		await snapshot(page, info, `default-${viewport.width}x${viewport.height}`)
 	}
+})
+
+test('a configured narrow content width stacks the header even on a wide desktop', async ({ page }, info) => {
+	await page.setViewportSize({ width: 1440, height: 900 })
+	await home(page, { panel: { maxWidth: 600, maxWidthUnit: 'px' } })
+	await headerLayout(page, 1440, false)
+	await follows(page.locator('.home-hero'), page.locator('.navigation-group').first())
+	await expect(page.getByRole('textbox', { name: '搜索', exact: true })).toBeInViewport({ ratio: 1 })
+	await noHorizontalOverflow(page)
+	await snapshot(page, info, 'configured-narrow-width')
 })
 
 test('long identities leave tools accessible across narrow desktop and low-height breakpoints', async ({ page }, info) => {
@@ -182,6 +205,9 @@ test('long identities leave tools accessible across narrow desktop and low-heigh
 			{ width: 641, height: 390 },
 			{ width: 700, height: 320 },
 			{ width: 900, height: 300 },
+			{ width: 1023, height: 600 },
+			{ width: 1024, height: 600 },
+			{ width: 1440, height: 900 },
 		]) {
 			await page.setViewportSize(viewport)
 			const tools = await box(page.locator('.home-tools'))
@@ -198,6 +224,7 @@ test('long identities leave tools accessible across narrow desktop and low-heigh
 				return button.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))
 			})).toBe(true)
 			expect((await box(page.locator('.search-box'))).height).toBeGreaterThanOrEqual(44)
+			await headerLayout(page, viewport.width)
 			await noHorizontalOverflow(page)
 			if (marginTop !== 10 || viewport.width !== 641 || viewport.height !== 390) continue
 			await snapshot(page, info, 'long-identity-641x390')
@@ -250,7 +277,13 @@ test('search, hidden search and both navigation styles retain click and keyboard
 		const withSearch = (await box(page.locator('.navigation-group').first())).y
 		await home(page, { panel: { iconStyle, searchBoxShow: false } })
 		await expect(search).toHaveCount(0)
-		expect((await box(page.locator('.navigation-group').first())).y).toBeLessThan(withSearch)
+		const withoutSearch = (await box(page.locator('.navigation-group').first())).y
+		if (iconStyle === 1) expect(withoutSearch).toBeLessThanOrEqual(withSearch)
+		else expect(withoutSearch).toBeLessThan(withSearch)
+		const hero = await box(page.locator('.home-hero'))
+		const identity = await box(page.locator('.home-identity'))
+		expect(identity.width).toBeCloseTo(hero.width, 0)
+		expect(hero.height).toBeCloseTo(identity.height, 0)
 		await follows(page.locator('.home-identity'), page.locator('.navigation-group').first())
 		await noHorizontalOverflow(page)
 	}

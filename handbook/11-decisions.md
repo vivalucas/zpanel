@@ -8,7 +8,7 @@
 
 ## Docker socket 权限须验证实际服务身份
 
-**日期**：2026-10-25；**状态**：源码与 Linux 隔离实测通过，1.2.7 发行处理中。
+**日期**：2026-10-25；**状态**：已随 1.2.7 发布并完成 m5 验证。
 
 容器内安装 Docker CLI、宿主 Docker 正常或 Compose 配置 `group_add`，都不能单独证明管理功能可用。`su-exec zpanel` 会按容器 `/etc/group` 重置补充组；入口只为已挂载 socket 且启动组列表已包含的 socket GID 建立用户组成员关系，不继承其他附加组，不以 root 服务或放宽宿主 socket 权限替代。判据包含启动进程的主组（例如 root 的 GID 0），不把它误写为仅能识别显式 `group_add`。
 

@@ -2,7 +2,7 @@
 
 ## 当前工作（2026-10-25）
 
-用户明确授权修复全部已确认问题、提交推送本地全部累计修改、推进补丁版本与 Tag，并更新 m5。全部本地累计修改已随 `7a255ed` 提交推送 main，包含 Docker 入口高 GID 修复、错误页优化与持久回归；源码已推进 1.2.7，正在核对发行提交，等待 main CI 全通过后打注释标签，正式镜像发布后再部署。只在 main 工作，不创建分支/工作树，不升级固定工具链或锁文件。
+用户授权的全部修复、提交推送、补丁发行与 m5 更新已完成。累计修复提交为 `7a255ed`，发行提交为 `9be436e`，注释标签 `v1.2.7` 精确指向同一发行提交；远端 Tag 对象和目标已核对。m5 已切换到正式 1.2.7，最后回写部署文档不改变发行代码。全程保持 main，未创建分支/工作树，未升级固定工具链或锁文件。
 
 入口按真实 socket GID 与启动组列表建立服务用户成员关系，支持较大 Linux GID，避免 BusyBox 数值建组上限；可选 Docker 组准备失败时告警并继续站点启动，基础 conf/data 初始化仍失败即退出。Docker 列表、缓存刷新、资源、日志及鉴权错误采用局部紧凑提示，默认折叠详情，长诊断限高换行，手机操作与 portal 主题回退完整；权限、缓存、数据结构和接口语义不变。
 
@@ -20,11 +20,15 @@
 
 ## 当前发行与生产部署
 
-源码版本为 1.2.7 候选，最近已发布标签 `v1.2.6` 指向 `eb51f9c`；[正式 Release](https://github.com/vivalucas/zpanel/releases/tag/v1.2.6) 的三项 Linux amd64 资产和双架构 GHCR/Docker Hub 镜像已发布。首页紧凑布局 `70f8725` 已推送 main，本次将随 1.2.7 首次发行：桌面身份/时钟与搜索横排，窄屏自然堆叠，同配置首图标约上移 148px；布局、壁纸和既有配置语义保留。
+源码及生产版本为 1.2.7，标签 `v1.2.7`、发行提交 `9be436e`。[发行提交 CI](https://github.com/vivalucas/zpanel/actions/runs/40198490045) 的 Frontend/Backend 全通过，包含 Ubuntu 上的 138 项浏览器、36 项前端单元、16 项入口回归、Go 测试与构建。[正式 Release](https://github.com/vivalucas/zpanel/releases/tag/v1.2.7) 已发布，三项部署资产非空，两份归档的实际 SHA256 均与公开 SHA256SUMS 和资产摘要一致。[Release 流水线](https://github.com/vivalucas/zpanel/actions/runs/40199080540)及[容器流水线](https://github.com/vivalucas/zpanel/actions/runs/40199080568)均成功；Docker Hub/GHCR 的 1.2.7/latest 索引摘要一致，包含 linux/amd64、linux/arm64。
 
-m5 当前运行正式 Docker Hub 1.2.6，Compose 固定 `vivalucas/zpanel:1.2.6@sha256:0c7f3da10e50b9ae999f9239dfd190b18f446c19c7cb2a223403587b2f8c571b`，实际镜像 ID `sha256:7b970cb083b200a7de86f2d95466fc4793876e39b08c4ac2d445769575ed53e7`。Docker socket 与 GID 984 已配置，旧修正脚本只读覆盖 `/app/docker-entrypoint.sh`，服务 UID 1000，容器 healthy、重启次数 0。升级到内置修复的镜像时必须移除此覆盖，保留 conf/data/socket、权限组和其他 Compose 配置，只重建 ZPanel。
+m5 使用固定镜像 `vivalucas/zpanel:1.2.7@sha256:5a577524b27e37dcf955215d15f3cd135d9032a4ec64eb509d2e34cf60a6b4de`，实际 amd64 镜像 ID `sha256:291e8f54a58b5b6119115950463705b4c9da51992254f6d8315c0cc11c2e2d92`，与官方 manifest 的 config 摘要相符。只重建了 ZPanel，conf/data/socket、GID 984、端口和其他 Compose 参数保留；旧的入口脚本覆盖已移除，实际内置脚本 SHA256 与发行提交一致。服务 UID 1000、Groups 包含 984，容器 healthy、重启次数 0。
 
-部署目录保留两份重要备份（目录时间为 UTC）：`backups/upgrade-1.2.6-20261024-095641` 含升级前停机归档及前后指纹，回退镜像 `zpanel:before-1.2.6` 对应原 `zpanel:1.2.5-local-54724d1`；`backups/docker-management-20261025-121417` 含在线一致 SQLite 副本、Docker 配置切换前停机 conf/data/Compose/环境归档及校验。目录 0700、数据文件 0600，归档校验通过。此前重建前后 11 张表结构和内容、配置、上传文件一致，integrity_check 为 ok；sun-panel/frpc 的 ID、启动时间、镜像、状态和重启次数未变。Docker 管理读取及独立无网络、无挂载临时容器的全部支持动作已验，测试容器已删除；已用 Chrome 既有会话查看线上首页、设置、关于与恢复后的 Docker 表，未将生产容器用于启停测试。
+升级先用在线 SQLite backup API 获取一致副本，在无网络、无发布端口的独立容器预检新镜像的健康、前后端 1.2.7、内置入口与 Docker 读取，11 张表、配置及上传文件指纹一致。正式切换前只停 ZPanel，备份 conf/data、Compose、环境文件与旧入口脚本；备份位于部署目录 `backups/upgrade-1.2.7-20261025-133854`（目录名时间为 UTC），目录 0700、数据文件与归档 0600。归档 gzip 和 SHA256 校验通过，保留在线数据库、前后指纹、预检/部署结果及脚本。回退镜像 `zpanel:before-1.2.7-20261025-133854` 对应升级前 1.2.6；回退时须配套恢复原 Compose、环境及可执行旧入口脚本，不只改镜像标签。
+
+切换后 11 张表结构与内容、配置、上传文件与停机快照一致，SQLite integrity_check 为 ok；健康、版本及首页引用的 6 项静态资源通过，启动日志无 panic、权限或数据库故障指征。sun-panel/frpc 的容器 ID、启动时间、状态、镜像和重启次数与切换前一致。实际服务身份的 Docker version/列表/资源/日志读取通过；独立无网络、无挂载临时容器的 start/pause/unpause/restart/logs/stop 均通过，测试容器已删除。用 Chrome 既有会话刷新后实际查看关于页（前后端均 1.2.7）、Docker 列表与 CPU/内存/网络数据、真实日志及新版首页/既有壁纸导航；未保存站点配置，也未用其他生产容器做启停测试。预检容器及本轮数据副本已清理，正式备份和回退镜像保留。
+
+首页紧凑布局 `70f8725` 随 1.2.7 首次正式发行部署：桌面身份/时钟与搜索横排，窄屏自然堆叠，同配置首图标约上移 148px，保留壁纸、透明分组、70px 图标和配置语义。此前 `upgrade-1.2.6-20261024-095641` 与 `docker-management-20261025-121417` 备份仍保留，具体旧验证/镜像资料可从 Git 追溯；切换成功不等于完整恢复演练通过。
 
 ## 实现与追溯入口
 

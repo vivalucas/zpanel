@@ -1396,6 +1396,11 @@ a {
 		transition-duration: 0s !important;
 		scroll-behavior: auto !important;
 	}
+	.ant-btn-loading-icon {
+		/* Preserve the icon's transition-end cleanup without animating popup coordinates. */
+		transition-property: width, opacity, margin !important;
+		transition-duration: 0.01ms !important;
+	}
 }
 @media (hover: none) {
 	.group-actions {

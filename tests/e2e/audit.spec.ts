@@ -60,38 +60,65 @@ test('HTTP LAN without randomUUID opens login and refreshes captcha after failed
 	await expect(page.getByRole('button', { name: 'Login', exact: true })).toBeVisible()
 	expect(errors).toEqual([])
 })
-test('failed appearance saves preserve drafts, block navigation, and successful retry locks inputs', async ({
-	page,
-}) => {
-	await enter(page, '/settings/appearance')
-	await page.getByLabel('面板名称').fill('Retained draft')
-	await page.route('**/api/panel/userConfig/set', (route) =>
-		route.fulfill({ json: { code: 1200, msg: 'Database failed' } }),
-	)
-	await page.getByRole('button', { name: '保存', exact: true }).click()
-	await expect(page.getByLabel('面板名称')).toHaveValue('Retained draft')
-	await page.getByRole('menuitem', { name: '导航分组', exact: true }).click()
-	const dialog = page.getByRole('dialog')
-	await expect(dialog).toContainText('放弃未保存')
-	await dialog.getByRole('button', { name: /取.*消/ }).click()
-	await expect(page.getByLabel('面板名称')).toHaveValue('Retained draft')
-	await page.unroute('**/api/panel/userConfig/set')
-	let release!: () => void
-	const pending = new Promise<void>((resolve) => {
-		release = resolve
+for (const reducedMotion of ['reduce', 'no-preference'] as const) {
+	test(`failed appearance saves preserve drafts and restore save controls in ${reducedMotion}`, async ({
+		page,
+	}, info) => {
+		await page.emulateMedia({ reducedMotion })
+		await enter(page, '/settings/appearance')
+		expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
+			reducedMotion === 'reduce',
+		)
+		const draftName = `Retained draft ${reducedMotion} ${info.repeatEachIndex}`
+		const title = page.getByLabel('面板名称')
+		const save = page.locator('.save-bar').getByRole('button', { name: /保存/ })
+		await title.fill(draftName)
+		let failedWrites = 0
+		await page.route('**/api/panel/userConfig/set', (route) => {
+			failedWrites++
+			return route.fulfill({ json: { code: 1200, msg: 'Database failed' } })
+		})
+		await expect(save).toHaveAccessibleName('保存')
+		await save.click()
+		await expect.poll(() => failedWrites).toBe(1)
+		await expect(title).toHaveValue(draftName)
+		await expect(save).not.toHaveClass(/ant-btn-loading/)
+		await expect(save).toHaveAccessibleName('保存')
+		await expect(save.locator('.anticon-loading')).toHaveCount(0)
+		await page.getByRole('menuitem', { name: '导航分组', exact: true }).click()
+		const dialog = page.getByRole('dialog')
+		await expect(dialog).toContainText('放弃未保存')
+		await dialog.getByRole('button', { name: /取.*消/ }).click()
+		await expect(dialog).toHaveCount(0)
+		await expect(title).toHaveValue(draftName)
+		await expect(save).toHaveAccessibleName('保存')
+		await page.unroute('**/api/panel/userConfig/set')
+		let release!: () => void
+		const pending = new Promise<void>((resolve) => {
+			release = resolve
+		})
+		let successfulWrites = 0
+		await page.route('**/api/panel/userConfig/set', async (route) => {
+			successfulWrites++
+			await pending
+			await route.continue()
+		})
+		await save.click()
+		try {
+			await expect.poll(() => successfulWrites).toBe(1)
+			await expect(title).toBeDisabled()
+			await expect(save).toHaveClass(/ant-btn-loading/)
+		} finally {
+			release()
+		}
+		await expect(title).toBeEnabled()
+		await expect(title).toHaveValue(draftName)
+		await expect(save).toHaveAccessibleName('保存')
+		await expect(save.locator('.anticon-loading')).toHaveCount(0)
+		await page.getByRole('menuitem', { name: '导航分组', exact: true }).click()
+		await expect(page).toHaveURL(/settings\/groups/)
 	})
-	await page.route('**/api/panel/userConfig/set', async (route) => {
-		await pending
-		await route.continue()
-	})
-	await page.getByRole('button', { name: '保存', exact: true }).click()
-	await expect(page.getByLabel('面板名称')).toBeDisabled()
-	release()
-	await expect(page.getByLabel('面板名称')).toBeEnabled()
-	await expect(page.getByLabel('面板名称')).toHaveValue('Retained draft')
-	await page.getByRole('menuitem', { name: '导航分组', exact: true }).click()
-	await expect(page).toHaveURL(/settings\/groups/)
-})
+}
 test('removing an earlier search engine preserves the selected default and reloads it', async ({
 	page,
 	request,

@@ -17,6 +17,7 @@ All notable changes to ZPanel will be documented in this file.
 
 - Preserved address-specific opening, clipboard fallback, native link behavior, keyboard menus, permissions, upload draft protection and unsaved-change confirmation.
 - Fixed offscreen dropdowns under reduced-motion preferences by making CSS transitions immediate, preserving synchronous popup measurements and automatic viewport placement.
+- Kept reduced-motion button loading cleanup finite so failed saves restore their labels and remain retryable.
 - Added browser regressions for compact menus, application-name tooltips and responsive application editing; synchronized the duplicate-search-engine test with dropdown and save completion.
 - Pure-touch iOS Safari still lacks an application-menu entry after removal of the overlay button; its native long press does not emit the required contextmenu event. A compatible touch entry remains pending. Real mobile devices, Safari/Firefox and assistive technologies are outside this release's verified scope.
 

@@ -2,38 +2,54 @@
 
 ## 当前工作（2026-10-26）
 
-1.2.9 候选已完成累计改动复核与完整隔离验证，按用户授权推进 GitHub 发布和 M5 升级。全程 main，不创建分支/工作树，不升级固定工具链或锁文件；正式标签与生产切换等待对应检查通过。
+1.2.9 图标优化、完整复核、正式发行与 M5 升级已完成。发行代码 `95f66b5ebd0c86d5613ca90ffb62ffd459a9d1eb` 已推送 main；状态回写随本次收尾同步，不改变发行代码。全程 main，未创建分支/工作树，未升级固定工具链或锁文件。
 
-应用图片取消统一 75% 缩放，完整方图贴合底座，横竖图保持比例；底座圆角与阴影收轻，新建图标默认空背景使用磨砂，历史显式底色和原图留白保留。编辑器共用图标组件实时预览，清空背景可恢复磨砂，失败图片换源可恢复。修复纵图被 grid 隐式轨道撑高后裁切，以及生产 CSS 丢失图标标准磨砂属性的问题。无持久化字段或存量数据迁移。
+应用图片取消统一 75% 缩放，完整方图贴合底座，横竖图保持比例；底座圆角与阴影收轻，新建图标默认空背景使用磨砂，历史显式底色和原图留白保留。编辑器共用组件实时预览，清空背景可恢复磨砂，失败图片换源可恢复。修复纵图被 grid 隐式轨道撑高后裁切，以及生产 CSS 丢失图标标准磨砂属性的问题。无持久化字段或存量业务数据迁移。
 
 ## 1.2.9 验证
 
-固定 Node.js 24.15.0/pnpm 11.1.3/Go 1.26.3：普通/PWA 构建、类型检查、零警告 ESLint、36 项 Vitest、test:review/语言键、Go 全部测试与发行构建、16 项 Docker 入口回归通过。完整 163 项 Chromium 全通过（6.0 分钟，0 跳过/失败/重试），包括新增 6 项图标回归及原有账号/会话、上传、菜单、表单、设置和首页关联功能。普通/PWA 图标标准磨砂声明均核对；PWA 产物独立保存。
+固定 Node.js 24.15.0/pnpm 11.1.3/Go 1.26.3：普通/PWA 构建、类型检查、零警告 ESLint、36 项 Vitest、test:review/语言键、Go 全部测试与发行构建、16 项 Docker 入口回归通过。完整本地 163 项 Chromium 全通过（6.0 分钟，0 跳过/失败/重试）；发行提交的 [Ubuntu CI](https://github.com/vivalucas/zpanel/actions/runs/40273606845) 也全部通过，163 项浏览器用例耗时 6.5 分钟。
 
-完整 QA：`/tmp/zpanel-1.2.9-full-qa-20261026-s8wki28f`。隔离快照的 350 个文件在测试前后及与发布工作区的内容/模式比对一致；发布清单为 QA 中 `publish-source-files.sha256`。运行副本已清理，临时 SQLite/不可用 Docker socket 和所有测试服务均已退出；不访问开发或生产数据。
+新增 6 项图标回归覆盖满版方图、横竖图实际像素、旧色保存/清空、换源恢复、中英文实时预览及浅深/壁纸/320px/详情样式；既有账号/会话、上传、菜单、表单和设置回归继续通过。普通/PWA 图标标准磨砂声明均核对，PWA 产物独立保存。
 
-已实际查看浅深、壁纸、详情样式、320px 首页及中英文编辑预览。累计代码与关联路径交叉复核未确认新增 bug 或发布阻塞项。主线程实施/视觉查看、协作代理测试和静态交叉核对均属于同轮自查，不称独立验收。预览跟随弹窗主题，不代表首页壁纸下的最终材质。
+完整 QA：`/tmp/zpanel-1.2.9-full-qa-20261026-s8wki28f`。隔离快照 350 个文件在测试前后不变；发布提交的业务源码、测试、清单、版本及锁文件与验证清单一致。临时 SQLite、不可用 Docker socket 和执行副本均隔离，测试服务及副本已清理。正式发布包的整个 web 目录与本地已验证 normal-dist 逐文件相同。
 
-## 当前发行与生产部署
+已实际查看浅深、壁纸、详情样式、320px 首页及中英文编辑预览；累计代码和关联路径交叉复核未确认新增 bug 或发布阻塞项。主线程实施/视觉查看、协作代理测试与交叉核对均为同轮自查，不称独立验收。
 
-发行代码 `070cd20`，注释标签 `v1.2.8` 的远端对象和目标：Tag 对象 `b81ac0f8cd1958ebe28fff42375fcbac27ae94bf` 已核对，剥离后的目标精确为 `070cd2056851f5afa97054b876cf139c5704a37f`。最终 157 项 CI 结果见上节。[正式 Release](https://github.com/vivalucas/zpanel/releases/tag/v1.2.8)：正式稳定发行已发布；[Release 流水线](https://github.com/vivalucas/zpanel/actions/runs/40260114877)、[容器流水线](https://github.com/vivalucas/zpanel/actions/runs/40260114838)：均成功。三项部署资产非空、两份归档的实际 SHA256 与公开 SHA256SUMS/资产摘要核对结果：通过，gzip/tar/zip 结构也有效；公开 [SHA256SUMS](https://github.com/vivalucas/zpanel/releases/download/v1.2.8/SHA256SUMS) 可用于复核。
+## 当前发行
 
-Docker Hub/GHCR 的 `1.2.8` 与 `latest` 索引摘要核对：四个标签与两仓库摘要一致；共同索引摘要为 `sha256:385d62d0da42929bb784d1440574bddf7714c7b73195d364b57d8eddb5ffa5c9`，包含 linux/amd64、linux/arm64。m5 的固定镜像为 `ghcr.io/vivalucas/zpanel:1.2.8@sha256:385d62d0da42929bb784d1440574bddf7714c7b73195d364b57d8eddb5ffa5c9`，实际 amd64 镜像 ID 为 `sha256:9200d46c5280d58f27040813ec8ed362ace3367c26997496809dafcfa7733376`，与 manifest 的 config 摘要核对：一致。
+注释标签 `v1.2.9`：远端 Tag 对象 `b59d225f8538ea6e66e9195f9d49a8621154a50a`，剥离目标精确为 `95f66b5ebd0c86d5613ca90ffb62ffd459a9d1eb`。[正式 Release](https://github.com/vivalucas/zpanel/releases/tag/v1.2.9)、[Release 流水线](https://github.com/vivalucas/zpanel/actions/runs/40275305081)、[容器流水线](https://github.com/vivalucas/zpanel/actions/runs/40275305027)：均成功。
 
-m5 升级结果：正式 1.2.8 已上线，仅重建 ZPanel，原挂载、端口、GID 与其他 Compose 参数保留。一致副本的无网络、无发布端口预检结果：通过，前后端 1.2.8、11 张表结构与内容、配置和上传文件一致，并以实际服务身份完成 Docker 只读检查。正式切换前只停 ZPanel，完整备份 conf/data、Compose 和环境文件；备份位于 `/opt/zpanel/backups/upgrade-1.2.8-20261026-023740`（目录名时间为 UTC），目录 0700、数据与归档 0600。归档 gzip/tar/SHA256 校验：全部通过，归档摘要 `3f8c88975c35f67ebbafd4d647a6a2e701cf61ce4fa585d7d3463a619afdebdb`；回退镜像 `zpanel:before-1.2.8-20261026-023740` 对应升级前 1.2.7，须配套恢复该次完整备份和原部署配置，不能只改镜像标签。
+三项公开资产非空，真实 SHA256、GitHub asset digest 和公开 SHA256SUMS 核对通过；gzip/tar/zip 完整，两包 88 个文件逐字节相同，配置/部署/文档齐全。前端 About chunk 与 Linux amd64 ELF 内嵌版本均为 1.2.9，Go 1.26.3 发行标志正确。二进制未嵌入 vcs.revision，提交对应通过标签与成功流水线核对，不混称为二进制自报 revision。
 
-切换后的前后端均为 1.2.8，容器 healthy、重启次数 0；服务 UID 1000、Groups 含 984。正式切换后，11 张表结构与内容、配置及上传文件与停机快照一致，SQLite integrity_check 为 ok。实际 UI 检查后再次核对，仅会话记录的 `last_seen_at`、`updated_at` 按认证中间件的五分钟活跃触达更新；会话其他列、业务表、配置和上传文件保持一致。
+- tar.gz：`0618fd91e78bcce9d5b8b8dfdbb4f0f0218618ea7393389bcb707e1d1d8a1ee6`
+- zip：`12ceee8d657c54fb367fd18c61b0038370c2e8a518fcc14529ae029d5876118b`
+- SHA256SUMS：`04320c5069551dc414bb28353c5e2ee4a48374ef1dd3441e96b7719605b6516f`
 
-首页实际引用的 6 项静态文件 HTTP 内容与容器文件 SHA256 全部匹配。内置入口脚本 SHA256 为 `45cd7a3a16a44d4f9bf17185eb3b4b1beaed384d4377e451181f26d2d1cfd8a3`，与发行源码一致；实际服务身份的 Docker version、列表、资源和日志读取通过。sun-panel/frpc 的容器 ID、启动时间、镜像、状态与重启次数均与切换前一致。
+资产证据：`/tmp/zpanel-1.2.9-release-asset-qa-20261026-51w4_pvt/verification.json`。
 
-生产实际 UI 检查：Chrome 既有会话刷新后，首页无图标覆盖菜单或网址提示，YouTube 紧凑右键菜单正常；820px 图片编辑表单一屏完整，下拉定位正确，关闭编辑后回焦原应用链接；关于页前后端均为 1.2.8，Docker 三个容器的 CPU/内存/网络数据显示正常，并已返回首页。启动日志检查：已实际查看 ZPanel 真实启动日志，未见启动故障指征。本轮预检容器、数据副本清理与正式备份/回退镜像保留结果：预检容器与数据副本、远端官方镜像传输副本已清理；正式备份、回退镜像及会话 QA 结果保留。生产检查未保存站点配置，未把其他业务容器作为启停测试对象。
+Docker Hub/GHCR 的 `1.2.9` 与 `latest` 四个标签索引相同，含 linux/amd64、linux/arm64；共同索引摘要 `sha256:9abe44343b069bb0538add57a4d2e55cc68e46e61eb337ffc44040b4d485c856`。amd64 config/image ID 为 `sha256:18d2d0da06ea6b7dcf81eb4b98d3c53c47f9c2b6f13ef2fcdd95f013467d3b82`，与 M5 实际镜像核对一致。
 
-历史备份 `backups/upgrade-1.2.7-20261025-133854` 及回退镜像 `zpanel:before-1.2.7-20261025-133854` 仍保留；该回退镜像对应 1.2.6，须配套恢复当时 Compose、环境与可执行旧入口脚本。更早的 `upgrade-1.2.6-20261024-095641`、`docker-management-20261025-121417` 备份仍保留。旧发行和验证明细由 Git 追溯；切换成功不等于完整恢复演练通过。
+## M5 部署与回退
+
+M5 固定镜像为 `ghcr.io/vivalucas/zpanel:1.2.9@sha256:9abe44343b069bb0538add57a4d2e55cc68e46e61eb337ffc44040b4d485c856`。直接拉取超时后，从官方仓库下载 amd64 的 6 个层，逐项核对压缩 digest 和解压 diffID，经传输归档 SHA256 校验导入，再按官方索引摘要完成本地 RepoDigest 关联；未重启 Docker 或改其全局配置。
+
+一致数据副本在无网络、无发布端口的临时容器中预检通过：1.2.9 启动、11 表逻辑内容与 schema、配置/上传、UID 1000 和组 984、实际服务身份 Docker 读取均正常。严格校验曾发现 sqlite_sequence 的隐含 rowid 重排；1.2.8 在同条件副本中精确复现，name/seq 和全部业务行未变。校验 v2 只排除该内部表的无业务语义 rowid，仍严格核对 name/seq、所有业务表及其 rowid；18 项合成自验证通过，重新生成清单后预检通过。
+
+正式切换前仅停 ZPanel，完整备份 conf/data、Compose 和环境文件。备份：`/opt/zpanel/backups/upgrade-1.2.9-20261026-142141`（Asia/Shanghai），目录 0700、归档及审计文件 0600；gzip/tar/SHA256 校验通过。归档 SHA256：`5d56cab08b0ad9bef6a0d2bac8a1c8b1cbf28fbd22ec8fa1adc34986569bb6b0`。回退镜像 `zpanel:before-1.2.9-20261026-142141` 对应升级前 1.2.8；完整回退须配套恢复该次备份和原部署配置，不能只改镜像标签。
+
+正式升级只重建 ZPanel，保留原端口、挂载、GID、环境与其他 Compose 参数。容器 healthy、重启次数 0，服务 UID 1000、组含 984；SQLite integrity_check 为 ok，11 表逻辑内容/schema、配置和上传文件及其权限与停机快照一致。实际 UI 查看后，仅 session 的 last_seen_at、updated_at 正常更新，其余列和全部业务数据不变。首页 HTML 与引用的 6 项静态资源 HTTP/容器 SHA256 共 7 项一致；入口脚本 SHA256 为 `45cd7a3a16a44d4f9bf17185eb3b4b1beaed384d4377e451181f26d2d1cfd8a3`，与发行源码一致。
+
+生产实际 UI 已查看：首页图片更贴合，右键菜单与取消编辑回焦正常，实时预览可见；关于页前后端均 1.2.9，Docker 三个容器 CPU/内存/网络数据正常，已返回首页。启动日志已实际查看，未见启动故障指征。sun-panel/frpc 的 ID、启动时间、镜像、状态与重启次数均与切换前一致，未保存生产站点或项目配置。
+
+本轮预检/旧版对照容器、数据副本、远端临时工具目录及本地/远端镜像传输副本已清理；正式 QA、备份及回退镜像保留。审计结果/清单/脚本位于上述备份的 audit 目录。升级成功与回退脚本自查不代表完整恢复演练通过。
+
+历史备份与回退镜像继续保留：`upgrade-1.2.8-20261026-023740` / `zpanel:before-1.2.8-20261026-023740` 对应旧版 1.2.7（目录时间 UTC）；`upgrade-1.2.7-20261025-133854` / `zpanel:before-1.2.7-20261025-133854` 对应旧版 1.2.6，须恢复当时 Compose、环境与可执行旧入口脚本。更早的 `upgrade-1.2.6-20261024-095641`、`docker-management-20261025-121417` 仍保留，均位于 `/opt/zpanel/backups`。
 
 ## 已知限制与交接
 
-iOS Safari 纯触屏仍缺应用菜单入口：当前依赖浏览器 contextmenu，没有触屏长按识别器，不能声称已支持 iPhone/iPad 长按。应用图片不自动裁去素材白边或透明留白；旧项目保存的白色底座保留，可在编辑器清空背景色恢复磨砂。
+iOS Safari 纯触屏仍缺应用菜单入口，当前依赖 contextmenu，不能声称已支持 iPhone/iPad 长按。图片不自动裁去素材白边或透明留白；旧显式白底保留，可在编辑器清空背景色恢复磨砂。编辑预览随弹窗主题，不代表首页壁纸下的最终材质。其他既有玻璃规则的前缀/标准属性顺序未在图标范围内统一调整。
 
-真实手机/软键盘/辅助技术、Safari/Firefox、Windows/Ubuntu 桌面、MySQL/Redis/NAS、完整恢复和 PWA 安装升级仍未验证。配置导出只迁移导航与外观，不含上传文件、账号或模块配置，不能作为整站备份。本轮图标优化待用户指令提交/推送及后续发行部署，生产仍为上述 1.2.8；已知限制继续保留。
+真实手机/软键盘/辅助技术、Safari/Firefox、Windows/Ubuntu 桌面实机、MySQL/Redis/NAS、完整恢复和 PWA 安装升级未验证。配置导出只迁移导航与外观，不含上传文件、账号或模块配置，不能作为整站备份。无本轮待实现或待部署事项，已知限制继续保留。
 
-工程、视觉与验收入口分别为 [React 开发](../docs/frontend.zh-CN.md)、[视觉设计](../docs/ui-design.zh-CN.md)、[前端验收](../docs/frontend-audit.zh-CN.md)。计划见 [09](09-current-plan.md)，长期边界见 [11](11-decisions.md)，部署与恢复见 [08](08-deployment.md)。[15](15-project-review.md)、[16](16-frontend-event-review.md) 保留专题证据，后者的原任务独立验收不代表本轮。数据演进 [14](14-data-evolution.md) 仍为提案。
+工程、视觉和验收入口：[React 开发](../docs/frontend.zh-CN.md)、[视觉设计](../docs/ui-design.zh-CN.md)、[前端验收](../docs/frontend-audit.zh-CN.md)。计划见 [09](09-current-plan.md)，长期边界见 [11](11-decisions.md)，部署/恢复见 [08](08-deployment.md)。[15](15-project-review.md)、[16](16-frontend-event-review.md) 保留历史专题证据，原任务独立验收不代表本轮；[14](14-data-evolution.md) 仍为提案。

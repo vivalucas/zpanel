@@ -1,8 +1,8 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Alert, Button, Empty, Input, Modal, Select, Space, Tooltip, theme } from 'antd'
+import { Alert, Button, Empty, Input, Modal, Select, Space, Tooltip } from 'antd'
 import {
 	AppstoreOutlined,
 	GlobalOutlined,
@@ -12,7 +12,6 @@ import {
 	SettingOutlined,
 	SwapOutlined,
 } from '@ant-design/icons'
-import { Icon } from '@iconify/react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import type { AuthInfo, Engine, Group } from '@/lib/api'
@@ -23,11 +22,11 @@ import { SafeHtml } from '@/components/SafeHtml'
 import { SortableGrid } from '@/components/Sortable'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 import ItemEditor from './ItemEditor'
+import ItemIcon from './ItemIcon'
 import ItemTitle from './ItemTitle'
 import ItemActionMenu from './ItemActionMenu'
 import type { ItemMenuTarget } from './ItemActionMenu'
 import { useWallpaperAppearance } from './useWallpaperAppearance'
-import { iconForeground } from '@/lib/iconColor'
 import { findSearchEngineIndex } from '@/lib/searchEngine'
 import { isAccessError } from '@/lib/queryState'
 const MonitorCards = lazy(() => import('./MonitorCards'))
@@ -50,27 +49,6 @@ function Clock({ seconds, color }: { seconds?: boolean; color?: string }) {
 			</time>
 			<span>{now.toLocaleDateString(language, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
 		</div>
-	)
-}
-export function ItemIcon({ item, tone }: { item: Panel.ItemInfo; tone?: 'light' | 'dark' }) {
-	const icon = item.icon
-	const [failed, setFailed] = useState(false)
-	const { token } = theme.useToken()
-	const backdrop = tone ? (tone === 'light' ? '#fafbfd' : '#0a0f17') : token.colorBgLayout
-	const foreground = useMemo(
-		() => iconForeground(icon?.backgroundColor, backdrop),
-		[icon?.backgroundColor, backdrop],
-	)
-	return (
-		<span className="item-icon" style={{ background: icon?.backgroundColor || undefined, color: foreground }}>
-			{icon?.itemType === 2 && icon.src && !failed ? (
-				<img src={icon.src} alt="" loading="lazy" onError={() => setFailed(true)} />
-			) : icon?.itemType === 3 && icon.text ? (
-				<Icon icon={icon.text} width={35} />
-			) : (
-				<span>{(icon?.itemType === 1 && icon.text) || item.title.slice(0, 2).toUpperCase()}</span>
-			)}
-		</span>
 	)
 }
 export default function Home({ auth }: { auth: AuthInfo }) {

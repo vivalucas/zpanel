@@ -297,10 +297,10 @@ sudo docker compose up -d
 重要环境建议固定版本：
 
 ```yaml
-image: vivalucas/zpanel:1.2.8
+image: vivalucas/zpanel:1.2.9
 ```
 
-`latest` 跟随最近一次成功发布的镜像；推送 GitHub `main` 不会自动更新镜像。发布是否完成请查看 [Releases](https://github.com/vivalucas/zpanel/releases) 和 [容器发布任务](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml)。GHCR 可作为另一个官方拉取渠道：`ghcr.io/vivalucas/zpanel:1.2.8`。
+`latest` 跟随最近一次成功发布的镜像；推送 GitHub `main` 不会自动更新镜像。发布是否完成请查看 [Releases](https://github.com/vivalucas/zpanel/releases) 和 [容器发布任务](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml)。GHCR 可作为另一个官方拉取渠道：`ghcr.io/vivalucas/zpanel:1.2.9`。
 
 升级按以下顺序操作：
 

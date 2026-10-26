@@ -420,6 +420,7 @@
     "textIcon": "Text icon",
     "imageIcon": "Image icon",
     "iconBackground": "Icon background",
+    "iconBackgroundAuto": "Blank for glass",
     "unavailable": "Unavailable",
     "groups": "Groups",
     "widgets": "Search & monitoring",

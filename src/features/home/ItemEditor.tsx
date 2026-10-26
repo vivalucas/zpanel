@@ -7,6 +7,7 @@ import type { Group } from '@/lib/api'
 import { ImageUpload } from '@/components/ImageUpload'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 import { useUnsavedChanges } from '@/lib/unsaved'
+import ItemIcon from './ItemIcon'
 
 export default function ItemEditor({
 	item,
@@ -30,6 +31,7 @@ export default function ItemEditor({
 	const { t, error, message, modal } = useFeedback()
 	const client = useQueryClient()
 	const type = Form.useWatch(['icon', 'itemType'], form)
+	const draft = Form.useWatch([], form)
 	useUnsavedChanges(dirty || uploading || faviconBusy)
 	const requestClose = () => {
 		if (busy || discardOpenRef.current) return
@@ -87,7 +89,7 @@ export default function ItemEditor({
 							description: '',
 							openMethod: 2,
 							itemIconGroupId: groupId || groups[0]?.id,
-							icon: { itemType: 1, text: '', backgroundColor: '#eef0ff' },
+							icon: { itemType: 1, text: '', backgroundColor: '' },
 						}
 					}
 					layout="vertical"
@@ -236,13 +238,14 @@ export default function ItemEditor({
 								<Input placeholder={type === 3 ? 'mdi:server' : 'Z'} maxLength={type === 3 ? 100 : 4} />
 							</Form.Item>
 						)}
-						<Form.Item
-							className="item-editor-icon-background"
-							name={['icon', 'backgroundColor']}
-							label={t('ui.iconBackground')}
-						>
-							<Input placeholder="#eef0ff" />
-						</Form.Item>
+						<div className="item-editor-icon-background">
+							<Form.Item name={['icon', 'backgroundColor']} label={t('ui.iconBackground')}>
+								<Input allowClear placeholder={t('ui.iconBackgroundAuto')} />
+							</Form.Item>
+							<span className="item-editor-icon-preview" aria-hidden="true">
+								<ItemIcon item={{ title: draft?.title || 'Z', icon: draft?.icon || item?.icon || null }} />
+							</span>
+						</div>
 					</div>
 				</Form>
 			</ConfigProvider>

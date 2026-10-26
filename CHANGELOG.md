@@ -4,6 +4,20 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.9 - 2026-10-26
+
+### Application Icons
+
+- Let square images fill their rounded icon tiles while keeping wide and tall marks in proportion and fully visible. Refined corner radii and shadows without changing tile sizes or hover positions.
+- Use a light frosted background for new applications by default. Preserve saved background colors and the original image contents; clearing an application's background restores the automatic glass surface.
+- Added live icon previews to the application editor, including background changes and recovery after replacing a failed image URL.
+- Fixed icon and preview blur declarations being lost from production CSS by keeping the standard backdrop-filter after its compatibility declaration.
+
+### Verification
+
+- Added browser regressions for filled tiles, uncropped horizontal/vertical marks, saved colors, empty backgrounds, failed-image recovery and responsive previews. The complete local suite passed 163 Chromium checks, 36 frontend unit tests, 16 Docker entrypoint checks, the Go suite and standard/PWA builds.
+- Real mobile devices, Safari/Firefox, assistive technologies and PWA installation/upgrades remain outside the verified scope. Existing pure-touch iOS application-menu limitations remain unchanged.
+
 ## 1.2.8 - 2026-10-26
 
 ### Appearance and Navigation

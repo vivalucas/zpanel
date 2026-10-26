@@ -51,12 +51,10 @@ export default function ItemEditor({
 				? Promise.resolve()
 				: Promise.reject(new Error(t('review.invalidUrl'))),
 	}
-	// Keep modal geometry stable before scrolled fields open their Select popups.
 	return (
 		<Modal
 			open
 			width={820}
-			transitionName=""
 			className="item-editor-modal"
 			classNames={{
 				container: 'item-editor-container',

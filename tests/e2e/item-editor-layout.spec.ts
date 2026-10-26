@@ -10,6 +10,7 @@ interface Scenario {
 	iconType: IconType
 	language: Language
 	theme: 'light' | 'dark'
+	groupCount?: number
 }
 
 const names = {
@@ -60,6 +61,7 @@ async function openEditor(page: Page, scenario: Scenario) {
 	const { mode, iconType, language, theme } = scenario
 	const labels = names[language]
 	let writes = 0
+	let lastWrite: Record<string, unknown> | undefined
 	await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: theme })
 	await page.addInitScript(() => {
 		// Every reload derives its preferences from that document, regardless of init-script order.
@@ -116,6 +118,11 @@ async function openEditor(page: Page, scenario: Scenario) {
 							},
 						],
 					},
+					...Array.from({ length: scenario.groupCount || 0 }, (_, index) => ({
+						id: 4200 + index,
+						title: `Additional group ${index + 1}`,
+						items: [],
+					})),
 				],
 			},
 		}),
@@ -125,6 +132,7 @@ async function openEditor(page: Page, scenario: Scenario) {
 	)
 	await page.route('**/api/panel/itemIcon/edit', (route) => {
 		writes++
+		lastWrite = route.request().postDataJSON()
 		return route.fulfill({ json: { code: 0, data: null } })
 	})
 	await page.route('**/editor-layout-icon.svg', (route) =>
@@ -169,7 +177,7 @@ async function openEditor(page: Page, scenario: Scenario) {
 	const header = dialog.locator('.item-editor-header')
 	const footer = dialog.locator('.item-editor-footer')
 	const save = footer.getByRole('button', { name: labels.confirm, exact: true })
-	return { dialog, body, header, footer, save, labels, writes: () => writes }
+	return { dialog, body, header, footer, save, labels, writes: () => writes, lastWrite: () => lastWrite }
 }
 
 async function expectNoHorizontalOverflow(page: Page, dialog: Locator, body: Locator) {
@@ -376,4 +384,56 @@ test('validation errors remain reachable by body scrolling while the save action
 	expect(editor.writes()).toBe(0)
 	await page.screenshot({ path: info.outputPath('editor-validation-320x480.png'), animations: 'disabled' })
 	await dismissEditor(editor, true)
+})
+
+test('scrolled selectors expose long group lists and opening methods without clipped options', async ({
+	page,
+}) => {
+	for (const viewport of [
+		{ width: 320, height: 360 },
+		{ width: 320, height: 480 },
+		{ width: 390, height: 640 },
+	]) {
+		await page.setViewportSize(viewport)
+		const editor = await openEditor(page, {
+			mode: 'add',
+			iconType: 1,
+			language: 'en-US',
+			theme: 'light',
+			groupCount: 50,
+		})
+		const group = editor.dialog.getByRole('combobox', { name: editor.labels.group, exact: true })
+		await group.click()
+		let popup = page.locator('.ant-select-dropdown:visible')
+		await expect(popup.getByText('Editor group', { exact: true })).toBeInViewport({ ratio: 1 })
+		await popup.locator('.ant-select-dropdown-list-holder').evaluate((element) => {
+			element.scrollTop = element.scrollHeight
+		})
+		const last = popup.getByText('Additional group 50', { exact: true })
+		await expect(last).toBeInViewport({ ratio: 1 })
+		await last.click()
+		await expect(page.locator('.ant-select-dropdown:visible')).toHaveCount(0)
+		await editor.dialog.getByRole('combobox', { name: editor.labels.method, exact: true }).click()
+		popup = page.locator('.ant-select-dropdown:visible')
+		const currentPage = popup.getByText('Open in current page', { exact: true })
+		await expect(currentPage).toBeInViewport({ ratio: 1 })
+		await currentPage.click()
+		await expect(page.locator('.ant-select-dropdown:visible')).toHaveCount(0)
+		await expect(editor.header).toBeInViewport({ ratio: 1 })
+		await expect(editor.footer).toBeInViewport({ ratio: 1 })
+		await editor.dialog
+			.getByRole('textbox', { name: editor.labels.title, exact: true })
+			.fill('New scrolled app')
+		await editor.dialog
+			.getByRole('textbox', { name: editor.labels.url, exact: true })
+			.fill('https://example.test/new')
+		await editor.save.click()
+		await expect(editor.dialog).toHaveCount(0)
+		expect(editor.writes()).toBe(1)
+		expect(editor.lastWrite()).toMatchObject({
+			itemIconGroupId: 4249,
+			openMethod: 1,
+			title: 'New scrolled app',
+		})
+	}
 })

@@ -1392,7 +1392,8 @@ a {
 	*::before,
 	*::after {
 		animation-duration: 0.01ms !important;
-		transition-duration: 0.01ms !important;
+		/* Popup measurements must observe temporary position changes immediately. */
+		transition-duration: 0s !important;
 		scroll-behavior: auto !important;
 	}
 }

@@ -1,8 +1,16 @@
 import { useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Menu, Tooltip, theme } from 'antd'
+import { ConfigProvider, Menu, Tooltip, theme } from 'antd'
 import type { MenuProps } from 'antd'
-import { CopyOutlined, DeleteOutlined, EditOutlined, ExportOutlined, BlockOutlined } from '@ant-design/icons'
+import {
+	ApartmentOutlined,
+	CopyOutlined,
+	DeleteOutlined,
+	EditOutlined,
+	ExportOutlined,
+	GlobalOutlined,
+	BlockOutlined,
+} from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 
@@ -38,21 +46,34 @@ export default function ItemActionMenu({
 	const actions = new Map<string, () => void>()
 	const items: NonNullable<MenuProps['items']> = []
 	for (const [key, address, url] of [
-		['address', t('iconItem.url'), item.url],
+		['address', t('ui.itemMenuPrimaryAddress'), item.url],
 		['lan', t('iconItem.lanUrl'), item.lanUrl],
 	] as const) {
-		if (!url?.trim()) continue
+		if (!url?.trim() || (key === 'lan' && url.trim() === item.url?.trim())) continue
 		const disabled = !isSafeNavigationUrl(url)
 		actions.set(`${key}-open`, () => onOpen(url))
 		const shortcuts = [
-			['tab', t('ui.itemMenuNewTab'), <ExportOutlined key="tab" aria-hidden="true" />, () => onOpen(url, 2)],
+			[
+				'tab',
+				t('ui.itemMenuNewTab'),
+				t('ui.itemMenuNewTabShort'),
+				<ExportOutlined key="tab" aria-hidden="true" />,
+				() => onOpen(url, 2),
+			],
 			[
 				'frame',
 				t('ui.itemMenuFrame'),
+				t('ui.itemMenuFrameShort'),
 				<BlockOutlined key="frame" aria-hidden="true" />,
 				() => onOpen(url, 3),
 			],
-			['copy', t('ui.itemMenuCopy'), <CopyOutlined key="copy" aria-hidden="true" />, () => onCopy(url)],
+			[
+				'copy',
+				t('ui.itemMenuCopy'),
+				t('ui.itemMenuCopyShort'),
+				<CopyOutlined key="copy" aria-hidden="true" />,
+				() => onCopy(url),
+			],
 		] as const
 		items.push({
 			type: 'group',
@@ -62,10 +83,17 @@ export default function ItemActionMenu({
 				{
 					key: `${key}-open`,
 					label: t('ui.itemMenuOpen', { address }),
+					icon:
+						key === 'address' ? (
+							<GlobalOutlined aria-hidden="true" />
+						) : (
+							<ApartmentOutlined aria-hidden="true" />
+						),
 					disabled,
-					className: 'item-action-open',
+					className: 'item-action-primary',
+					style: { paddingInline: 10 },
 				},
-				...shortcuts.map(([action, label, icon, run]) => {
+				...shortcuts.map(([action, label, shortLabel, icon, run]) => {
 					const name = `${address}：${label}`
 					actions.set(`${key}-${action}`, run)
 					return {
@@ -73,10 +101,10 @@ export default function ItemActionMenu({
 						disabled,
 						className: 'item-action-shortcut',
 						label: (
-							<Tooltip title={name}>
-								<span aria-label={name}>
+							<Tooltip title={name} mouseEnterDelay={0.6}>
+								<span className="item-action-shortcut-content" aria-label={name}>
 									{icon}
-									<span className="item-action-label">{name}</span>
+									<span className="item-action-label">{shortLabel}</span>
 								</span>
 							</Tooltip>
 						),
@@ -88,8 +116,19 @@ export default function ItemActionMenu({
 	if (editable) {
 		if (items.length) items.push({ type: 'divider' })
 		items.push(
-			{ key: 'edit', icon: <EditOutlined aria-hidden="true" />, label: t('common.edit') },
-			{ key: 'delete', icon: <DeleteOutlined aria-hidden="true" />, label: t('common.delete'), danger: true },
+			{
+				key: 'edit',
+				icon: <EditOutlined aria-hidden="true" />,
+				label: t('common.edit'),
+				className: 'item-action-manage',
+			},
+			{
+				key: 'delete',
+				icon: <DeleteOutlined aria-hidden="true" />,
+				label: t('common.delete'),
+				danger: true,
+				className: 'item-action-manage',
+			},
 		)
 		actions.set('edit', onEdit)
 		actions.set('delete', onDelete)
@@ -103,12 +142,7 @@ export default function ItemActionMenu({
 		const focusTarget = first || element.querySelector<HTMLElement>('[role="menu"]')
 		focusTarget?.focus({ preventScroll: true })
 		const outside = (event: Event) => {
-			const toggleTarget =
-				event.target instanceof Node &&
-				target.trigger.matches('.item-menu') &&
-				target.trigger.contains(event.target)
-			if (!(event.target instanceof Node) || (!element.contains(event.target) && !toggleTarget))
-				onClose(false)
+			if (!(event.target instanceof Node) || !element.contains(event.target)) onClose(false)
 		}
 		const dismiss = () => onClose(false)
 		document.addEventListener('pointerdown', outside, true)
@@ -137,7 +171,7 @@ export default function ItemActionMenu({
 				boxShadow: 'var(--glass-popup-shadow)',
 				backdropFilter: 'var(--glass-popup-blur)',
 				WebkitBackdropFilter: 'var(--glass-popup-blur)',
-				borderRadius: token.borderRadiusLG,
+				borderRadius: 14,
 				zIndex: token.zIndexPopupBase + 50,
 			}}
 			onKeyDownCapture={(event) => {
@@ -159,15 +193,38 @@ export default function ItemActionMenu({
 				}
 			}}
 		>
-			<Menu
-				aria-label={`${t('ui.more')} ${item.title}`}
-				selectable={false}
-				items={items}
-				onClick={({ key }) => {
-					onClose(true)
-					actions.get(key)?.()
+			<ConfigProvider
+				theme={{
+					components: {
+						Menu: {
+							fontSize: 13,
+							itemHeight: 'var(--item-action-row-height)',
+							itemMarginInline: 0,
+							itemMarginBlock: 0,
+							itemBorderRadius: 8,
+							itemPaddingInline: 10,
+							iconSize: 15,
+							iconMarginInlineEnd: 8,
+							itemColor: 'var(--glass-popup-text)',
+							itemHoverColor: 'var(--glass-popup-text)',
+							itemDisabledColor: 'color-mix(in srgb, var(--glass-popup-text) 34%, transparent)',
+							itemHoverBg: 'color-mix(in srgb, var(--glass-popup-text) 6%, transparent)',
+							itemActiveBg: 'color-mix(in srgb, var(--glass-popup-text) 9%, transparent)',
+						},
+					},
 				}}
-			/>
+			>
+				<Menu
+					className="item-action-menu"
+					aria-label={`${t('ui.more')} ${item.title}`}
+					selectable={false}
+					items={items}
+					onClick={({ key }) => {
+						onClose(true)
+						actions.get(key)?.()
+					}}
+				/>
+			</ConfigProvider>
 		</div>,
 		document.body,
 	)

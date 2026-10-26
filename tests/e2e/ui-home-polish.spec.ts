@@ -105,7 +105,7 @@ async function revisitHome(page: Page) {
 }
 
 async function edit(page: Page) {
-	await page.getByRole('button', { name: `更多操作 ${app.title}`, exact: true }).click()
+	await page.getByRole('link', { name: app.title, exact: true }).click({ button: 'right' })
 	await page.getByRole('menuitem', { name: '编辑', exact: true }).click()
 	await expect(page.getByLabel('标题', { exact: true })).toBeVisible()
 }
@@ -160,15 +160,16 @@ test('monitor refresh failures retain the last value and configuration but permi
 	await expect(page.getByRole('link', { name: app.title, exact: true })).toBeVisible()
 })
 
-test('clicking the same more button twice closes the menu', async ({ page }, info) => {
+test('right-click menu dismisses with Escape and restores the app link focus', async ({ page }, info) => {
 	await fixture(page)
-	const more = page.getByRole('button', { name: `更多操作 ${app.title}`, exact: true })
-	await more.click()
+	const link = page.getByRole('link', { name: app.title, exact: true })
+	await expect(page.locator('.item-menu')).toHaveCount(0)
+	await link.click({ button: 'right' })
 	await expect(page.getByRole('menu', { name: `更多操作 ${app.title}`, exact: true })).toBeVisible()
 	await page.screenshot({ path: info.outputPath('glass-app-menu.png'), animations: 'disabled' })
-	await more.click()
+	await page.keyboard.press('Escape')
 	await expect(page.getByRole('menu', { name: `更多操作 ${app.title}`, exact: true })).toHaveCount(0)
-	await expect(more).toBeFocused()
+	await expect(link).toBeFocused()
 })
 
 test('opening a right-clicked app closes its menu for embedded and native link actions', async ({ page }) => {
@@ -244,8 +245,7 @@ test('single image uploads serialize failed retries with a newly selected file',
 	let uploads = 0
 	await page.route('**/api/file/uploadImg', async (route) => {
 		const sequence = ++uploads
-		if (sequence === 1)
-			return route.fulfill({ json: { code: 500, msg: 'Initial upload failed' } })
+		if (sequence === 1) return route.fulfill({ json: { code: 500, msg: 'Initial upload failed' } })
 		await new Promise<void>((resolve) => pending.push(resolve))
 		await route
 			.fulfill({
@@ -321,6 +321,7 @@ test('item draft close requires confirmation and a small viewport keeps actions 
 })
 
 test('home selects and saves the complete engine when URLs are duplicated', async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' })
 	const state = await fixture(page)
 	const saved: string[] = []
 	await page.route('**/api/system/moduleConfig/save', (route) => {
@@ -328,10 +329,24 @@ test('home selects and saves the complete engine when URLs are duplicated', asyn
 		saved.push(state.selected.title)
 		return route.fulfill({ json: { code: 0, data: null } })
 	})
+	const picker = page.getByRole('combobox', { name: '搜索引擎', exact: true })
+	const dropdown = page.locator('.ant-select-dropdown')
 	await expect(page.locator('.search-box .ant-select')).toContainText('Beta')
 	for (const title of ['Alpha', 'Beta']) {
-		await page.getByRole('combobox', { name: '搜索引擎', exact: true }).click()
-		await page.locator('.ant-select-dropdown').getByText(title, { exact: true }).click()
+		await expect(picker).toBeEnabled()
+		await picker.click()
+		await expect(dropdown).toBeVisible()
+		await dropdown.evaluate(async (element) => {
+			await new Promise<void>((resolve) =>
+				requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+			)
+			await Promise.all(
+				element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => {})),
+			)
+		})
+		await dropdown.getByText(title, { exact: true }).click()
+		await expect(dropdown).toBeHidden()
+		await expect(picker).toBeEnabled()
 		await expect.poll(() => saved.at(-1)).toBe(title)
 		await expect(page.locator('.search-box .ant-select')).toContainText(title)
 	}

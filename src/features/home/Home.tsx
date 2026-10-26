@@ -5,7 +5,6 @@ import type { CSSProperties } from 'react'
 import { Alert, Button, Empty, Input, Modal, Select, Space, Tooltip, theme } from 'antd'
 import {
 	AppstoreOutlined,
-	EllipsisOutlined,
 	GlobalOutlined,
 	LoginOutlined,
 	PlusOutlined,
@@ -24,6 +23,7 @@ import { SafeHtml } from '@/components/SafeHtml'
 import { SortableGrid } from '@/components/Sortable'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 import ItemEditor from './ItemEditor'
+import ItemTitle from './ItemTitle'
 import ItemActionMenu from './ItemActionMenu'
 import type { ItemMenuTarget } from './ItemActionMenu'
 import { useWallpaperAppearance } from './useWallpaperAppearance'
@@ -493,7 +493,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 									<article
 										className="navigation-card"
 										onContextMenu={(event) => {
-											if (event.shiftKey || (event.nativeEvent as PointerEvent).pointerType === 'touch') {
+											if (event.shiftKey) {
 												closeItemMenu(false)
 												return
 											}
@@ -522,10 +522,13 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 									>
 										<a
 											className="app-link"
+											ref={(node) => {
+												if (node) itemTriggersRef.current.set(item.id!, node)
+												else itemTriggersRef.current.delete(item.id!)
+											}}
 											href={destination(item)}
 											target={item.openMethod === 2 ? '_blank' : undefined}
 											rel="noopener noreferrer"
-											title={destination(item)}
 											onClick={(event) => {
 												if (sortingGroupId === group.id) {
 													event.preventDefault()
@@ -541,6 +544,9 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											}}
 											aria-disabled={sortingGroupId === group.id}
 											aria-label={item.title}
+											tabIndex={0}
+											aria-haspopup={sortingGroupId === group.id ? undefined : 'menu'}
+											aria-expanded={sortingGroupId === group.id ? undefined : activeMenuItem?.id === item.id}
 										>
 											<ItemIcon
 												key={item.icon?.src}
@@ -549,37 +555,13 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											/>
 											<div className="app-copy">
 												{!(config.iconStyle === 1 && config.iconTextIconHideTitle) && (
-													<strong>{item.title}</strong>
+													<ItemTitle title={item.title} />
 												)}
 												{config.iconStyle !== 1 &&
 													!config.iconTextInfoHideDescription &&
 													item.description && <span>{item.description}</span>}
 											</div>
 										</a>
-										{sortingGroupId !== group.id && (
-											<Button
-												className="item-menu"
-												ref={(node) => {
-													if (node) itemTriggersRef.current.set(item.id!, node)
-													else itemTriggersRef.current.delete(item.id!)
-												}}
-												type="text"
-												size="small"
-												aria-label={`${t('ui.more')} ${item.title}`}
-												aria-haspopup="menu"
-												aria-expanded={activeMenuItem?.id === item.id}
-												onClick={(event) => {
-													const trigger = event.currentTarget
-													const rect = trigger.getBoundingClientRect()
-													setItemMenu(
-														activeMenuItem?.id === item.id
-															? null
-															: { id: item.id!, trigger, x: rect.right - 232, y: rect.bottom + 4 },
-													)
-												}}
-												icon={<EllipsisOutlined aria-hidden="true" />}
-											/>
-										)}
 									</article>
 								)}
 							</SortableGrid>

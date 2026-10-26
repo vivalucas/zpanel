@@ -83,7 +83,7 @@ test('leaving a page destroys its pending confirmation without sending the old a
 		return route.fulfill({ json: ok })
 	})
 	await enter(page)
-	await page.getByRole('button', { name: '更多操作 Event app', exact: true }).click()
+	await page.getByRole('link', { name: 'Event app', exact: true }).click({ button: 'right' })
 	await page.getByRole('menuitem', { name: '删除', exact: true }).click()
 	await expect(page.getByRole('dialog')).toBeVisible()
 	await page.evaluate(() => {
@@ -165,7 +165,7 @@ for (const scope of ['appearance', 'account', 'item'] as const) {
 		})
 		await enter(page, scope === 'item' ? '/' : `/settings/${scope}`)
 		if (scope === 'item') {
-			await page.getByRole('button', { name: '更多操作 Event app', exact: true }).click()
+			await page.getByRole('link', { name: 'Event app', exact: true }).click({ button: 'right' })
 			await page.getByRole('menuitem', { name: '编辑', exact: true }).click()
 		}
 		await page
@@ -193,7 +193,7 @@ test('a late favicon response does not overwrite a manually changed icon', async
 		await route.fulfill({ json: { code: 0, data: { iconUrl: '/favicon.svg?old=1' } } })
 	})
 	await enter(page)
-	await page.getByRole('button', { name: '更多操作 Event app', exact: true }).click()
+	await page.getByRole('link', { name: 'Event app', exact: true }).click({ button: 'right' })
 	await page.getByRole('menuitem', { name: '编辑', exact: true }).click()
 	await page.getByRole('button', { name: '获取图标', exact: true }).click()
 	const icon = page.getByLabel('输入图标地址或上传', { exact: true })
@@ -407,8 +407,8 @@ test('brand navigation respects unsaved appearance changes', async ({ page }) =>
 test('closing the item editor restores focus to its action trigger', async ({ page }) => {
 	await mockNavigation(page)
 	await enter(page)
-	const trigger = page.getByRole('button', { name: '更多操作 Event app', exact: true })
-	await trigger.click()
+	const trigger = page.getByRole('link', { name: 'Event app', exact: true })
+	await trigger.click({ button: 'right' })
 	await page.getByRole('menuitem', { name: '编辑', exact: true }).click()
 	await page
 		.getByRole('dialog')
@@ -501,10 +501,10 @@ test('a failed old language load cannot replace a newer selected language', asyn
 	await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN')
 })
 
-test('saving an app into another group returns focus to its new menu trigger', async ({ page }) => {
+test('saving an app into another group returns focus to its relocated link', async ({ page }) => {
 	await mockNavigation(page)
 	await enter(page)
-	await page.getByRole('button', { name: '更多操作 Event app', exact: true }).click()
+	await page.getByRole('link', { name: 'Event app', exact: true }).click({ button: 'right' })
 	await page.getByRole('menuitem', { name: '编辑', exact: true }).click()
 	await page.getByRole('combobox', { name: '分组', exact: true }).click()
 	await page
@@ -540,5 +540,5 @@ test('saving an app into another group returns focus to its new menu trigger', a
 		.getByRole('button', { name: /确.*定/ })
 		.click()
 	await expect(page.getByRole('dialog')).toHaveCount(0)
-	await expect(page.getByRole('button', { name: '更多操作 Event app', exact: true })).toBeFocused()
+	await expect(page.getByRole('link', { name: 'Event app', exact: true })).toBeFocused()
 })

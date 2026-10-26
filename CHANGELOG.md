@@ -4,6 +4,22 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.8 - 2026-10-26
+
+### Appearance and Navigation
+
+- Kept application icons stationary on hover, with a deeper shadow instead of a floating animation, and removed the overlay menu button.
+- Replaced oversized context menus with compact address actions, visible shortcut labels, shared light/dark glass surfaces and larger touch targets. Identical primary and LAN addresses share one action section without changing saved configuration.
+- Removed URL hover bubbles from application icons. Only visually truncated application names show a full-name tooltip, with updates after resizing, font loading and renaming.
+- Widened and reorganized the add/edit application dialog so its fields fit common desktop viewports, while narrow and short windows retain bounded scrolling and reachable actions.
+
+### Reliability and Verification
+
+- Preserved address-specific opening, clipboard fallback, native link behavior, keyboard menus, permissions, upload draft protection and unsaved-change confirmation.
+- Fixed offscreen dropdowns after scrolling the application editor by keeping the dialog geometry stable during opening while retaining automatic dropdown placement.
+- Added browser regressions for compact menus, application-name tooltips and responsive application editing; synchronized the duplicate-search-engine test with dropdown and save completion.
+- Pure-touch iOS Safari still lacks an application-menu entry after removal of the overlay button; its native long press does not emit the required contextmenu event. A compatible touch entry remains pending. Real mobile devices, Safari/Firefox and assistive technologies are outside this release's verified scope.
+
 ## 1.2.7 - 2026-10-25
 
 ### Appearance

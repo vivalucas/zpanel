@@ -69,7 +69,7 @@ test('login, create a group and app, edit, search and keyboard-sort with persist
 		.getByRole('button', { name: /确.*定/ })
 		.click()
 	await expect(page.getByRole('link', { name: 'Project Atlas', exact: true })).toBeVisible()
-	await page.getByRole('button', { name: '更多操作 Project Atlas' }).click()
+	await page.getByRole('link', { name: 'Project Atlas', exact: true }).click({ button: 'right' })
 	await page.getByRole('menuitem', { name: '编辑' }).click()
 	await page.getByLabel('标题').fill('Project Atlas Updated')
 	await page

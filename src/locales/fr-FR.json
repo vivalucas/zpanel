@@ -374,6 +374,10 @@
     "deleteGroupTitle": "Delete group"
   },
   "ui": {
+    "itemMenuPrimaryAddress": "Primary address",
+    "itemMenuNewTabShort": "New tab",
+    "itemMenuFrameShort": "Embed",
+    "itemMenuCopyShort": "Copy",
     "itemMenuNewTab": "Ouvrir dans un nouvel onglet",
     "itemMenuFrame": "Ouvrir dans la page",
     "itemMenuCopy": "Copier l’adresse",

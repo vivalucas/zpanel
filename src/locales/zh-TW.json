@@ -374,6 +374,10 @@
     "deleteGroupTitle": "Delete group"
   },
   "ui": {
+    "itemMenuPrimaryAddress": "主要網址",
+    "itemMenuNewTabShort": "新分頁",
+    "itemMenuFrameShort": "嵌入",
+    "itemMenuCopyShort": "複製",
     "itemMenuNewTab": "在新分頁開啟",
     "itemMenuFrame": "嵌入開啟",
     "itemMenuCopy": "複製網址",
@@ -434,7 +438,7 @@
     "followTheme": "留空自動適配背景",
     "clockColor": "时钟文字颜色",
     "resetDefaults": "恢复默认值",
-    "homeEditHint": "在分組標題旁新增或排序應用程式，點擊應用程式的更多選單可編輯或刪除。",
+    "homeEditHint": "在分組標題旁新增或排序應用程式，右鍵應用程式可編輯或刪除。",
     "gotIt": "知道了",
     "groupsDescription": "在首页的分组标题旁添加导航项目；在这里拖动手柄调整分组顺序。",
     "deleteGroup": "删除分组及其中所有项目？",

@@ -1,5 +1,5 @@
 import { chromium, expect, test } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 let account: { token: string; id: number }
 let fixture = 0
@@ -12,23 +12,26 @@ const menuApp = {
 	itemIconGroupId: 980,
 	icon: null,
 }
-async function home(page: Page, app = {}, panel = {}, guest = false) {
-	await page.addInitScript((user) => {
-		localStorage.setItem(
-			'zpanel-preferences',
-			JSON.stringify({
-				version: 1,
-				state: {
-					token: user.token,
-					accounts: [{ token: user.token, user }],
-					theme: 'auto',
-					language: 'zh-CN',
-					network: 'wan',
-					homeEditHintDismissed: true,
-				},
-			}),
-		)
-	}, account)
+async function home(page: Page, app = {}, panel = {}, guest = false, language = 'zh-CN') {
+	await page.addInitScript(
+		({ user, language }) => {
+			localStorage.setItem(
+				'zpanel-preferences',
+				JSON.stringify({
+					version: 1,
+					state: {
+						token: user.token,
+						accounts: [{ token: user.token, user }],
+						theme: 'auto',
+						language,
+						network: 'wan',
+						homeEditHintDismissed: true,
+					},
+				}),
+			)
+		},
+		{ user: account, language },
+	)
 	await page.route('**/api/user/getAuthInfo', (route) =>
 		route.fulfill({
 			json: {
@@ -73,6 +76,45 @@ async function home(page: Page, app = {}, panel = {}, guest = false) {
 const link = (page: Page) => page.getByRole('link', { name: 'Menu app', exact: true })
 const popup = (page: Page) => page.locator('.item-action-popup')
 const action = (page: Page, name: string) => page.getByRole('menuitem', { name, exact: true })
+
+async function readableAddressSection(section: Locator, labels: string[]) {
+	const primary = section.getByRole('menuitem').first()
+	const shortcuts = section.locator('.item-action-shortcut')
+	await expect(primary.locator('.anticon')).toBeVisible()
+	await expect(shortcuts).toHaveCount(3)
+	const mainBounds = (await primary.boundingBox())!
+	const boxes = []
+	for (const [index, text] of labels.entries()) {
+		const button = shortcuts.nth(index)
+		const label = button.locator('.item-action-label')
+		await expect(label).toHaveText(text)
+		await expect(label).toBeVisible()
+		const bounds = (await button.boundingBox())!
+		const textBounds = await label.evaluate((element) => {
+			const range = document.createRange()
+			range.selectNodeContents(element)
+			const rect = range.getBoundingClientRect()
+			return {
+				left: rect.left,
+				right: rect.right,
+				width: rect.width,
+				clip: getComputedStyle(element).clipPath,
+			}
+		})
+		expect(textBounds.clip).toBe('none')
+		expect(textBounds.width).toBeGreaterThan(1)
+		expect(textBounds.left).toBeGreaterThanOrEqual(bounds.x)
+		expect(textBounds.right).toBeLessThanOrEqual(bounds.x + bounds.width)
+		expect(bounds.width).toBeGreaterThanOrEqual(24)
+		expect(bounds.height).toBeGreaterThanOrEqual(24)
+		expect(bounds.y).toBeGreaterThanOrEqual(mainBounds.y + mainBounds.height)
+		boxes.push(bounds)
+	}
+	for (const box of boxes) expect(box.y).toBeCloseTo(boxes[0].y, 0)
+	for (let index = 1; index < boxes.length; index++)
+		expect(boxes[index].x).toBeGreaterThanOrEqual(boxes[index - 1].x + boxes[index - 1].width)
+}
+
 test.beforeAll(async ({ request }) => {
 	const result = await (
 		await request.post('/api/login', { data: { username: 'admin@zpanel.local', password: '12345678' } })
@@ -81,7 +123,7 @@ test.beforeAll(async ({ request }) => {
 	account = result.data
 })
 
-test('right click and more share one menu, explicit addresses and methods override only this opening', async ({
+test('right click keeps one menu, explicit addresses and methods override only this opening', async ({
 	page,
 }) => {
 	let writes = 0
@@ -99,7 +141,7 @@ test('right click and more share one menu, explicit addresses and methods overri
 	await expect(link(page)).toHaveAttribute('href', menuApp.lanUrl)
 	await link(page).click({ button: 'right' })
 	await expect(popup(page)).toHaveCount(1)
-	await action(page, '打开地址').click()
+	await action(page, '打开主地址').click()
 	await expect(page.locator('iframe.app-frame')).toHaveAttribute('src', menuApp.url)
 	await expect(popup(page)).toHaveCount(0)
 	await page.keyboard.press('Escape')
@@ -110,7 +152,7 @@ test('right click and more share one menu, explicit addresses and methods overri
 	await expect(tab).toHaveURL(/menu=lan/)
 	await tab.close()
 	await expect(page.getByRole('dialog')).toHaveCount(0)
-	await page.getByRole('button', { name: '更多操作 Menu app', exact: true }).click()
+	await link(page).click({ button: 'right', position: { x: 10, y: 60 } })
 	await expect(popup(page)).toHaveCount(1)
 	await page.getByRole('link', { name: 'Other app', exact: true }).click({ button: 'right' })
 	await expect(popup(page)).toHaveCount(1)
@@ -125,6 +167,40 @@ test('primary address operations retain the configured current-page opening', as
 	await link(page).click({ button: 'right' })
 	await action(page, '打开内网地址').click()
 	await expect(page).toHaveURL(/favicon.svg\?menu=lan/)
+})
+
+test('identical trimmed addresses share one section without changing the saved address or writing data', async ({
+	page,
+}) => {
+	let writes = 0
+	await page.route(/\/api\/panel\/itemIcon\/(edit|deletes|saveSort|addMultiple)$/, (route) => {
+		writes++
+		return route.fulfill({ json: { code: 0, data: null } })
+	})
+	await page.addInitScript(() => {
+		Object.defineProperty(navigator, 'clipboard', {
+			configurable: true,
+			value: { writeText: async (address: string) => Object.assign(window, { copiedAddress: address }) },
+		})
+	})
+	for (const lanUrl of [menuApp.url, `  ${menuApp.url}  `]) {
+		await home(page, { lanUrl })
+		await link(page).click({ button: 'right' })
+		await expect(popup(page).locator('.item-action-address')).toHaveCount(1)
+		await expect(popup(page).locator('.item-action-primary')).toHaveCount(1)
+		await expect(page.getByRole('menuitem')).toHaveCount(6)
+		await expect(action(page, '打开主地址')).toBeVisible()
+		await expect(action(page, '打开内网地址')).toHaveCount(0)
+		await action(page, '主地址：内嵌打开').click()
+		await expect(page.locator('iframe.app-frame')).toHaveAttribute('src', menuApp.url)
+		await page.keyboard.press('Escape')
+		await link(page).click({ button: 'right' })
+		await action(page, '主地址：复制地址').click()
+		await expect
+			.poll(() => page.evaluate(() => (window as unknown as { copiedAddress?: string }).copiedAddress))
+			.toBe(`http://127.0.0.1:16521${menuApp.url}`)
+	}
+	expect(writes).toBe(0)
 })
 
 test('keyboard menus restore focus, preserve native shortcuts and pass through Shift right click', async ({
@@ -148,21 +224,20 @@ test('keyboard menus restore focus, preserve native shortcuts and pass through S
 	await expect(popup(page)).toHaveCount(0)
 	await link(page).focus()
 	await page.keyboard.press('Shift+F10')
-	await expect(action(page, '打开地址')).toBeFocused()
+	await expect(action(page, '打开主地址')).toBeFocused()
 	await page.keyboard.press('ArrowDown')
-	await expect(action(page, '地址：新标签页打开')).toBeFocused()
+	await expect(action(page, '主地址：新标签页打开')).toBeFocused()
 	await page.keyboard.press('ArrowRight')
-	await expect(action(page, '地址：内嵌打开')).toBeFocused()
+	await expect(action(page, '主地址：内嵌打开')).toBeFocused()
 	await page.keyboard.press('ArrowLeft')
-	await expect(action(page, '地址：新标签页打开')).toBeFocused()
+	await expect(action(page, '主地址：新标签页打开')).toBeFocused()
 	await page.keyboard.press('End')
 	await expect(action(page, '删除')).toBeFocused()
 	await page.keyboard.press('Escape')
 	await expect(link(page)).toBeFocused()
-	const more = page.getByRole('button', { name: '更多操作 Menu app', exact: true })
-	await more.focus()
-	await page.keyboard.press('Enter')
-	await expect(action(page, '打开地址')).toBeFocused()
+	await link(page).focus()
+	await page.keyboard.press('ContextMenu')
+	await expect(action(page, '打开主地址')).toBeFocused()
 	await page.keyboard.press('Tab')
 	await expect(popup(page)).toHaveCount(0)
 	await expect(page.getByRole('link', { name: 'Other app', exact: true })).toBeFocused()
@@ -222,7 +297,7 @@ for (const mode of ['missing', 'denied'] as const) {
 		)
 		await home(page)
 		await link(page).click({ button: 'right' })
-		await action(page, '地址：复制地址').click()
+		await action(page, '主地址：复制地址').click()
 		const input = page.getByRole('dialog').getByRole('textbox', { name: '地址', exact: true })
 		await expect(input).toHaveValue(`http://127.0.0.1:16521${menuApp.url}`)
 		await expect(input).toBeFocused()
@@ -252,7 +327,7 @@ test('late clipboard rejection is ignored after leaving Home', async ({ page }) 
 	)
 	await home(page)
 	await link(page).click({ button: 'right' })
-	await action(page, '地址：复制地址').click()
+	await action(page, '主地址：复制地址').click()
 	await page.evaluate(() => {
 		location.hash = '/settings/about'
 	})
@@ -294,13 +369,13 @@ test('LAN-only visitors have one address section, no management actions, and uns
 	await expect(link(page)).toHaveAttribute('href', menuApp.lanUrl)
 	await link(page).click({ button: 'right' })
 	await expect(page.getByRole('menuitem')).toHaveCount(4)
-	await expect(action(page, '打开地址')).toHaveCount(0)
+	await expect(action(page, '打开主地址')).toHaveCount(0)
 	await expect(action(page, '编辑')).toHaveCount(0)
 	await expect(action(page, '删除')).toHaveCount(0)
 	await home(page, { url: 'javascript:alert(1)', lanUrl: '' })
-	await page.getByRole('button', { name: '更多操作 Menu app', exact: true }).click()
-	await expect(action(page, '打开地址')).toHaveAttribute('aria-disabled', 'true')
-	await expect(action(page, '地址：新标签页打开')).toHaveAttribute('aria-disabled', 'true')
+	await page.locator('.app-link').first().click({ button: 'right' })
+	await expect(action(page, '打开主地址')).toHaveAttribute('aria-disabled', 'true')
+	await expect(action(page, '主地址：新标签页打开')).toHaveAttribute('aria-disabled', 'true')
 	await expect(action(page, '编辑')).toBeFocused()
 })
 
@@ -308,13 +383,14 @@ test('visitors can exit an entirely disabled menu with the keyboard and backgrou
 	page,
 }) => {
 	await home(page, { url: 'javascript:alert(1)', lanUrl: '' }, {}, true)
-	const more = page.getByRole('button', { name: '更多操作 Menu app', exact: true })
-	await more.click()
+	const target = page.locator('.app-link').first()
+	await target.focus()
+	await page.keyboard.press('Shift+F10')
 	await expect(page.getByRole('menu', { name: '更多操作 Menu app', exact: true })).toBeFocused()
 	await expect(page.getByRole('menuitem', { disabled: true })).toHaveCount(4)
 	await page.keyboard.press('Escape')
 	await expect(popup(page)).toHaveCount(0)
-	await expect(more).toBeFocused()
+	await expect(target).toBeFocused()
 	expect(
 		await page.locator('main').evaluate((element) => {
 			const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
@@ -358,12 +434,53 @@ test('blocked embedding retains the external opening escape hatch', async ({ pag
 	)
 	await home(page, { url: '/blocked-frame' })
 	await link(page).click({ button: 'right' })
-	await action(page, '地址：内嵌打开').click()
+	await action(page, '主地址：内嵌打开').click()
 	await expect(
 		page.getByRole('dialog').getByRole('link', { name: '新窗口打开', exact: true }),
 	).toHaveAttribute('href', '/blocked-frame')
 	await page.keyboard.press('Escape')
 	await expect(link(page)).toBeFocused()
+})
+
+test('address sections keep readable shortcut labels and compact mouse targets in Chinese and English', async ({
+	page,
+}, info) => {
+	for (const language of ['zh-CN', 'en-US']) {
+		await home(page, {}, {}, false, language)
+		await expect(page.locator('html')).toHaveAttribute('lang', language)
+		for (const width of [320, 1440]) {
+			await page.setViewportSize({ width, height: 700 })
+			await link(page).click({ button: 'right' })
+			const menu = popup(page)
+			await expect(menu).toBeVisible()
+			const sections = menu.locator('.item-action-address')
+			await expect(sections).toHaveCount(2)
+			const labels = language === 'zh-CN' ? ['新标签页', '内嵌', '复制'] : ['New tab', 'Embed', 'Copy']
+			for (const section of await sections.all()) await readableAddressSection(section, labels)
+			const mainNames =
+				language === 'zh-CN' ? ['打开主地址', '打开内网地址'] : ['Open Primary address', 'Open LAN URL']
+			for (const [index, name] of mainNames.entries())
+				await expect(sections.nth(index).getByRole('menuitem').first()).toHaveAccessibleName(name)
+			const first = (await sections.first().boundingBox())!
+			const second = (await sections.last().boundingBox())!
+			expect(second.y).toBeGreaterThanOrEqual(first.y + first.height)
+			for (const item of await menu.getByRole('menuitem').all()) {
+				const bounds = (await item.boundingBox())!
+				expect(bounds.width).toBeGreaterThanOrEqual(24)
+				expect(bounds.height).toBeGreaterThanOrEqual(24)
+			}
+			const bounds = (await menu.boundingBox())!
+			expect(bounds.height).toBeLessThanOrEqual(240)
+			expect(bounds.x).toBeGreaterThanOrEqual(8)
+			expect(bounds.x + bounds.width).toBeLessThanOrEqual(width - 8)
+			expect(await menu.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+			await page.screenshot({
+				path: info.outputPath(`compact-menu-${language}-${width}.png`),
+				animations: 'disabled',
+			})
+			await page.keyboard.press('Escape')
+		}
+	}
 })
 
 test('menu stays within desktop and mobile edges in both styles and themes', async ({ page }, info) => {
@@ -402,7 +519,7 @@ test('menu stays within desktop and mobile edges in both styles and themes', asy
 				await expect(popup(page)).toBeVisible()
 				const bounds = await popup(page).boundingBox()
 				expect(bounds!.x).toBeGreaterThanOrEqual(8)
-				expect(bounds!.x).toBe(width - 232 - 8)
+				expect(bounds!.x).toBeCloseTo(width - bounds!.width - 8, 0)
 				expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width - 8)
 				expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(692)
 				await page.screenshot({
@@ -413,16 +530,19 @@ test('menu stays within desktop and mobile edges in both styles and themes', asy
 			}
 		}
 	}
-	await page.setViewportSize({ width: 320, height: 240 })
+	await page.setViewportSize({ width: 320, height: 180 })
 	await page.evaluate(
 		() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
 	)
 	await link(page).evaluate((element) =>
 		element.dispatchEvent(
-			new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 319, clientY: 239 }),
+			new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 319, clientY: 179 }),
 		),
 	)
 	await expect(popup(page)).toBeVisible()
+	const lowBounds = (await popup(page).boundingBox())!
+	expect(lowBounds.y).toBeGreaterThanOrEqual(8)
+	expect(lowBounds.y + lowBounds.height).toBeLessThanOrEqual(172)
 	expect(await popup(page).evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true)
 	await popup(page).evaluate((element) => {
 		element.scrollTop = element.scrollHeight
@@ -433,7 +553,62 @@ test('menu stays within desktop and mobile edges in both styles and themes', asy
 	expect(errors).toEqual([])
 })
 
-test('touch users open the same menu with more and can edit without navigation', async ({ browser }) => {
+test('hover deepens shadows without moving either app style or exposing a menu button', async ({
+	page,
+}, info) => {
+	test.setTimeout(60_000)
+	await page.route('**/hover-wallpaper.svg', (route) =>
+		route.fulfill({
+			contentType: 'image/svg+xml',
+			body: '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000"><path fill="#102a39" d="M0 0h1600v1000H0z"/></svg>',
+		}),
+	)
+	for (const iconStyle of [1, 2]) {
+		for (const wallpaper of [false, true]) {
+			await home(page, {}, { iconStyle, backgroundImageSrc: wallpaper ? '/hover-wallpaper.svg' : '' })
+			for (const theme of ['light', 'dark'] as const) {
+				await page.emulateMedia({ colorScheme: theme })
+				for (const width of [320, 1440]) {
+					await page.setViewportSize({ width, height: 700 })
+					await page.mouse.move(1, 1)
+					const card = page.locator('.navigation-card').first()
+					const icon = card.locator('.item-icon')
+					const surface = iconStyle === 1 ? icon : card
+					const settle = () =>
+						surface.evaluate(async (element) => {
+							await Promise.all(
+								element
+									.getAnimations({ subtree: true })
+									.map((animation) => animation.finished.catch(() => {})),
+							)
+						})
+					await settle()
+					const cardBefore = await card.boundingBox()
+					const iconBefore = await icon.boundingBox()
+					const shadowBefore = await surface.evaluate((element) => getComputedStyle(element).boxShadow)
+					await link(page).hover()
+					await settle()
+					expect(await card.boundingBox()).toEqual(cardBefore)
+					expect(await icon.boundingBox()).toEqual(iconBefore)
+					expect(await surface.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe(
+						shadowBefore,
+					)
+					await expect(page.locator('.item-menu')).toHaveCount(0)
+					await expect(page.getByRole('button', { name: /^更多操作 / })).toHaveCount(0)
+					if (wallpaper && theme === 'dark')
+						await page.screenshot({
+							path: info.outputPath(`hover-${iconStyle}-${width}.png`),
+							animations: 'disabled',
+						})
+				}
+			}
+		}
+	}
+})
+
+test('touch context menus open without an overlay button and allow editing without navigation', async ({
+	browser,
+}, info) => {
 	const context = await browser.newContext({
 		baseURL: 'http://127.0.0.1:16521',
 		viewport: { width: 320, height: 700 },
@@ -443,8 +618,29 @@ test('touch users open the same menu with more and can edit without navigation',
 	try {
 		const page = await context.newPage()
 		await home(page)
-		await page.getByRole('button', { name: '更多操作 Menu app', exact: true }).tap()
+		await expect(page.locator('.item-menu')).toHaveCount(0)
+		// Exercise the contextmenu event emitted by a touch long press; native gestures vary by browser.
+		const prevented = await link(page).evaluate((element) => {
+			const event = new PointerEvent('contextmenu', {
+				bubbles: true,
+				cancelable: true,
+				pointerType: 'touch',
+				clientX: 60,
+				clientY: 180,
+			})
+			element.dispatchEvent(event)
+			return event.defaultPrevented
+		})
+		expect(prevented).toBe(true)
 		await expect(popup(page)).toBeVisible()
+		expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+		for (const section of await popup(page).locator('.item-action-address').all())
+			await readableAddressSection(section, ['新标签页', '内嵌', '复制'])
+		for (const item of await popup(page).getByRole('menuitem').all())
+			expect((await item.boundingBox())!.height).toBeGreaterThanOrEqual(40)
+		for (const item of await popup(page).locator('.item-action-shortcut').all())
+			expect((await item.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+		await page.screenshot({ path: info.outputPath('compact-menu-touch-320.png'), animations: 'disabled' })
 		await action(page, '编辑').tap()
 		await expect(page.getByRole('dialog').getByLabel('标题', { exact: true })).toHaveValue('Menu app')
 		await expect(popup(page)).toHaveCount(0)

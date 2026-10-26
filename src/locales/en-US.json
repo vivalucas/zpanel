@@ -374,6 +374,10 @@
     "deleteGroupTitle": "Delete group"
   },
   "ui": {
+    "itemMenuPrimaryAddress": "Primary address",
+    "itemMenuNewTabShort": "New tab",
+    "itemMenuFrameShort": "Embed",
+    "itemMenuCopyShort": "Copy",
     "itemMenuNewTab": "Open in new tab",
     "itemMenuFrame": "Open embedded",
     "itemMenuCopy": "Copy address",
@@ -434,7 +438,7 @@
     "followTheme": "Leave blank for automatic background contrast",
     "clockColor": "Clock color",
     "resetDefaults": "Reset to defaults",
-    "homeEditHint": "Add or sort apps beside a group heading. Use an app’s menu to edit or delete it.",
+    "homeEditHint": "Add or sort apps beside a group heading. Right-click an app to edit or delete it.",
     "gotIt": "Got it",
     "groupsDescription": "Add applications beside their group heading on Home; drag the handles here to reorder groups.",
     "deleteGroup": "Delete this group and all its applications?",

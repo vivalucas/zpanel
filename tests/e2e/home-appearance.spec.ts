@@ -335,7 +335,7 @@ test('public visitors see neither editing controls nor the editing hint', async 
 	await home(page, wallpapers.dark)
 	await expect(page.locator('.home-edit-hint')).toHaveCount(0)
 	await expect(page.locator('.group-actions')).toHaveCount(0)
-	await page.locator('.item-menu').click()
+	await page.locator('.app-link').first().click({ button: 'right' })
 	await expect(page.getByRole('menuitem')).toHaveCount(4)
 	await expect(page.getByRole('menuitem', { name: '编辑', exact: true })).toHaveCount(0)
 	await expect(page.getByRole('menuitem', { name: '删除', exact: true })).toHaveCount(0)

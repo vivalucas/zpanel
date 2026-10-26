@@ -22,6 +22,7 @@ import { isAccessError } from '@/lib/queryState'
 import { usePreferences } from '@/app/store'
 import { Loading, QueryError, Section } from '@/components/shared'
 import { ImageUpload } from '@/components/ImageUpload'
+import WallpaperPreview from './WallpaperPreview'
 export default function Appearance() {
 	const request = useSessionRequest()
 	const panel = usePanel()
@@ -32,9 +33,11 @@ export default function Appearance() {
 	const wallpaper = Form.useWatch('backgroundImageSrc', form)
 	const wallpaperBlur = Form.useWatch('backgroundBlur', form) || 0
 	const wallpaperShade = Form.useWatch('backgroundMaskNumber', form) || 0
+	const wallpaperAutoContrast = Form.useWatch('wallpaperAutoContrast', form) === true
 	const wallpaperRevisionRef = useRef(0)
 	const logoText = Form.useWatch('logoText', form)
 	const logoImage = Form.useWatch('logoImageSrc', form)
+	const iconTextColor = Form.useWatch('iconTextColor', form)
 	useUnsavedChanges(dirty)
 	const client = useQueryClient()
 	const { t, error, message, modal } = useFeedback()
@@ -140,24 +143,14 @@ export default function Appearance() {
 					</div>
 				</Section>
 				<Section title={t('apps.baseSettings.wallpaper')} description={t('ui.wallpaperDescription')}>
-					<div className="wallpaper-preview" aria-hidden="true">
-						<div
-							className="wallpaper-preview-image"
-							style={{
-								...(wallpaper ? { backgroundImage: `url(${JSON.stringify(wallpaper)})` } : {}),
-								filter: `blur(${wallpaperBlur}px)`,
-							}}
-						/>
-						<div
-							className="wallpaper-preview-shade"
-							style={{ backgroundColor: `rgba(0, 0, 0, ${wallpaperShade})` }}
-						/>
-						<div className="wallpaper-preview-icons">
-							<span />
-							<span />
-							<span />
-						</div>
-					</div>
+					<WallpaperPreview
+						src={wallpaper}
+						shade={wallpaperShade}
+						blur={wallpaperBlur}
+						autoContrast={wallpaperAutoContrast}
+						title={logoText}
+						textColor={iconTextColor}
+					/>
 					<Form.Item name="backgroundImageSrc" label={t('ui.imageUrl')}>
 						<Input allowClear />
 					</Form.Item>
@@ -182,6 +175,20 @@ export default function Appearance() {
 							<Slider min={0} max={1} step={0.05} ariaLabelForHandle={t('ui.wallpaperShade')} />
 						</Form.Item>
 					</div>
+					<Form.Item
+						className="setting-toggle"
+						layout="horizontal"
+						labelCol={{ xs: { span: 18 } }}
+						wrapperCol={{ xs: { span: 6 } }}
+						name="wallpaperAutoContrast"
+						label={t('ui.wallpaperAutoContrast')}
+						valuePropName="checked"
+					>
+						<Switch aria-describedby="wallpaper-auto-contrast-help" />
+					</Form.Item>
+					<p className="wallpaper-preview-note" id="wallpaper-auto-contrast-help">
+						{t('ui.wallpaperAutoContrastHelp')}
+					</p>
 				</Section>
 				<Section title={t('apps.baseSettings.contentArea')} description={t('ui.contentAreaDescription')}>
 					<div className="form-grid">

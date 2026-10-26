@@ -7,6 +7,7 @@ const stringFields: Record<string, number> = {
 	footerHtml: 65536,
 }
 const boolFields = new Set([
+	'wallpaperAutoContrast',
 	'iconTextInfoHideDescription',
 	'iconTextIconHideTitle',
 	'clockShowSecond',

@@ -9,7 +9,7 @@ import (
 )
 
 var stringsFields = map[string]int{"logoText": 200, "logoImageSrc": 2048, "backgroundImageSrc": 2048, "iconTextColor": 100, "clockColor": 100, "footerHtml": 65536}
-var boolFields = map[string]bool{"iconTextInfoHideDescription": true, "iconTextIconHideTitle": true, "clockShowSecond": true, "searchBoxShow": true, "searchBoxSearchIcon": true, "systemMonitorShow": true, "systemMonitorShowTitle": true, "systemMonitorPublicVisitModeShow": true, "netModeChangeButtonShow": true}
+var boolFields = map[string]bool{"wallpaperAutoContrast": true, "iconTextInfoHideDescription": true, "iconTextIconHideTitle": true, "clockShowSecond": true, "searchBoxShow": true, "searchBoxSearchIcon": true, "systemMonitorShow": true, "systemMonitorShowTitle": true, "systemMonitorPublicVisitModeShow": true, "netModeChangeButtonShow": true}
 var numberFields = map[string][2]float64{"backgroundBlur": {0, 30}, "backgroundMaskNumber": {0, 1}, "marginTop": {0, 50}, "marginBottom": {0, 50}, "marginX": {0, 100}, "maxWidth": {1, 3000}}
 
 func validField(key string, value interface{}) bool {

@@ -79,6 +79,7 @@ export const defaultPanel: Panel.panelConfig = {
 	backgroundImageSrc: '',
 	backgroundBlur: 0,
 	backgroundMaskNumber: 0.2,
+	wallpaperAutoContrast: false,
 	iconStyle: 1,
 	iconTextColor: '',
 	iconTextInfoHideDescription: false,

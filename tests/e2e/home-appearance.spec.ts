@@ -74,7 +74,7 @@ async function home(page: Page, image: string, panel: Record<string, unknown> = 
 			},
 		}),
 	)
-	await page.goto('/#/')
+	await page.goto(`/?wallpaperFixture=${Date.now()}#/`)
 	await expect(page.locator('.navigation-group')).toHaveCount(2)
 }
 
@@ -87,12 +87,12 @@ test.beforeAll(async ({ request }) => {
 })
 
 for (const tone of ['light', 'dark', 'mixed'] as const) {
-	test(`home stays readable on ${tone} wallpaper in both UI themes and narrow widths`, async ({
+	test(`automatic contrast keeps ${tone} wallpaper readable in both UI themes and narrow widths`, async ({
 		page,
 	}, info) => {
 		const errors: string[] = []
 		page.on('pageerror', (error) => errors.push(error.message))
-		await home(page, wallpapers[tone])
+		await home(page, wallpapers[tone], { wallpaperAutoContrast: true })
 		await expect(page.locator('.home-page')).toHaveAttribute(
 			'data-wallpaper-tone',
 			tone === 'dark' ? 'dark' : 'light',
@@ -183,9 +183,10 @@ test('wallpaper appearance follows the actual cover crop after resizing', async 
 	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-mixed', 'false')
 })
 
-test('uninspectable remote images retain protected surfaces and explicit text overrides', async ({
+test('uninspectable remote images preserve their brightness and explicit text overrides', async ({
 	page,
 }) => {
+	await page.emulateMedia({ colorScheme: 'dark' })
 	await home(page, wallpapers.light, {
 		backgroundImageSrc: 'https://wallpaper.test/wallpaper-remote.svg',
 		iconTextColor: '#b04171',
@@ -193,6 +194,8 @@ test('uninspectable remote images retain protected surfaces and explicit text ov
 	})
 	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-tone', 'dark')
 	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-mixed', 'true')
+	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'unreadable')
+	await expect(page.locator('.home-contrast-mask')).toHaveCSS('background-color', 'rgba(10, 15, 23, 0)')
 	await expect(page.locator('.app-link')).toHaveCSS('color', 'rgb(176, 65, 113)')
 	await expect(page.locator('.app-copy strong')).toHaveCSS('color', 'rgb(176, 65, 113)')
 	await expect(page.locator('.app-copy > span')).toHaveCSS('color', 'rgb(176, 65, 113)')
@@ -207,7 +210,7 @@ test('fine mixed textures retain a readable veil at desktop and mobile sizes', a
 	const texture = svg(
 		'<defs><pattern id="p" width="8" height="8" patternUnits="userSpaceOnUse"><path fill="#fff" d="M0 0h4v8H0z"/></pattern></defs><path fill="#000" d="M0 0h1600v1000H0z"/><path fill="url(#p)" d="M0 0h1600v1000H0z"/>',
 	)
-	await home(page, texture, { backgroundBlur: 0 })
+	await home(page, texture, { backgroundBlur: 0, wallpaperAutoContrast: true })
 	for (const width of [1440, 320]) {
 		await page.setViewportSize({ width, height: 1000 })
 		await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-tone', 'light')

@@ -65,6 +65,64 @@ func TestImportAtomicRetryAndReplace(t *testing.T) {
 	}
 }
 
+func TestWallpaperContrastImportPreservesMissingChoiceAndAppliesExplicitChoice(t *testing.T) {
+	for _, mode := range []string{"append", "replace"} {
+		for _, initial := range []bool{false, true} {
+			name := mode + "-disabled"
+			if initial {
+				name = mode + "-enabled"
+			}
+			t.Run(name, func(t *testing.T) {
+				db := newPanelTestDB(t)
+				if err := db.AutoMigrate(&models.ImportReceipt{}, &models.UserConfig{}); err != nil {
+					t.Fatal(err)
+				}
+				original, err := json.Marshal(map[string]interface{}{
+					"wallpaperAutoContrast": initial,
+					"backgroundMaskNumber":  0.2,
+					"backgroundBlur":        3,
+					"backgroundImageSrc":    "/uploads/existing.png",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				cfg := models.UserConfig{UserId: 1, PanelJson: string(original), SearchEngineJson: `{"existing":true}`}
+				if err := db.Create(&cfg).Error; err != nil {
+					t.Fatal(err)
+				}
+				legacy := importRequest{RequestID: "wallpaper-legacy-request", Mode: mode, Panel: map[string]interface{}{"backgroundMaskNumber": float64(0)}}
+				if err := importConfig(db, 1, legacy); err != nil {
+					t.Fatal(err)
+				}
+				if err := db.First(&cfg, "user_id=?", 1).Error; err != nil {
+					t.Fatal(err)
+				}
+				var panel map[string]interface{}
+				if err := json.Unmarshal([]byte(cfg.PanelJson), &panel); err != nil {
+					t.Fatal(err)
+				}
+				if panel["wallpaperAutoContrast"] != initial || panel["backgroundMaskNumber"] != float64(0) || panel["backgroundBlur"] != float64(3) || panel["backgroundImageSrc"] != "/uploads/existing.png" {
+					t.Fatal("legacy backup changed a missing wallpaper choice or unrelated fields", panel)
+				}
+				choice := importRequest{RequestID: "wallpaper-explicit-request", Mode: mode, Panel: map[string]interface{}{"wallpaperAutoContrast": !initial}}
+				if err := importConfig(db, 1, choice); err != nil {
+					t.Fatal(err)
+				}
+				if err := db.First(&cfg, "user_id=?", 1).Error; err != nil {
+					t.Fatal(err)
+				}
+				panel = nil
+				if err := json.Unmarshal([]byte(cfg.PanelJson), &panel); err != nil {
+					t.Fatal(err)
+				}
+				if panel["wallpaperAutoContrast"] != !initial || panel["backgroundMaskNumber"] != float64(0) || panel["backgroundBlur"] != float64(3) || panel["backgroundImageSrc"] != "/uploads/existing.png" || cfg.SearchEngineJson != `{"existing":true}` {
+					t.Fatal("explicit wallpaper choice was ignored or changed other settings", panel)
+				}
+			})
+		}
+	}
+}
+
 func TestLastAdministratorCannotBeDemoted(t *testing.T) {
 	db := newPanelTestDB(t)
 	if err := db.AutoMigrate(&models.User{}, &models.Session{}); err != nil {

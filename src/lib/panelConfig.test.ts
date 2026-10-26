@@ -11,12 +11,33 @@ describe('configuration and input boundaries', () => {
 			{ searchBoxShow: 'yes' },
 			{ maxWidth: null },
 			{ iconStyle: 3 },
+			{ wallpaperAutoContrast: 'false' },
+			{ wallpaperAutoContrast: 0 },
+			{ wallpaperAutoContrast: null },
 		]) {
 			const backup = exportJson('test')
 				.addStyleData(style as unknown as Panel.panelConfig)
 				.string()
 			expect(() => importJsonString(backup)).toThrow()
 		}
+	})
+	it('preserves explicit wallpaper contrast choices and legacy zero darkness through backups', () => {
+		for (const wallpaperAutoContrast of [false, true]) {
+			const style = { wallpaperAutoContrast, backgroundMaskNumber: 0, backgroundBlur: 0, maxWidthUnit: 'px' }
+			expect(isValidPanelConfig(style)).toBe(true)
+			expect(sanitizePanelConfig(style)).toEqual({ panel: style, warnings: [] })
+			const backup = exportJson('test').addStyleData(style).string()
+			const imported = importJsonString(backup)
+			expect(imported?.isPassCheckMd5()).toBe(true)
+			expect(imported?.getStyleConfig()).toEqual(style)
+		}
+		const legacy = { backgroundMaskNumber: 0, backgroundBlur: 0, maxWidthUnit: 'px' }
+		const backup = exportJson('test').addStyleData(legacy).string()
+		expect(importJsonString(backup)?.getStyleConfig()).toEqual(legacy)
+		expect(sanitizePanelConfig({ ...legacy, wallpaperAutoContrast: 'false' })).toEqual({
+			panel: legacy,
+			warnings: ['wallpaperAutoContrast'],
+		})
 	})
 	it('keeps valid false and zero values, repairing only invalid legacy fields', () => {
 		expect(

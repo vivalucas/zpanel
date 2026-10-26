@@ -16,11 +16,13 @@ function DockerReadError(props: Omit<ComponentProps<typeof QueryError>, 'compact
 		</div>
 	)
 }
+type DockerReadTarget = 'containers' | 'stats' | 'logs'
 
 export default function Docker() {
 	const request = useSessionRequest()
 	const [filter, setFilter] = useState('')
 	const [pending, setPending] = useState<string[]>([])
+	const [retryErrors, setRetryErrors] = useState<Partial<Record<DockerReadTarget, Error>>>({})
 	const confirmingRef = useRef(new Set<string>())
 	const [logsId, setLogsId] = useState<string | null>(null)
 	const [lines, setLines] = useState(200)
@@ -42,6 +44,19 @@ export default function Docker() {
 		queryFn: ({ signal }) =>
 			request<{ logs: string }>('/system/docker/logs', { id: logsId, lines }, { signal }),
 	})
+	// A first-load refetch clears query.error before it has any replacement data.
+	// Keep the same error card mounted so its retry button retains loading feedback.
+	const reads = { containers, stats, logs }
+	const containerError = containers.error || retryErrors.containers
+	const retryRead = async (target: DockerReadTarget) => {
+		const query = reads[target]
+		setRetryErrors((previous) => ({ ...previous, [target]: query.error || undefined }))
+		try {
+			return await query.refetch()
+		} finally {
+			setRetryErrors((previous) => ({ ...previous, [target]: undefined }))
+		}
+	}
 	const refresh = () =>
 		Promise.all([containers.refetch(), ...(containers.data?.list.length ? [stats.refetch()] : [])])
 	const action = (row: System.DockerContainer, name: string) => {
@@ -67,21 +82,23 @@ export default function Docker() {
 			},
 		})
 	}
-	const accessQuery = isAccessError(containers.error)
-		? containers
-		: isAccessError(stats.error)
-			? stats
-			: isAccessError(logs.error)
-				? logs
-				: null
-	if (accessQuery) return <DockerReadError error={accessQuery.error} retry={() => accessQuery.refetch()} />
+	const accessTarget = (['containers', 'stats', 'logs'] as const).find((target) =>
+		isAccessError(reads[target].error || retryErrors[target]),
+	)
+	if (accessTarget)
+		return (
+			<DockerReadError
+				error={reads[accessTarget].error || retryErrors[accessTarget]}
+				retry={() => retryRead(accessTarget)}
+			/>
+		)
 	return (
 		<Section
 			title="Docker"
 			hideTitle
 			description={t('ui.dockerDescription')}
 			extra={
-				!containers.error && (
+				!containerError && (
 					<Button
 						icon={<ReloadOutlined aria-hidden="true" />}
 						loading={containers.isFetching || stats.isFetching}
@@ -92,23 +109,23 @@ export default function Docker() {
 				)
 			}
 		>
-			{containers.error && !containers.data ? (
+			{containerError && !containers.data ? (
 				<DockerReadError
-					error={containers.error}
+					error={containerError}
 					title={t('ui.dockerListUnavailable')}
 					description={t('ui.dockerConnectionHint')}
 					diagnostic
-					retry={() => containers.refetch()}
+					retry={() => retryRead('containers')}
 				/>
 			) : (
 				<>
-					{containers.error && (
+					{containerError && (
 						<DockerReadError
-							error={containers.error}
+							error={containerError}
 							title={t('ui.refreshFailedWithPreviousData')}
 							description={t('ui.refreshPreviousDataHint')}
 							diagnostic
-							retry={() => containers.refetch()}
+							retry={() => retryRead('containers')}
 						/>
 					)}
 					<Input.Search

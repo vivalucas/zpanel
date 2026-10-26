@@ -40,6 +40,7 @@ declare namespace Panel {
         backgroundImageSrc?:string
         backgroundBlur?:number
         backgroundMaskNumber?:number
+        wallpaperAutoContrast?:boolean
         iconStyle?:number
         iconTextColor?:string
         iconTextInfoHideDescription?:boolean

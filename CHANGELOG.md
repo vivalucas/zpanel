@@ -4,6 +4,29 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.10 - 2026-10-26
+
+### Wallpaper Appearance
+
+- Choose the stronger available text color on uniform middle-gray wallpapers. Measure the actual fixed background area so scrollbar gutters do not make automatic contrast analyze hidden image regions or disagree with the preview.
+- Make whole-image automatic contrast an explicit, saved option that defaults to off. Existing wallpaper darkness, blur and custom colors are preserved; wallpapers may look brighter because the formerly implicit contrast overlay is no longer applied by default.
+- Share wallpaper layers, shade colors, crop analysis and scaled blur between Home and the live settings preview. Keep controls readable on their own glass surfaces while retaining light icon tiles and transparent group headings.
+- Distinguish image loading failures from unavailable color analysis. Keep default mode free of automatic veils for cross-origin images, transparent images and large windows; preserve existing settings when importing older backups.
+
+### Application Icons
+
+- Give icon tiles their own translucent frosted surface in light and dark themes, with matching editor and wallpaper previews.
+- Protect text, monochrome symbols and failed-image fallbacks with a thin inner surface while respecting explicitly saved background colors. Use solid surfaces without blur for reduced transparency, higher contrast and forced colors.
+
+### Reliability
+
+- Keep the Docker error card and its loading feedback visible during an initial retry. Failed retries remain actionable, cached rows survive refresh retries, and denied container, resource-statistics and log data stay hidden until access is restored.
+
+### Verification
+
+- Passed the full local 181-check Chromium suite, then 34 related checks against the final Docker retry changes, including the two new first-access denial regressions. Passed 41 frontend unit tests, the Go suite and release build, 16 Docker entrypoint checks, type checking, lint, configuration review checks and standard/PWA builds.
+- Reviewed desktop, narrow and short windows, light/dark themes and Chinese, Traditional Chinese and English previews. Real mobile devices, Safari/Firefox, assistive technologies and PWA installation/upgrades remain outside the verified scope. The existing pure-touch iOS application-menu limitation remains.
+
 ## 1.2.9 - 2026-10-26
 
 ### Application Icons

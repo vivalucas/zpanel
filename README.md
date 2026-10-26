@@ -135,7 +135,7 @@ Version tags create GitHub Releases with release notes, Linux amd64 deployment p
 - `ghcr.io/vivalucas/zpanel:<version>`
 - `vivalucas/zpanel:<version>`
 
-`latest` points to the most recently published stable image. If you need repeatable rollbacks, use an explicit version tag such as `vivalucas/zpanel:1.2.9`.
+`latest` points to the most recently published stable image. If you need repeatable rollbacks, use an explicit version tag such as `vivalucas/zpanel:1.2.10`.
 
 Health check endpoint:
 

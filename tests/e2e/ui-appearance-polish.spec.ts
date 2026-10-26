@@ -60,12 +60,19 @@ for (const language of ['zh-CN', 'en-US']) {
 		).toHaveCount(1)
 		await blur.focus()
 		await blur.press('ArrowRight')
-		await expect(page.locator('.wallpaper-preview-image')).toHaveCSS('filter', 'blur(1px)')
+		const preview = page.locator('.wallpaper-preview')
+		await expect(page.locator('.wallpaper-preview-image')).not.toHaveCSS('filter', 'blur(0px)')
+		const size = await preview.boundingBox()
+		const viewport = page.viewportSize()!
+		const actualBlur = await page
+			.locator('.wallpaper-preview-image')
+			.evaluate((element) => Number.parseFloat(getComputedStyle(element).filter.replace('blur(', '')))
+		expect(actualBlur).toBeCloseTo(size!.width / viewport.width, 4)
 		await shade.focus()
 		await shade.press('ArrowRight')
 		await expect(page.locator('.wallpaper-preview-shade')).toHaveCSS(
 			'background-color',
-			'rgba(0, 0, 0, 0.05)',
+			'rgba(10, 15, 30, 0.05)',
 		)
 		await expect(page.locator('.settings-draft-hint')).toHaveText(zh ? '有未保存的更改' : 'Unsaved changes')
 		await page.setViewportSize({ width: 320, height: 640 })

@@ -19,6 +19,7 @@ import { useGroups, usePanel, useSearchConfig } from '@/lib/queries'
 import { usePreferences } from '@/app/store'
 import { Loading, QueryError } from '@/components/shared'
 import { SafeHtml } from '@/components/SafeHtml'
+import { WallpaperBackground } from '@/components/WallpaperBackground'
 import { SortableGrid } from '@/components/Sortable'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 import ItemEditor from './ItemEditor'
@@ -59,6 +60,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		panel.data && groups.data ? panel.data.panel.backgroundImageSrc : undefined,
 		panel.data?.panel.backgroundMaskNumber ?? 0,
 		panel.data?.panel.backgroundBlur ?? 0,
+		panel.data?.panel.wallpaperAutoContrast ?? false,
 	)
 	const searchConfig = useSearchConfig()
 	const navigate = useNavigate()
@@ -120,7 +122,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const engineIndex = searchData
 		? findSearchEngineIndex(searchData.searchEngineList, engine || searchData.currentSearchEngine)
 		: -1
-	const wallpaper = config.backgroundImageSrc
+	const wallpaper = wallpaperAppearance.status === 'error' ? '' : config.backgroundImageSrc
 	const homeTextColor =
 		config.iconTextColor?.trim().toLowerCase() === '#1f2937' ? undefined : config.iconTextColor || undefined
 	const showEditHint = editable && groups.data.length > 0 && !preferences.homeEditHintDismissed
@@ -221,29 +223,15 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 			className={`home-page ${wallpaper ? 'has-wallpaper' : ''} ${showEditHint ? 'show-edit-hint' : ''}`}
 			data-wallpaper-tone={wallpaper ? wallpaperAppearance.tone : undefined}
 			data-wallpaper-mixed={wallpaper ? wallpaperAppearance.mixed : undefined}
+			data-wallpaper-status={wallpaperAppearance.status}
 			style={wallpaper ? ({ '--wallpaper-scrim': wallpaperAppearance.scrim } as CSSProperties) : undefined}
 		>
-			<div
-				className="home-background"
-				style={
-					wallpaper
-						? {
-								backgroundImage: `url(${JSON.stringify(wallpaper)})`,
-								filter: `blur(${config.backgroundBlur || 0}px)`,
-								inset: `${-2 * (config.backgroundBlur || 0)}px`,
-							}
-						: undefined
-				}
+			<WallpaperBackground
+				src={config.backgroundImageSrc}
+				shade={config.backgroundMaskNumber}
+				blur={config.backgroundBlur}
+				appearance={wallpaperAppearance}
 			/>
-			{wallpaper && (
-				<div
-					className="home-mask"
-					style={{
-						background: `rgba(10,15,30,${Math.max(0, Math.min(1, config.backgroundMaskNumber || 0))})`,
-					}}
-				/>
-			)}
-			{wallpaper && <div className="home-contrast-mask" aria-hidden="true" />}
 			<div className="home-tools">
 				{config.netModeChangeButtonShow && (
 					<Tooltip

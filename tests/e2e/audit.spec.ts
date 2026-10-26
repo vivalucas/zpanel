@@ -345,19 +345,22 @@ test('Docker log errors fit long details inside the mobile dialog and recover on
 	await expect(dialog.locator('.log-output')).toHaveText('recovered container log')
 	expect(logRequests).toBe(2)
 })
-test('Docker read failures replace the empty table and recover in place', async ({ page }) => {
+test('Docker read failures replace the empty table and recover in place', async ({ page }, info) => {
 	let containersFail = true
+	let containerErrorCode = -1
 	let statsFail = true
 	let holdRetry = false
 	let releaseRetry: (() => void) | undefined
+	let containerRequests = 0
 	await page.route('**/api/system/docker/containers', async (route) => {
+		containerRequests++
 		if (holdRetry)
 			await new Promise<void>((resolve) => {
 				releaseRetry = resolve
 			})
 		await route.fulfill({
 			json: containersFail
-				? { code: -1, msg: 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock' }
+				? { code: containerErrorCode, msg: 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock' }
 				: {
 						code: 0,
 						data: {
@@ -394,15 +397,35 @@ test('Docker read failures replace the empty table and recover in place', async 
 	await expect(
 		failure.getByText('Cannot connect to the Docker daemon at unix:///var/run/docker.sock'),
 	).toBeVisible()
-	containersFail = false
 	holdRetry = true
 	const retryButton = failure.getByRole('button', { name: '重试' })
 	await retryButton.click()
-	await expect(retryButton).toHaveClass(/ant-btn-loading/)
 	await expect.poll(() => !!releaseRetry).toBe(true)
+	await expect(retryButton).toHaveClass(/ant-btn-loading/)
+	await expect(failure).toContainText('容器列表暂时无法加载')
+	await expect(page.getByRole('table')).toHaveCount(0)
+	await retryButton.press('Enter')
+	await page.screenshot({ path: info.outputPath('docker-initial-retry-loading.png') })
+	expect(containerRequests).toBe(2)
+	await expect(retryButton).toHaveClass(/ant-btn-loading/)
+	holdRetry = false
+	releaseRetry!()
+	await expect(retryButton).not.toHaveClass(/ant-btn-loading/)
+	await expect(retryButton).toBeEnabled()
+	await expect(failure).toContainText('容器列表暂时无法加载')
+	await expect(page.getByRole('table')).toHaveCount(0)
+	containersFail = false
+	holdRetry = true
+	releaseRetry = undefined
+	await retryButton.click()
+	await expect.poll(() => !!releaseRetry).toBe(true)
+	await expect(retryButton).toHaveClass(/ant-btn-loading/)
+	await expect(failure).toContainText('容器列表暂时无法加载')
+	await expect(page.getByRole('table')).toHaveCount(0)
 	holdRetry = false
 	releaseRetry!()
 	await expect(page.getByRole('row').filter({ hasText: 'recovered-container' })).toBeVisible()
+	expect(containerRequests).toBe(3)
 	const partialFailure = page.getByRole('alert')
 	await expect(partialFailure).toContainText('资源信息暂时无法加载')
 	statsFail = false
@@ -414,9 +437,107 @@ test('Docker read failures replace the empty table and recover in place', async 
 	await expect(page.getByRole('alert')).toContainText('刷新失败')
 	await expect(page.getByRole('row').filter({ hasText: 'recovered-container' })).toBeVisible()
 	containersFail = false
-	await page.getByRole('alert').getByRole('button', { name: '重试' }).click()
+	holdRetry = true
+	releaseRetry = undefined
+	await retryButton.click()
+	await expect.poll(() => !!releaseRetry).toBe(true)
+	await expect(retryButton).toHaveClass(/ant-btn-loading/)
+	await expect(failure).toContainText('刷新失败')
+	await expect(page.getByRole('row').filter({ hasText: 'recovered-container' })).toContainText('1.0%')
+	await page.screenshot({ path: info.outputPath('docker-cached-retry-loading.png') })
+	holdRetry = false
+	releaseRetry!()
 	await expect(page.getByRole('alert')).toHaveCount(0)
+	containersFail = true
+	containerErrorCode = 1005
+	await page.getByRole('button', { name: '刷新', exact: true }).click()
+	await expect(failure).toBeVisible()
+	await expect(page.getByRole('table')).toHaveCount(0)
+	containersFail = false
+	holdRetry = true
+	releaseRetry = undefined
+	await retryButton.click()
+	await expect.poll(() => !!releaseRetry).toBe(true)
+	await expect(retryButton).toHaveClass(/ant-btn-loading/)
+	await expect(page.getByRole('table')).toHaveCount(0)
+	await expect(page.locator('.settings-body')).not.toContainText('recovered-container')
+	await page.screenshot({ path: info.outputPath('docker-access-retry-loading.png') })
+	holdRetry = false
+	releaseRetry!()
+	await expect(page.getByRole('row').filter({ hasText: 'recovered-container' })).toContainText('1.0%')
+	await expect(failure).toHaveCount(0)
 })
+for (const target of ['stats', 'logs'] as const) {
+	test(`Docker first ${target} access failure keeps container actions hidden throughout retries`, async ({ page }, info) => {
+		let accessDenied = true
+		let holdRetry = false
+		let releaseRetry: (() => void) | undefined
+		let targetRequests = 0
+		await page.route('**/api/system/docker/containers', (route) =>
+			route.fulfill({
+				json: {
+					code: 0,
+					data: {
+						count: 1,
+						list: [{ id: 'access-container', names: 'Access protected container', image: 'nginx', state: 'running' }],
+					},
+				},
+			}),
+		)
+		await page.route(/\/api\/system\/docker\/(stats|logs)$/, async (route) => {
+			const endpoint = new URL(route.request().url()).pathname.endsWith('/logs') ? 'logs' : 'stats'
+			if (endpoint === 'logs')
+				expect(route.request().postDataJSON()).toEqual({ id: 'access-container', lines: 200 })
+			if (endpoint === target) {
+				targetRequests++
+				if (holdRetry)
+					await new Promise<void>((resolve) => {
+						releaseRetry = resolve
+					})
+			}
+			await route.fulfill({
+				json: endpoint === target && accessDenied
+					? { code: target === 'stats' ? 1005 : 1006 }
+					: { code: 0, data: endpoint === 'stats' ? [{ ID: 'access-container', CPUPerc: '13.0%' }] : { logs: 'restored access log' } },
+			})
+		})
+		await enter(page, '/settings/docker')
+		if (target === 'logs') {
+			const row = page.getByRole('row').filter({ hasText: 'Access protected container' })
+			await expect(row).toContainText('13.0%')
+			await row.getByRole('button', { name: '日志', exact: true }).click()
+		}
+		const failure = page.locator('.settings-body').getByRole('alert')
+		const retryButton = failure.getByRole('button', { name: '重试', exact: true })
+		await expect(failure).toBeVisible()
+		await expect(page.getByRole('table')).toHaveCount(0)
+		for (const succeeds of [false, true]) {
+			accessDenied = !succeeds
+			holdRetry = true
+			releaseRetry = undefined
+			await retryButton.click()
+			await expect.poll(() => !!releaseRetry).toBe(true)
+			await expect(retryButton).toHaveClass(/ant-btn-loading/)
+			await expect(page.getByRole('table')).toHaveCount(0)
+			await expect(page.getByRole('button', { name: '停止', exact: true })).toHaveCount(0)
+			await expect(page.locator('.settings-body')).not.toContainText('Access protected container')
+			await page.screenshot({ path: info.outputPath(`docker-${target}-access-retry-${succeeds ? 'success' : 'failure'}-pending.png`) })
+			holdRetry = false
+			releaseRetry!()
+			if (!succeeds) {
+				await expect(failure).toBeVisible()
+				await expect(retryButton).not.toHaveClass(/ant-btn-loading/)
+				await expect(retryButton).toBeEnabled()
+				await expect(page.getByRole('table')).toHaveCount(0)
+			}
+		}
+		await expect(failure).toHaveCount(0)
+		await expect(page.locator('.ant-table')).toContainText('Access protected container')
+		if (target === 'logs') await expect(page.locator('.log-output')).toHaveText('restored access log')
+		else await expect(page.getByRole('row').filter({ hasText: 'Access protected container' })).toContainText('13.0%')
+		expect(targetRequests).toBe(3)
+	})
+}
 for (const theme of ['light', 'dark'] as const) {
 	for (const width of [1440, 320]) {
 		test(`Docker connection errors fit long diagnostics in ${theme} at ${width}px`, async ({

@@ -15,6 +15,10 @@ interface Scenario {
 	theme?: 'light' | 'dark'
 	language?: 'zh-CN' | 'en-US'
 	wallpaper?: boolean
+	wallpaperImage?: string
+	glassProbe?: boolean
+	symbolProbe?: boolean
+	autoContrast?: boolean
 	iconStyle?: number
 }
 
@@ -26,8 +30,12 @@ const fixtures: Record<string, string> = {
 	'bing.svg': svg(96, 96, '<defs><linearGradient id="b" x2="1" y2="1"><stop stop-color="#39d1f5"/><stop offset="1" stop-color="#176bde"/></linearGradient></defs><path fill="#19104d" d="M0 0h96v96H0z"/><path fill="url(#b)" d="M25 7l20 14v41l22-13-16-8V24l27 16c13 8 13 22 0 30L40 91 25 81z"/>'),
 	'wide.svg': svg(120, 40, '<path fill="#46b47a" d="M0 0h120v40H0z"/><path fill="#ef4444" d="M0 0h16v40H0z"/><path fill="#2563eb" d="M104 0h16v40h-16z"/>'),
 	'tall.svg': svg(40, 120, '<path fill="#46b47a" d="M0 0h40v120H0z"/><path fill="#ef4444" d="M0 0h40v16H0z"/><path fill="#2563eb" d="M0 104h40v16H0z"/>'),
+	'glass-probe.svg': svg(96, 96, '<path fill="#54c6ff" d="M36 36h24v24H36z"/>'),
 }
 const wallpaper = svg(1600, 1000, '<defs><linearGradient id="w" x2="1" y2="1"><stop stop-color="#51551c"/><stop offset=".5" stop-color="#17394a"/><stop offset="1" stop-color="#266841"/></linearGradient></defs><path fill="url(#w)" d="M0 0h1600v1000H0z"/>')
+const stripedWallpaper = (low: string, high: string, mixed = false) => svg(1600, 1000,
+	`<defs><pattern id="stripes" width="8" height="8" patternUnits="userSpaceOnUse"><path fill="${low}" d="M0 0h8v8H0z"/><path fill="${high}" d="M4 0h4v8H4z"/></pattern></defs><path fill="url(#stripes)" d="M0 0h1600v1000H0z"/>${mixed ? '<path fill="#f5efd8" d="M800 0h800v1000H800z"/>' : ''}`,
+)
 const png = readFileSync('public/logo.png')
 const app = (page: Page, title: string) => page.getByRole('link', { name: title, exact: true })
 const icon = (page: Page, title: string) => app(page, title).locator('.item-icon')
@@ -48,11 +56,17 @@ async function home(page: Page, scenario: Scenario = {}) {
 		['品牌底色', 'google.svg', '#f05a67'],
 		['Broken icon', 'missing.svg', ''],
 	]
+	if (scenario.glassProbe) entries.unshift(['Glass probe', 'glass-probe.svg', ''])
 	const items: IconItem[] = entries.map(([title, file, backgroundColor], index) => ({
 		id: 8701 + index, title, url: 'https://example.test/app', openMethod: 2,
 		itemIconGroupId: 8700, description: '图片保持比例，底座按配置展示',
 		icon: { itemType: 2, src: `/icon-fixture/${file}`, backgroundColor },
 	}))
+	if (scenario.symbolProbe) items.unshift({
+		id: 8699, title: 'Text probe', url: 'https://example.test/text', openMethod: 2,
+		itemIconGroupId: 8700, description: '文字图标对比探针',
+		icon: { itemType: 1, src: '', text: 'W', backgroundColor: '' },
+	})
 	const writes: IconItem[] = []
 	const language = scenario.language || 'zh-CN'
 	const theme = scenario.theme || 'light'
@@ -74,6 +88,8 @@ async function home(page: Page, scenario: Scenario = {}) {
 			iconStyle: scenario.iconStyle || 1, marginTop: 2, marginBottom: 2, searchBoxShow: false,
 			backgroundImageSrc: scenario.wallpaper ? '/icon-fixture/wallpaper.svg' : '',
 			backgroundMaskNumber: 0,
+			backgroundBlur: 0,
+			wallpaperAutoContrast: scenario.autoContrast || false,
 		}, panelWarnings: [] }
 		if (pathname === '/api/panel/itemIconGroup/getNavigation') data = [{ id: 8700, title: 'Icon gallery', items }]
 		if (pathname === '/api/panel/itemIcon/edit') {
@@ -88,7 +104,7 @@ async function home(page: Page, scenario: Scenario = {}) {
 	await page.route('**/icon-fixture/*', (route) => {
 		const file = new URL(route.request().url()).pathname.split('/').at(-1)!
 		if (file === 'zpanel.png') return route.fulfill({ contentType: 'image/png', body: png })
-		const body = file === 'wallpaper.svg' ? wallpaper : fixtures[file]
+		const body = file === 'wallpaper.svg' ? scenario.wallpaperImage || wallpaper : fixtures[file]
 		return body ? route.fulfill({ contentType: 'image/svg+xml', body }) : route.fulfill({ status: 404, body: '' })
 	})
 	await page.goto(`/?iconTheme=${theme}&iconLanguage=${language}&iconFixture=${Date.now()}#/`)
@@ -116,8 +132,8 @@ async function save(dialog: Locator, name = '确定') {
 	await expect(dialog).toHaveCount(0)
 }
 
-async function sample(page: Page, target: Locator, points: [number, number][]) {
-	const screenshot = await target.screenshot({ animations: 'disabled' })
+async function sample(page: Page, target: Locator, points: [number, number][], path?: string) {
+	const screenshot = await target.screenshot({ animations: 'disabled', path })
 	return page.evaluate(async ({ data, points }) => {
 		const image = new Image()
 		image.src = `data:image/png;base64,${data}`
@@ -129,6 +145,57 @@ async function sample(page: Page, target: Locator, points: [number, number][]) {
 		context.drawImage(image, 0, 0)
 		return points.map(([x, y]) => Array.from(context.getImageData(x, y, 1, 1).data).slice(0, 3))
 	}, { data: screenshot.toString('base64'), points })
+}
+
+function textureStats(pixels: number[][], rowWidth: number) {
+	const luminances = pixels.map(([red, green, blue]) => red * 0.2126 + green * 0.7152 + blue * 0.0722)
+	const differences = luminances.flatMap((value, index) => index % rowWidth ? [Math.abs(value - luminances[index - 1])] : [])
+	return {
+		meanLuminance: luminances.reduce((sum, value) => sum + value, 0) / luminances.length,
+		texture: differences.reduce((sum, value) => sum + value, 0) / differences.length,
+	}
+}
+
+function relativeLuminance(color: number[]) {
+	return color.reduce((sum, value, index) => {
+		const channel = value / 255
+		return sum + [0.2126, 0.7152, 0.0722][index] * (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+	}, 0)
+}
+
+async function renderedTextContrast(page: Page, target: Locator, path: string) {
+	// Use the glyph's line box rather than the whole tile: the protective surface may only wrap text.
+	const points = await target.evaluate((element) => {
+		const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+			acceptNode: (node) => node.textContent?.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP,
+		})
+		const text = walker.nextNode()
+		if (!text) throw new Error('Expected a visible text or failed-image fallback glyph')
+		const range = document.createRange()
+		range.selectNodeContents(text)
+		const glyph = range.getBoundingClientRect()
+		const tile = element.getBoundingClientRect()
+		const samples: [number, number][] = []
+		for (let y = Math.max(0, Math.ceil(glyph.top - tile.top)); y < Math.min(tile.height, Math.floor(glyph.bottom - tile.top)); y++)
+			for (let x = Math.max(0, Math.ceil(glyph.left - tile.left)); x < Math.min(tile.width, Math.floor(glyph.right - tile.left)); x++) samples.push([x, y])
+		return samples
+	})
+	expect(points.length).toBeGreaterThan(100)
+	const pixels = await sample(page, target, points, path)
+	const colors = new Map<string, { color: number[]; count: number }>()
+	for (const color of pixels) {
+		const key = color.join(',')
+		const entry = colors.get(key)
+		if (entry) entry.count++
+		else colors.set(key, { color, count: 1 })
+	}
+	const ranked = [...colors.values()].sort((left, right) => right.count - left.count)
+	const background = ranked[0].color
+	const distance = (color: number[]) => color.reduce((sum, value, index) => sum + (value - background[index]) ** 2, 0)
+	// Uniform fixtures leave the line-box background dominant; the furthest real pixel is solid glyph ink.
+	const foreground = ranked.reduce((best, entry) => distance(entry.color) > distance(best) ? entry.color : best, background)
+	const luminances = [relativeLuminance(background), relativeLuminance(foreground)].sort((left, right) => left - right)
+	return { background, foreground, contrast: (luminances[1] + 0.05) / (luminances[0] + 0.05) }
 }
 
 test('square images fill their tile without an added white ring', async ({ page }, info) => {
@@ -160,6 +227,111 @@ test('wide and tall marks retain their shape and both ends without cropping', as
 	})
 	expect(background.background).toMatch(/^rgba\(/)
 	expect(background.blur).toContain('blur(')
+})
+
+test('transparent logos transmit dark, light and mixed wallpaper while their glass softens actual texture', async ({ page }, info) => {
+	test.setTimeout(60_000)
+	await page.setViewportSize({ width: 1440, height: 1000 })
+	const scenarios = [
+		{ name: 'dark', theme: 'light', image: stripedWallpaper('#1c394d', '#4c718e') },
+		{ name: 'light', theme: 'dark', image: stripedWallpaper('#b4d4c0', '#fff4d6') },
+		{ name: 'mixed', theme: 'dark', image: stripedWallpaper('#1c394d', '#4c718e', true) },
+	] as const
+	// This strip lies above the small opaque mark and inside the rounded tile's edges.
+	const points: [number, number][] = []
+	for (let y = 14; y < 22; y++) for (let x = 18; x < 50; x++) points.push([x, y])
+	const measurements = []
+	for (const scenario of scenarios) {
+		const { writes } = await home(page, {
+			theme: scenario.theme, wallpaper: true, wallpaperImage: scenario.image, glassProbe: true,
+		})
+		await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'ready')
+		await page.mouse.move(1, 1)
+		const tile = icon(page, 'Glass probe')
+		const originalStyle = await tile.getAttribute('style')
+		const frosted = textureStats(await sample(page, tile, points, info.outputPath(`${scenario.name}-frosted.png`)), 32)
+		let unblurred: ReturnType<typeof textureStats>
+		let bare: ReturnType<typeof textureStats>
+		try {
+			await tile.evaluate((element) => {
+				const style = (element as HTMLElement).style
+				style.setProperty('-webkit-backdrop-filter', 'none', 'important')
+				style.setProperty('backdrop-filter', 'none', 'important')
+			})
+			unblurred = textureStats(await sample(page, tile, points, info.outputPath(`${scenario.name}-unblurred.png`)), 32)
+			await tile.evaluate((element) => {
+				const style = (element as HTMLElement).style
+				style.setProperty('background', 'transparent', 'important')
+				style.setProperty('box-shadow', 'none', 'important')
+			})
+			bare = textureStats(await sample(page, tile, points, info.outputPath(`${scenario.name}-bare-wallpaper.png`)), 32)
+		} finally {
+			await tile.evaluate((element, style) => {
+				if (style === null) element.removeAttribute('style')
+				else element.setAttribute('style', style)
+			}, originalStyle)
+		}
+		measurements.push({ wallpaper: scenario.name, frosted, unblurred, bare })
+		// An opaque tile cannot pass by hiding all texture: most light must still transmit without blur.
+		expect(bare.texture, `${scenario.name}: fixture texture is visible`).toBeGreaterThan(3)
+		expect(unblurred.texture, `${scenario.name}: surface remains translucent`).toBeGreaterThan(bare.texture * 0.7)
+		expect(frosted.texture, `${scenario.name}: blur visibly softens the wallpaper`).toBeLessThan(unblurred.texture * 0.45)
+		expect(frosted.meanLuminance, `${scenario.name}: surface does not become a dark block`).toBeGreaterThan(bare.meanLuminance * 0.9 - 2)
+		expect(writes).toHaveLength(0)
+	}
+	await info.attach('glass-surface-pixels', { body: JSON.stringify(measurements, null, 2), contentType: 'application/json' })
+})
+
+test('text and failed-image glyphs keep 4.5 contrast on a middle-gray automatically adjusted wallpaper', async ({ page }, info) => {
+	const { writes } = await home(page, {
+		theme: 'dark', wallpaper: true, symbolProbe: true, autoContrast: true,
+		wallpaperImage: svg(1600, 1000, '<path fill="#6d6d6d" d="M0 0h1600v1000H0z"/>'),
+	})
+	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'ready')
+	const measurements = []
+	for (const name of ['Text probe', 'Broken icon']) {
+		const tile = icon(page, name)
+		await expect(tile).toHaveText(name === 'Text probe' ? 'W' : 'BR')
+		const pixels = await renderedTextContrast(page, tile, info.outputPath(`gray-wallpaper-${name === 'Text probe' ? 'text' : 'fallback'}.png`))
+		measurements.push({ name, ...pixels })
+		expect(pixels.contrast, `${name}: real glyph and its immediate background`).toBeGreaterThanOrEqual(4.5)
+	}
+	expect(writes).toHaveLength(0)
+	await info.attach('gray-wallpaper-symbol-contrast', { body: JSON.stringify(measurements, null, 2), contentType: 'application/json' })
+})
+
+test('forced colors alone use readable solid icon surfaces without blur in both themes and wallpaper modes', async ({ page }, info) => {
+	test.setTimeout(60_000)
+	const measurements = []
+	for (const theme of ['light', 'dark'] as const) {
+		for (const hasWallpaper of [false, true]) {
+			const { writes } = await home(page, {
+				theme, wallpaper: hasWallpaper, symbolProbe: true,
+				wallpaperImage: svg(1600, 1000, '<path fill="#6d6d6d" d="M0 0h1600v1000H0z"/>'),
+			})
+			await page.emulateMedia({ forcedColors: 'active', contrast: 'no-preference' })
+			expect(await page.evaluate(() => ({ forced: matchMedia('(forced-colors: active)').matches, contrast: matchMedia('(prefers-contrast: more)').matches }))).toEqual({ forced: true, contrast: false })
+			const mode = `${theme}-${hasWallpaper ? 'wallpaper' : 'plain'}`
+			for (const name of ['Text probe', 'Broken icon']) {
+				const tile = icon(page, name)
+				await expect(tile).toHaveCSS('backdrop-filter', 'none')
+				const alpha = await tile.evaluate((element) => {
+					const canvas = document.createElement('canvas')
+					canvas.width = canvas.height = 1
+					const context = canvas.getContext('2d')!
+					context.fillStyle = getComputedStyle(element).backgroundColor
+					context.fillRect(0, 0, 1, 1)
+					return context.getImageData(0, 0, 1, 1).data[3]
+				})
+				expect(alpha, `${mode}: solid accessible surface`).toBe(255)
+				const pixels = await renderedTextContrast(page, tile, info.outputPath(`forced-colors-${mode}-${name === 'Text probe' ? 'text' : 'fallback'}.png`))
+				measurements.push({ theme, hasWallpaper, name, alpha, ...pixels })
+				expect(pixels.contrast, `${mode} ${name}: real text contrast`).toBeGreaterThanOrEqual(4.5)
+			}
+			expect(writes).toHaveLength(0)
+		}
+	}
+	await info.attach('forced-colors-symbol-contrast', { body: JSON.stringify(measurements, null, 2), contentType: 'application/json' })
 })
 
 test('existing background colors survive saves and clearing opts back into glass', async ({ page }, info) => {

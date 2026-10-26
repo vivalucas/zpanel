@@ -1,6 +1,10 @@
 :root {
+	--wallpaper-base: #eef5ff;
 	--glass: rgba(255, 255, 255, 0.62);
 	--glass-raised: rgba(255, 255, 255, 0.76);
+	--icon-surface: rgba(255, 255, 255, 0.18);
+	--icon-symbol-surface: rgba(255, 255, 255, 0.12);
+	--icon-blur: blur(18px) saturate(1.1);
 	--glass-line: rgba(255, 255, 255, 0.76);
 	--glass-shadow: 0 18px 50px rgba(53, 73, 112, 0.11), inset 0 1px rgba(255, 255, 255, 0.72);
 	--glass-shadow-hover: 0 24px 56px rgba(53, 73, 112, 0.16), inset 0 1px rgba(255, 255, 255, 0.86);
@@ -23,8 +27,11 @@
 	-webkit-font-smoothing: antialiased;
 }
 [data-theme='dark'] {
+	--wallpaper-base: #111827;
 	--glass: rgba(37, 43, 58, 0.58);
 	--glass-raised: rgba(48, 54, 70, 0.72);
+	--icon-surface: rgba(255, 255, 255, 0.08);
+	--icon-symbol-surface: rgba(0, 0, 0, 0.12);
 	--glass-line: rgba(255, 255, 255, 0.12);
 	--glass-shadow: 0 18px 50px rgba(0, 0, 0, 0.24), inset 0 1px rgba(255, 255, 255, 0.09);
 	--glass-shadow-hover: 0 24px 56px rgba(0, 0, 0, 0.32), inset 0 1px rgba(255, 255, 255, 0.14);
@@ -256,7 +263,7 @@ a {
 	inset: 0;
 	z-index: -1;
 	pointer-events: none;
-	background: rgba(var(--home-scrim-rgb), var(--wallpaper-scrim, 0.68));
+	background: rgba(var(--home-scrim-rgb), var(--wallpaper-scrim, 0));
 }
 .home-tools {
 	position: fixed;
@@ -501,7 +508,9 @@ a {
 	width: 50px;
 	height: 50px;
 	border-radius: 24%;
-	background: var(--glass-raised);
+	background: var(--icon-surface);
+	-webkit-backdrop-filter: var(--icon-blur);
+	backdrop-filter: var(--icon-blur);
 	box-shadow: 0 3px 10px rgba(10, 17, 30, 0.1);
 	display: flex;
 	align-items: center;
@@ -517,6 +526,17 @@ a {
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
+}
+.item-icon-symbol {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	background: var(--icon-symbol-surface);
+}
+.item-icon-custom > .item-icon-symbol {
+	background: transparent;
 }
 .app-copy {
 	overflow: hidden;
@@ -571,10 +591,8 @@ a {
 .icon-grid .item-icon {
 	width: 70px;
 	height: 70px;
-	background: var(--glass);
+	background: var(--icon-surface);
 	box-shadow: 0 4px 14px rgba(10, 17, 30, 0.12);
-	-webkit-backdrop-filter: blur(20px) saturate(1.25);
-	backdrop-filter: blur(20px) saturate(1.25);
 	transition: box-shadow 0.18s;
 }
 .icon-grid .navigation-card:hover .item-icon {
@@ -715,28 +733,34 @@ a {
 	color: inherit;
 }
 .has-wallpaper[data-wallpaper-tone='light'] {
+	--icon-surface: rgba(255, 255, 255, 0.18);
+	--icon-symbol-surface: rgba(255, 255, 255, 0.12);
 	--home-ink: #202733;
 	--home-muted: #202733;
-	--home-surface: rgba(250, 251, 253, 0.38);
+	--home-surface: var(--icon-surface);
+	--home-control-surface: rgba(250, 251, 253, 0.78);
 	--home-scrim-rgb: 250, 251, 253;
-	--home-text-shadow: 0 1px 3px rgba(255, 255, 255, 0.3);
+	--home-text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8), 0 0 5px rgba(255, 255, 255, 0.35);
 	--home-action-bg: rgba(32, 39, 51, 0.07);
 	--home-action-hover: rgba(250, 251, 253, 0.22);
 	--glass-line: rgba(32, 39, 51, 0.06);
 }
 .has-wallpaper[data-wallpaper-tone='dark'] {
+	--icon-surface: rgba(255, 255, 255, 0.08);
+	--icon-symbol-surface: rgba(0, 0, 0, 0.12);
 	--home-ink: #f5f7fa;
 	--home-muted: #f5f7fa;
-	--home-surface: rgba(18, 24, 34, 0.28);
+	--home-surface: var(--icon-surface);
+	--home-control-surface: rgba(18, 24, 34, 0.72);
 	--home-scrim-rgb: 10, 15, 23;
-	--home-text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.16);
+	--home-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.3);
 	--home-action-bg: rgba(245, 247, 250, 0.1);
 	--home-action-hover: rgba(10, 15, 23, 0.18);
 	--glass-line: rgba(245, 247, 250, 0.08);
 }
 .home-page.has-wallpaper {
-	--glass: var(--home-surface);
-	--glass-raised: var(--home-surface);
+	--glass: var(--home-control-surface);
+	--glass-raised: var(--home-control-surface);
 	--glass-shadow: 0 10px 32px rgba(10, 17, 30, 0.12);
 	--glass-shadow-hover: 0 14px 36px rgba(10, 17, 30, 0.18);
 }
@@ -749,7 +773,7 @@ a {
 }
 .has-wallpaper .home-hero > .status-state,
 .has-wallpaper .home-content > .status-state {
-	background: var(--home-surface);
+	background: var(--home-control-surface);
 	box-shadow: var(--glass-shadow);
 	backdrop-filter: blur(24px) saturate(1.15);
 	-webkit-backdrop-filter: blur(24px) saturate(1.15);
@@ -762,7 +786,7 @@ a {
 }
 .has-wallpaper .navigation-card {
 	border: 0;
-	background: var(--home-surface);
+	background: var(--home-control-surface);
 	box-shadow: none;
 	backdrop-filter: none;
 	-webkit-backdrop-filter: none;
@@ -777,12 +801,12 @@ a {
 }
 .has-wallpaper .item-icon {
 	color: var(--home-ink);
-	background: var(--home-surface);
+	background: var(--icon-surface);
 	box-shadow: none;
 }
 .has-wallpaper .icon-grid .item-icon {
 	border: 0;
-	background: var(--home-surface);
+	background: var(--icon-surface);
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 .home-page .search-box .ant-input,
@@ -800,7 +824,7 @@ a {
 	text-shadow: none;
 }
 .has-wallpaper .monitor-card {
-	background: var(--home-surface);
+	background: var(--home-control-surface);
 	border: 0;
 	box-shadow: none;
 }
@@ -1092,7 +1116,9 @@ a {
 	background: var(--settings-row);
 	border-radius: 16px;
 	box-shadow: var(--settings-row-shadow);
-	transition: background 0.2s, box-shadow 0.2s;
+	transition:
+		background 0.2s,
+		box-shadow 0.2s;
 }
 .group-row:hover,
 .group-row:focus-within {
@@ -1646,42 +1672,97 @@ a {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
+.wallpaper-preview-frame {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 10px;
+}
 .wallpaper-preview {
 	position: relative;
 	isolation: isolate;
 	overflow: hidden;
-	height: 140px;
+	container-type: inline-size;
+	flex-shrink: 0;
 	border-radius: 14px;
-	margin-bottom: 18px;
 	border: 0;
+	background: var(--wallpaper-base);
+	color: var(--home-ink, var(--text));
 }
 .wallpaper-preview-image {
 	position: absolute;
-	inset: -32px;
+	inset: 0;
 	z-index: -2;
-	background: radial-gradient(ellipse at 25% 20%, #b4caf4, transparent 65%), linear-gradient(130deg, #eee4f3, #ccd8ef);
+	background: var(--wallpaper-base);
 	background-size: cover;
 	background-position: center;
 }
-.wallpaper-preview-shade {
+.wallpaper-preview-shade,
+.wallpaper-preview-contrast {
 	position: absolute;
 	inset: 0;
 	z-index: -1;
+	pointer-events: none;
 }
-.wallpaper-preview-icons {
+.wallpaper-preview-content {
 	height: 100%;
+	position: relative;
+	padding: clamp(10px, 4cqw, 20px);
+	display: flex;
+	flex-direction: column;
+	gap: clamp(8px, 3cqw, 14px);
+}
+.wallpaper-preview-title {
+	font-size: clamp(12px, 5cqw, 20px);
+	line-height: 1.2;
+	text-shadow: var(--home-text-shadow);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.wallpaper-preview-search {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: 12px;
+	gap: 6px;
+	padding: 6px 8px;
+	border-radius: 8px;
+	font-size: clamp(9px, 3cqw, 12px);
+	background: var(--home-control-surface, var(--glass));
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
-.wallpaper-preview-icons span {
-	width: 38px;
-	height: 38px;
-	border-radius: 10px;
-	background: #ffffff70;
-	box-shadow: 0 4px 12px #15294a15;
-	backdrop-filter: blur(12px);
+.wallpaper-preview-apps {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+.wallpaper-preview-app {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 5px;
+	min-width: 0;
+}
+.wallpaper-preview-icon {
+	display: grid;
+	place-items: center;
+	width: clamp(22px, 10cqw, 36px);
+	height: clamp(22px, 10cqw, 36px);
+	border-radius: 24%;
+	background: var(--icon-surface);
+	-webkit-backdrop-filter: var(--icon-blur);
+	backdrop-filter: var(--icon-blur);
+	font-size: clamp(11px, 4cqw, 16px);
+}
+.wallpaper-preview-name {
+	font-size: clamp(9px, 3cqw, 11px);
+	text-shadow: var(--home-text-shadow);
+}
+.wallpaper-preview-note {
+	margin: 0 0 18px;
+	color: var(--muted);
+	font-size: 12px;
+	line-height: 1.6;
 }
 .settings-section .setting-toggle .ant-form-item-row {
 	flex-direction: row;
@@ -1766,6 +1847,13 @@ a {
 	:root {
 		--glass-popup: var(--glass-popup-solid);
 		--glass-popup-blur: none;
+		--icon-surface: #f8faff;
+		--icon-blur: none;
+		--icon-symbol-surface: transparent;
+	}
+	[data-theme='dark'] {
+		--icon-surface: #1d2331;
+		--icon-symbol-surface: transparent;
 	}
 	.settings-page {
 		--settings-pane: var(--glass-popup-solid);
@@ -1778,14 +1866,26 @@ a {
 		--glass: var(--glass-popup-solid);
 		--glass-raised: var(--glass-popup-solid);
 	}
-	.home-page.has-wallpaper[data-wallpaper-tone='light'] {
+	.has-wallpaper[data-wallpaper-tone='light'] {
+		--icon-surface: #f8faff;
+		--icon-symbol-surface: transparent;
 		--home-surface: #f8faff;
+		--home-control-surface: #f8faff;
 	}
-	.home-page.has-wallpaper[data-wallpaper-tone='dark'] {
+	.has-wallpaper[data-wallpaper-tone='dark'] {
+		--icon-surface: #1d2331;
+		--icon-symbol-surface: transparent;
 		--home-surface: #1d2331;
+		--home-control-surface: #1d2331;
 	}
 }
 @media (forced-colors: active) {
+	:root,
+	.has-wallpaper[data-wallpaper-tone] {
+		--icon-surface: Canvas;
+		--icon-blur: none;
+		--icon-symbol-surface: transparent;
+	}
 	:root {
 		--glass-popup: Canvas;
 		--glass-popup-text: CanvasText;
@@ -1840,9 +1940,7 @@ a {
 	margin-bottom: 12px;
 }
 .item-editor-icon-preview .item-icon {
-	background: var(--glass);
-	-webkit-backdrop-filter: blur(20px) saturate(1.25);
-	backdrop-filter: blur(20px) saturate(1.25);
+	background: var(--icon-surface);
 }
 .item-editor-upload-actions {
 	grid-column: 2 / -1;
@@ -1975,8 +2073,22 @@ a {
 }
 
 /* Upload history remains readable in narrow forms and action headers. */
-.image-upload { max-width: min(100%, 360px); min-width: 0; }
-.upload-row { display: flex; width: 100%; }
-.upload-row > .ant-space-item:first-child { flex: 1; min-width: 0; }
-.full-width { width: 100%; }
-a.app-link { text-decoration: none; color: var(--home-text, var(--home-ink)); }
+.image-upload {
+	max-width: min(100%, 360px);
+	min-width: 0;
+}
+.upload-row {
+	display: flex;
+	width: 100%;
+}
+.upload-row > .ant-space-item:first-child {
+	flex: 1;
+	min-width: 0;
+}
+.full-width {
+	width: 100%;
+}
+a.app-link {
+	text-decoration: none;
+	color: var(--home-text, var(--home-ink));
+}

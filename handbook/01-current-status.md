@@ -2,7 +2,7 @@
 
 ## 当前工作（2026-10-26）
 
-用户已授权提交全部本地修改、推进版本及创建新标签。1.2.10 发行准备已完成：版本源、发布说明和当前示例一致；待提交推送 main，确认对应 CI 后创建注释标签 v1.2.10，实际远端结果待回写。本次不访问或部署 M5，线上仍为 1.2.9。
+用户已授权的全部 51 个文件改动已随 `2bf3ae5bde6f4c1bc494be74fa18f4f5a0d045ef` 提交推送 main，版本推进至 1.2.10；版本源、发布说明和当前示例一致。注释标签 v1.2.10、正式 Release 和双仓库双架构容器发布均已完成；本次文档收尾同步结果，不改变发行代码或标签。本次不访问或部署 M5，线上仍为 1.2.9。
 
 壁纸的 `wallpaperAutoContrast` 缺省关闭，暗度 0 无隐式全页遮罩；首页与草稿预览共享图层、实际裁切、罩色及模糊换算，普通模式比较实际文字对比，固定背景尺寸测量避免滚动条预留误采样。旧暗度/模糊、人工颜色、旧备份缺键行为保持；失败、跨域、透明和超大窗口分别回退，无新表或迁移。图标使用独立低透明磨砂，文字/单色/失败回退加薄保护层，显式底色保留；降低透明度、高对比及强制颜色使用实底并关闭模糊。
 
@@ -11,6 +11,16 @@
 固定 Node.js 24.15.0/pnpm 11.1.3/Go 1.26.3：隔离快照完整 181 项 Chromium 通过（6.6 分钟，无失败/跳过/重试）；最终 Docker 关联补验 34 项通过（1.1 分钟），含两项新鉴权回归。41 项 Vitest、类型检查、零警告 ESLint、test:review/语言键、普通/PWA 构建、Go 全测和发行构建、16 项 Docker 入口检查通过；前后端内嵌版本均 1.2.10。最终源码与测试 SHA256 清单对应，完整及关联 QA 在 `/tmp/zpanel-1.2.10-final-qa-20261026-zataxze_`；后端证据也复制到同目录 `backend-qa`。工具链及锁文件未升级。
 
 已实际查看中英繁、浅深、桌面/320px/矮窗口、原图/自动、失败/跨域/高对比、最新图标及 Docker 挂起重试状态，核对入口、保存区、焦点、溢出和风格；早期视觉证据在 `/tmp/zpanel-wallpaper-self-review-20261026-emTeS9`。主线程与协作代理均为同轮自查，不称独立验收。普通模式的透明文字不保证任意底图对比，可调暗度或开启自动；真实手机、Safari/Firefox、Windows/Ubuntu 桌面及 PWA 安装生命周期未验证。共享构建、其他预览及生产配置未清理。
+
+## 当前发行（1.2.10）
+
+[发行提交的 Ubuntu CI](https://github.com/vivalucas/zpanel/actions/runs/40325115044) 全部成功，含完整 183 项 Chromium（7.8 分钟）。注释标签 `v1.2.10` 的远端对象为 `660f41fa0f259b8772156aae5090b85da8e0856f`，剥离目标精确为 `2bf3ae5bde6f4c1bc494be74fa18f4f5a0d045ef`；[正式 Release](https://github.com/vivalucas/zpanel/releases/tag/v1.2.10) 与 [Release 流水线](https://github.com/vivalucas/zpanel/actions/runs/40326444618) 已成功。
+
+三项公开资产非空，实际 SHA256、GitHub digest 与公开 SHA256SUMS 均匹配；tar/zip 的 89 个文件逐字节一致，安全路径/CRC 检查通过，其中 76 项 web 与最终已测试 dist 一致。前后端内嵌版本 1.2.10，Linux amd64 ELF 与 Go 1.26.3/CGO/release 标志正确；二进制未内嵌 vcs.revision，提交对应由标签及流水线核对。配置、Compose 和发行文档匹配该提交；QA 快照较早的 CHANGELOG 差异及初始严格比较诊断保留，正式文档按固定发行提交复核。证据见本轮 QA 下 `release-asset-qa/verification.json`。
+
+[容器流水线](https://github.com/vivalucas/zpanel/actions/runs/40326444761) 已成功。Docker Hub/GHCR 的 `1.2.10` 与 `latest` 四个索引字节及 header 摘要一致，均含 linux/amd64、linux/arm64；共同索引为 `sha256:e583fcd06ea01f21f51cb5dbf545e989d247a16774ef61016d248dd38a1e6427`。两仓库的架构子 manifest 按摘要重读并核对大小、内容及 header，通过；证据见本轮 QA 下 `container-qa/verification.json`。只读元数据核验未拉取或执行镜像，不触发生产升级。
+
+## 上一版本实施摘要
 
 1.2.9 图标优化、完整复核、正式发行与 M5 升级已完成。发行代码 `95f66b5ebd0c86d5613ca90ffb62ffd459a9d1eb` 已推送 main；状态回写随本次收尾同步，不改变发行代码。全程 main，未创建分支/工作树，未升级固定工具链或锁文件。
 

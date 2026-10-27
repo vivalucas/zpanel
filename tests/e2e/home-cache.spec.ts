@@ -265,6 +265,9 @@ for (const phase of ['authentication', 'panel'] as const) {
 			await expect(
 				page.getByText(phase === 'authentication' ? '正在验证身份…' : '正在加载页面…', { exact: true }),
 			).toBeVisible()
+			// The same loading label also covers downloading Home, before its panel
+			// query exists. Advance the deadline only after the target request starts.
+			await expect.poll(() => (phase === 'authentication' ? state.authReads : state.panelReads)).toBe(1)
 			await page.clock.fastForward(15_001)
 			await expect(page.getByText('网络响应超时，请检查连接后重试。', { exact: true })).toBeVisible()
 			pending.release()

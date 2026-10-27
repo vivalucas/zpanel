@@ -31,7 +31,7 @@
 	--glass: rgba(37, 43, 58, 0.58);
 	--glass-raised: rgba(48, 54, 70, 0.72);
 	--icon-surface: rgba(255, 255, 255, 0.08);
-	--icon-symbol-surface: rgba(0, 0, 0, 0.12);
+	--icon-symbol-surface: rgba(0, 0, 0, 0.16);
 	--glass-line: rgba(255, 255, 255, 0.12);
 	--glass-shadow: 0 18px 50px rgba(0, 0, 0, 0.24), inset 0 1px rgba(255, 255, 255, 0.09);
 	--glass-shadow-hover: 0 24px 56px rgba(0, 0, 0, 0.32), inset 0 1px rgba(255, 255, 255, 0.14);
@@ -229,11 +229,13 @@ a {
 	}
 }
 .home-page {
-	--home-ink: var(--text);
-	--home-muted: var(--muted);
+	--home-text: #ffffff;
+	--home-ink: #ffffff;
+	--home-muted: #ffffff;
 	--home-action-bg: rgba(255, 255, 255, 0.42);
 	--home-action-hover: rgba(255, 255, 255, 0.7);
 	--home-focus: var(--home-ink);
+	--home-dock-clearance: calc(92px + env(safe-area-inset-bottom, 0px));
 	display: flow-root;
 	min-height: 100vh;
 	position: relative;
@@ -267,30 +269,59 @@ a {
 }
 .home-tools {
 	position: fixed;
-	right: 20px;
-	bottom: 24px;
+	right: calc(18px + env(safe-area-inset-right, 0px));
+	bottom: calc(18px + env(safe-area-inset-bottom, 0px));
 	z-index: 20;
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	gap: 4px;
-	padding: 6px;
+	padding: 5px;
 	border: 1px solid var(--glass-line);
-	border-radius: 18px;
+	border-radius: 16px;
 	background: var(--glass);
-	box-shadow: var(--glass-shadow);
-	backdrop-filter: blur(28px) saturate(1.35);
+	box-shadow: 0 6px 22px rgba(10, 17, 30, 0.13);
 	-webkit-backdrop-filter: blur(28px) saturate(1.35);
+	backdrop-filter: blur(28px) saturate(1.35);
 }
 .home-tools .ant-btn {
-	width: 40px;
-	height: 40px;
+	width: 44px;
+	height: 44px;
 	border: 0;
 	background: transparent;
 	box-shadow: none;
 	color: var(--home-ink);
 }
-.home-tools .ant-btn:hover {
-	background: var(--glass-raised);
+.home-scroll-top-slot {
+	display: flex;
+	position: relative;
+	padding-inline-end: 8px;
+	margin-inline-end: 4px;
+}
+.home-scroll-top-slot::after {
+	content: '';
+	position: absolute;
+	inset-inline-end: 0;
+	top: 11px;
+	height: 22px;
+	border-inline-end: 1px solid var(--glass-line);
+	pointer-events: none;
+}
+.home-logo-text:focus-visible {
+	outline: 2px solid var(--home-focus);
+	outline-offset: 4px;
+	border-radius: 4px;
+}
+.home-tools .ant-btn:not(:disabled):not(.ant-btn-disabled):hover,
+.home-tools .ant-btn:not(:disabled):not(.ant-btn-disabled):active,
+.home-tools .ant-btn:not(:disabled):not(.ant-btn-disabled):focus-visible {
+	color: var(--home-ink);
+	background: var(--home-action-hover);
+	border: 0;
+	box-shadow: none;
+}
+.home-tools .ant-btn:not(:disabled):not(.ant-btn-disabled):focus-visible {
+	outline: 2px solid var(--home-focus);
+	outline-offset: 2px;
 }
 .home-content {
 	position: relative;
@@ -315,6 +346,7 @@ a {
 	width: 100%;
 }
 .home-identity {
+	color: var(--home-text, var(--home-ink));
 	display: flex;
 	align-items: center;
 	justify-content: flex-start;
@@ -331,7 +363,7 @@ a {
 .home-logo-text {
 	font-size: clamp(28px, 3vw, 40px);
 	line-height: 1.15;
-	font-weight: 700;
+	font-weight: 750;
 	letter-spacing: -1px;
 	white-space: nowrap;
 	overflow: hidden;
@@ -345,6 +377,7 @@ a {
 	opacity: 0.25;
 }
 .clock {
+	color: var(--home-text, var(--home-ink));
 	margin: 0;
 	display: flex;
 	flex-direction: column;
@@ -357,10 +390,11 @@ a {
 	font-size: clamp(24px, 2.4vw, 30px);
 	line-height: 1.2;
 	letter-spacing: -0.8px;
-	font-weight: 600;
+	font-weight: 650;
 }
 .clock span {
 	color: inherit;
+	font-weight: 500;
 	opacity: 1;
 	font-size: 12px;
 	letter-spacing: 0.2px;
@@ -415,7 +449,8 @@ a {
 .group-heading h2 {
 	font-size: 20px;
 	margin: 0;
-	font-weight: 700;
+	font-weight: 750;
+	color: var(--home-text, var(--home-ink));
 	display: flex;
 	gap: 10px;
 	align-items: center;
@@ -451,6 +486,7 @@ a {
 }
 .home-page .group-actions .ant-btn {
 	color: var(--home-ink);
+	background: var(--home-action-bg);
 }
 .home-page .group-actions .ant-btn:not(:disabled):hover,
 .home-page .group-actions .ant-btn[aria-pressed='true'] {
@@ -517,7 +553,7 @@ a {
 	justify-content: center;
 	flex-shrink: 0;
 	overflow: hidden;
-	color: var(--home-ink, var(--text));
+	color: var(--text);
 	font-size: 18px;
 	font-weight: 650;
 }
@@ -539,6 +575,7 @@ a {
 	background: transparent;
 }
 .app-copy {
+	color: var(--home-text, var(--home-ink));
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
@@ -546,13 +583,14 @@ a {
 }
 .app-copy strong {
 	font-size: 14px;
-	font-weight: 600;
+	font-weight: 650;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 	overflow: hidden;
 }
 .app-copy > span {
 	font-size: 12px;
+	font-weight: 500;
 	color: var(--home-text, var(--home-muted));
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -693,7 +731,7 @@ a {
 	}
 }
 .home-page .empty-group .home-action {
-	background: transparent;
+	background: var(--home-action-bg);
 	box-shadow: none;
 	padding-inline: 8px;
 }
@@ -712,6 +750,9 @@ a {
 .home-page .status-state-icon {
 	color: var(--home-muted);
 }
+.home-page .monitor-card .muted {
+	color: inherit;
+}
 .home-page .status-state-icon {
 	border: 0;
 	background: var(--home-action-bg);
@@ -727,49 +768,62 @@ a {
 	font-size: 12px;
 	color: var(--home-muted);
 	padding-top: 38px;
-	padding-bottom: calc(28px + env(safe-area-inset-bottom));
+	padding-bottom: var(--home-dock-clearance);
 }
 .home-footer a {
 	color: inherit;
 }
-.has-wallpaper[data-wallpaper-tone='light'] {
-	--icon-surface: rgba(255, 255, 255, 0.18);
-	--icon-symbol-surface: rgba(255, 255, 255, 0.12);
+:is(.home-page, .wallpaper-preview)[data-home-text-tone='light'] {
 	--home-ink: #202733;
 	--home-muted: #202733;
 	--home-surface: var(--icon-surface);
-	--home-control-surface: rgba(250, 251, 253, 0.78);
+	--home-control-surface: rgba(250, 251, 253, 0.82);
 	--home-scrim-rgb: 250, 251, 253;
-	--home-text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8), 0 0 5px rgba(255, 255, 255, 0.35);
-	--home-action-bg: rgba(32, 39, 51, 0.07);
-	--home-action-hover: rgba(250, 251, 253, 0.22);
-	--glass-line: rgba(32, 39, 51, 0.06);
+	--home-text-stroke-color: rgba(255, 255, 255, 0.72);
+	--home-text-shadow: 0 1px 2px rgba(255, 255, 255, 0.42);
+	--home-action-bg: rgba(250, 251, 253, 0.78);
+	--home-action-hover: rgba(250, 251, 253, 0.92);
+	--glass-line: rgba(32, 39, 51, 0.08);
 }
-.has-wallpaper[data-wallpaper-tone='dark'] {
-	--icon-surface: rgba(255, 255, 255, 0.08);
-	--icon-symbol-surface: rgba(0, 0, 0, 0.12);
-	--home-ink: #f5f7fa;
-	--home-muted: #f5f7fa;
+:is(.home-page, .wallpaper-preview)[data-home-text-tone='dark'] {
+	--home-ink: #ffffff;
+	--home-muted: #ffffff;
 	--home-surface: var(--icon-surface);
-	--home-control-surface: rgba(18, 24, 34, 0.72);
+	--home-control-surface: rgba(18, 24, 34, 0.78);
 	--home-scrim-rgb: 10, 15, 23;
-	--home-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.3);
-	--home-action-bg: rgba(245, 247, 250, 0.1);
-	--home-action-hover: rgba(10, 15, 23, 0.18);
-	--glass-line: rgba(245, 247, 250, 0.08);
+	--home-text-stroke-color: rgba(0, 0, 0, 0.8);
+	--home-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.44), 0 2px 6px rgba(0, 0, 0, 0.2);
+	--home-action-bg: rgba(18, 24, 34, 0.72);
+	--home-action-hover: rgba(18, 24, 34, 0.9);
+	--glass-line: rgba(245, 247, 250, 0.1);
 }
-.home-page.has-wallpaper {
+.home-page[data-home-text-tone] {
 	--glass: var(--home-control-surface);
 	--glass-raised: var(--home-control-surface);
 	--glass-shadow: 0 10px 32px rgba(10, 17, 30, 0.12);
 	--glass-shadow-hover: 0 14px 36px rgba(10, 17, 30, 0.18);
 }
-.has-wallpaper .home-identity,
-.has-wallpaper .group-heading,
-.has-wallpaper .app-copy,
-.has-wallpaper .empty-group-message,
-.has-wallpaper .home-footer-content {
+/* Only text drawn over the page receives an outline; controls and icon artwork keep their own palette. */
+.home-page .home-logo-text,
+.home-page .clock time,
+.home-page .clock > span,
+.home-page .group-heading h2,
+.home-page .app-copy > strong,
+.home-page .app-copy > span,
+.home-page .empty-group-message,
+.home-page .home-edit-hint > span,
+.home-page .home-footer-content,
+.wallpaper-preview-title,
+.wallpaper-preview-name {
+	-webkit-text-stroke: var(--home-text-stroke-width, 0.4px) var(--home-text-stroke-color, rgba(0, 0, 0, 0.8));
+	paint-order: stroke fill;
 	text-shadow: var(--home-text-shadow);
+}
+.home-page .empty-group-message,
+.home-page .home-edit-hint > span,
+.home-page .home-footer-content {
+	color: var(--home-text, var(--home-ink));
+	font-weight: 500;
 }
 .has-wallpaper .home-hero > .status-state,
 .has-wallpaper .home-content > .status-state {
@@ -800,7 +854,7 @@ a {
 	box-shadow: none;
 }
 .has-wallpaper .item-icon {
-	color: var(--home-ink);
+	color: var(--text);
 	background: var(--icon-surface);
 	box-shadow: none;
 }
@@ -823,13 +877,13 @@ a {
 .home-page .home-footer {
 	text-shadow: none;
 }
-.has-wallpaper .monitor-card {
+.home-page .monitor-card {
 	background: var(--home-control-surface);
 	border: 0;
 	box-shadow: none;
 }
-.has-wallpaper .monitor-card,
-.has-wallpaper .status-state {
+.home-page .monitor-card,
+.home-page .status-state {
 	color: var(--home-ink);
 }
 .app-frame {
@@ -875,18 +929,20 @@ a {
 .monitor-card strong {
 	display: block;
 	font-size: 27px;
-	font-weight: 500;
+	font-weight: 600;
 	letter-spacing: -0.6px;
 	font-variant-numeric: tabular-nums;
 }
 .monitor-card strong small {
 	font-size: 13px;
-	opacity: 0.5;
+	font-weight: 500;
+	opacity: 0.9;
 	margin-left: 3px;
 }
 .monitor-detail {
 	font-size: 11px;
-	opacity: 0.55;
+	font-weight: 500;
+	opacity: 0.9;
 }
 .monitor-stale {
 	display: block;
@@ -1092,6 +1148,17 @@ a {
 	border-radius: 50%;
 	background: var(--primary);
 	vertical-align: middle;
+}
+.auto-save-status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 32px;
+	min-width: 0;
+	margin-inline-end: auto;
+	color: var(--muted);
+	font-size: 12px;
+	line-height: 1.6;
 }
 .settings-footer {
 	text-align: center;
@@ -1403,10 +1470,6 @@ a {
 [data-theme='dark'] .login-art p {
 	color: #b0bdd7;
 }
-[data-theme='dark'] .home-page:not(.has-wallpaper) {
-	--home-action-bg: rgba(245, 247, 250, 0.07);
-	--home-action-hover: rgba(245, 247, 250, 0.12);
-}
 [data-theme='dark'] .home-page {
 	background:
 		radial-gradient(circle at 14% 12%, rgba(68, 92, 153, 0.34), transparent 34%),
@@ -1431,20 +1494,6 @@ a {
 @media (hover: none) {
 	.group-actions {
 		opacity: 0.7;
-	}
-}
-@media (min-width: 641px) {
-	.home-hero {
-		/* Preserve the groups' left edge and reserve only the space needed by the fixed tools. */
-		width: min(100%, calc(50% + 50vw - 124px));
-	}
-	.home-tools {
-		top: 24px;
-		bottom: auto;
-		flex-direction: row;
-		border: 0;
-		border-radius: 12px;
-		padding: 4px;
 	}
 }
 @media (min-width: 1024px) {
@@ -1546,10 +1595,6 @@ a {
 	.icon-grid .item-icon {
 		width: min(70px, 100%);
 		height: 70px;
-	}
-	.home-tools {
-		right: 10px;
-		bottom: 10px;
 	}
 	.monitor-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1678,6 +1723,7 @@ a {
 	margin-bottom: 10px;
 }
 .wallpaper-preview {
+	--home-text: #ffffff;
 	position: relative;
 	isolation: isolate;
 	overflow: hidden;
@@ -1712,6 +1758,8 @@ a {
 	gap: clamp(8px, 3cqw, 14px);
 }
 .wallpaper-preview-title {
+	color: var(--home-text, var(--home-ink));
+	font-weight: 750;
 	font-size: clamp(12px, 5cqw, 20px);
 	line-height: 1.2;
 	text-shadow: var(--home-text-shadow);
@@ -1720,6 +1768,7 @@ a {
 	white-space: nowrap;
 }
 .wallpaper-preview-search {
+	color: var(--home-ink, var(--text));
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -1744,6 +1793,8 @@ a {
 	min-width: 0;
 }
 .wallpaper-preview-icon {
+	color: var(--text);
+	font-weight: 650;
 	display: grid;
 	place-items: center;
 	width: clamp(22px, 10cqw, 36px);
@@ -1755,6 +1806,8 @@ a {
 	font-size: clamp(11px, 4cqw, 16px);
 }
 .wallpaper-preview-name {
+	color: var(--home-text, var(--home-ink));
+	font-weight: 650;
 	font-size: clamp(9px, 3cqw, 11px);
 	text-shadow: var(--home-text-shadow);
 }
@@ -1763,6 +1816,15 @@ a {
 	color: var(--muted);
 	font-size: 12px;
 	line-height: 1.6;
+}
+.wallpaper-preview-status {
+	display: grid;
+}
+.wallpaper-preview-status > span {
+	grid-area: 1 / 1;
+}
+.wallpaper-preview-status-size {
+	visibility: hidden;
 }
 .settings-section .setting-toggle .ant-form-item-row {
 	flex-direction: row;
@@ -1862,26 +1924,20 @@ a {
 	.settings-window {
 		background: var(--glass-popup-solid);
 	}
-	.home-page:not(.has-wallpaper) {
-		--glass: var(--glass-popup-solid);
-		--glass-raised: var(--glass-popup-solid);
-	}
-	.has-wallpaper[data-wallpaper-tone='light'] {
-		--icon-surface: #f8faff;
-		--icon-symbol-surface: transparent;
-		--home-surface: #f8faff;
+	:is(.home-page, .wallpaper-preview)[data-home-text-tone='light'] {
 		--home-control-surface: #f8faff;
+		--home-action-bg: #f8faff;
+		--home-action-hover: #e3e9f4;
 	}
-	.has-wallpaper[data-wallpaper-tone='dark'] {
-		--icon-surface: #1d2331;
-		--icon-symbol-surface: transparent;
-		--home-surface: #1d2331;
+	:is(.home-page, .wallpaper-preview)[data-home-text-tone='dark'] {
 		--home-control-surface: #1d2331;
+		--home-action-bg: #1d2331;
+		--home-action-hover: #30394c;
 	}
 }
 @media (forced-colors: active) {
 	:root,
-	.has-wallpaper[data-wallpaper-tone] {
+	:is(.home-page, .wallpaper-preview)[data-home-text-tone] {
 		--icon-surface: Canvas;
 		--icon-blur: none;
 		--icon-symbol-surface: transparent;
@@ -1894,6 +1950,49 @@ a {
 		--glass-popup-blur: none;
 	}
 }
+@media (prefers-contrast: more), (forced-colors: active) {
+	:is(.home-page, .wallpaper-preview)[data-home-text-tone] {
+		--home-text: CanvasText !important;
+		--home-ink: CanvasText;
+		--home-muted: CanvasText;
+		--home-control-surface: Canvas;
+		--icon-surface: Canvas;
+		--icon-blur: none;
+		--icon-symbol-surface: transparent;
+		--home-action-bg: Canvas;
+		--home-action-hover: ButtonFace;
+		--home-text-stroke-width: 0px;
+		--home-text-shadow: none;
+		--glass-line: CanvasText;
+		background: Canvas;
+	}
+	.home-page .home-background,
+	.home-page .home-mask,
+	.home-page .home-contrast-mask,
+	.wallpaper-preview-image,
+	.wallpaper-preview-shade,
+	.wallpaper-preview-contrast {
+		visibility: hidden;
+	}
+	.home-page .item-icon:not(.item-icon-custom),
+	.wallpaper-preview-icon {
+		color: CanvasText;
+	}
+	.home-page .home-identity,
+	.home-page .clock,
+	.home-page .group-heading h2,
+	.home-page .app-copy,
+	.home-page .app-copy > span,
+	.home-page .empty-group-message,
+	.home-page .home-edit-hint > span,
+	.home-page .home-footer-content,
+	.home-page .monitor-card,
+	.wallpaper-preview-title,
+	.wallpaper-preview-name {
+		color: CanvasText !important;
+	}
+}
+
 .glass-modal-body,
 .item-editor-body {
 	min-height: 0;

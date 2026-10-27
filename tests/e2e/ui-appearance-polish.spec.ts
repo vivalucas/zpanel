@@ -67,14 +67,14 @@ for (const language of ['zh-CN', 'en-US']) {
 		const actualBlur = await page
 			.locator('.wallpaper-preview-image')
 			.evaluate((element) => Number.parseFloat(getComputedStyle(element).filter.replace('blur(', '')))
-		expect(actualBlur).toBeCloseTo(size!.width / viewport.width, 4)
+		expect(actualBlur).toBeCloseTo((3 * size!.width) / viewport.width, 4)
 		await shade.focus()
 		await shade.press('ArrowRight')
 		await expect(page.locator('.wallpaper-preview-shade')).toHaveCSS(
 			'background-color',
-			'rgba(10, 15, 30, 0.05)',
+			'rgba(10, 15, 30, 0.1)',
 		)
-		await expect(page.locator('.settings-draft-hint')).toHaveText(zh ? '有未保存的更改' : 'Unsaved changes')
+		await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'pending')
 		await page.setViewportSize({ width: 320, height: 640 })
 		const toggle = page.locator('.setting-toggle').last()
 		await toggle.scrollIntoViewIfNeeded()
@@ -111,6 +111,11 @@ test('late wallpaper upload does not overwrite an edited URL even after returnin
 		await gate
 		await route.fulfill({ json: { code: 0, data: { imageUrl: '/favicon.svg?uploaded' } } })
 	})
+	const writes: unknown[] = []
+	await page.route('**/api/panel/userConfig/set', (route) => {
+		writes.push(route.request().postDataJSON())
+		return route.fulfill({ json: { code: 0 } })
+	})
 	await enter(page)
 	const url = page.locator('#backgroundImageSrc')
 	await expect(url).toHaveValue('/favicon.svg?original')
@@ -124,18 +129,19 @@ test('late wallpaper upload does not overwrite an edited URL even after returnin
 	})
 	try {
 		await expect.poll(() => uploading).toBeTruthy()
-		await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled()
+		expect(writes).toHaveLength(0)
 		await url.fill('/favicon.svg?newer')
 		await url.fill('/favicon.svg?original')
 	} finally {
 		release()
 	}
-	await expect(page.getByRole('button', { name: '保存', exact: true })).toBeEnabled()
+	await expect.poll(() => writes.length).toBe(1)
 	await expect(url).toHaveValue('/favicon.svg?original')
 })
 
 for (const section of ['appearance', 'site']) {
 	test(`${section} keeps saved values and controls when the follow-up refresh fails`, async ({ page }) => {
+		await page.clock.install()
 		let saved = false
 		if (section === 'appearance') {
 			await page.route('**/api/panel/userConfig/get', (route) =>
@@ -166,11 +172,18 @@ for (const section of ['appearance', 'site']) {
 		await enter(page, section)
 		const field = page.locator(section === 'appearance' ? '#logoText' : '#siteTitle')
 		await field.fill('Saved title')
-		await expect(page.locator('.settings-draft-hint')).toHaveText('有未保存的更改')
-		await page.getByRole('button', { name: '保存', exact: true }).click()
+		if (section === 'site') {
+			await expect(page.locator('.settings-draft-hint')).toHaveText('有未保存的更改')
+			await page.getByRole('button', { name: '保存', exact: true }).click()
+		} else {
+			await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
+			await page.clock.fastForward(31_000)
+			await page.getByRole('menuitem', { name: '关于', exact: true }).click()
+			await page.getByRole('menuitem', { name: '风格设置', exact: true }).click()
+		}
 		await expect(page.locator('.status-state[role="alert"]')).toContainText('刷新失败')
 		await expect(field).toHaveValue('Saved title')
 		await expect(page.locator('.settings-draft-hint')).toHaveCount(0)
-		await expect(page.getByRole('button', { name: '保存', exact: true })).toBeEnabled()
+		await expect(field).toBeEnabled()
 	})
 }

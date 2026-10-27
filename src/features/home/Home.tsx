@@ -1,6 +1,6 @@
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Alert, Button, Empty, Input, Modal, Select, Space, Tooltip } from 'antd'
 import {
@@ -27,9 +27,11 @@ import ItemIcon from './ItemIcon'
 import ItemTitle from './ItemTitle'
 import ItemActionMenu from './ItemActionMenu'
 import type { ItemMenuTarget } from './ItemActionMenu'
+import HomeBackToTop from './HomeBackToTop'
 import { useWallpaperAppearance } from './useWallpaperAppearance'
 import { findSearchEngineIndex } from '@/lib/searchEngine'
 import { isAccessError } from '@/lib/queryState'
+import { resolveHomeText } from '@/lib/homeText'
 const MonitorCards = lazy(() => import('./MonitorCards'))
 function Clock({ seconds, color }: { seconds?: boolean; color?: string }) {
 	const [now, setNow] = useState(() => new Date())
@@ -55,12 +57,20 @@ function Clock({ seconds, color }: { seconds?: boolean; color?: string }) {
 export default function Home({ auth }: { auth: AuthInfo }) {
 	const request = useSessionRequest()
 	const groups = useGroups()
+	const topRef = useRef<HTMLElement>(null)
 	const panel = usePanel()
+	const text = useMemo(
+		() => resolveHomeText(panel.data?.panel.iconTextColor),
+		[panel.data?.panel.iconTextColor],
+	)
 	const wallpaperAppearance = useWallpaperAppearance(
 		panel.data && groups.data ? panel.data.panel.backgroundImageSrc : undefined,
 		panel.data?.panel.backgroundMaskNumber ?? 0,
 		panel.data?.panel.backgroundBlur ?? 0,
 		panel.data?.panel.wallpaperAutoContrast ?? false,
+		0,
+		text.tone,
+		text.ink,
 	)
 	const searchConfig = useSearchConfig()
 	const navigate = useNavigate()
@@ -123,8 +133,6 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		? findSearchEngineIndex(searchData.searchEngineList, engine || searchData.currentSearchEngine)
 		: -1
 	const wallpaper = wallpaperAppearance.status === 'error' ? '' : config.backgroundImageSrc
-	const homeTextColor =
-		config.iconTextColor?.trim().toLowerCase() === '#1f2937' ? undefined : config.iconTextColor || undefined
 	const showEditHint = editable && groups.data.length > 0 && !preferences.homeEditHintDismissed
 	const configSearchEnabled = config.searchBoxSearchIcon
 	const filtered = (groups.data || [])
@@ -224,7 +232,8 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 			data-wallpaper-tone={wallpaper ? wallpaperAppearance.tone : undefined}
 			data-wallpaper-mixed={wallpaper ? wallpaperAppearance.mixed : undefined}
 			data-wallpaper-status={wallpaperAppearance.status}
-			style={wallpaper ? ({ '--wallpaper-scrim': wallpaperAppearance.scrim } as CSSProperties) : undefined}
+			data-home-text-tone={text.tone}
+			style={{ '--home-text': text.color, '--wallpaper-scrim': wallpaperAppearance.scrim } as CSSProperties}
 		>
 			<WallpaperBackground
 				src={config.backgroundImageSrc}
@@ -232,7 +241,8 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 				blur={config.backgroundBlur}
 				appearance={wallpaperAppearance}
 			/>
-			<div className="home-tools">
+			<nav className="home-tools" aria-label={t('ui.homeTools')}>
+				<HomeBackToTop targetRef={topRef} />
 				{config.netModeChangeButtonShow && (
 					<Tooltip
 						title={t(
@@ -265,7 +275,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						/>
 					</Tooltip>
 				)}
-			</div>
+			</nav>
 			<div
 				className="home-content"
 				style={
@@ -274,7 +284,6 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						'--home-margin-top': config.marginTop ?? 10,
 						marginBottom: `${config.marginBottom ?? 10}%`,
 						paddingInline: `${10 + (config.marginX ?? 5)}px`,
-						'--home-text': homeTextColor,
 					} as CSSProperties
 				}
 			>
@@ -300,7 +309,9 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 				<section className="home-hero">
 					<div className="home-identity">
 						{config.logoImageSrc && <img className="home-logo-image" src={config.logoImageSrc} alt="" />}
-						<strong className="home-logo-text">{config.logoText || 'ZPanel'}</strong>
+						<strong className="home-logo-text" ref={topRef} tabIndex={-1}>
+							{config.logoText || 'ZPanel'}
+						</strong>
 						<span className="home-identity-divider" aria-hidden="true" />
 						<Clock seconds={config.clockShowSecond} color={config.clockColor} />
 					</div>
@@ -514,11 +525,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											aria-haspopup={sortingGroupId === group.id ? undefined : 'menu'}
 											aria-expanded={sortingGroupId === group.id ? undefined : activeMenuItem?.id === item.id}
 										>
-											<ItemIcon
-												key={item.icon?.src}
-												item={item}
-												tone={wallpaper ? wallpaperAppearance.tone : undefined}
-											/>
+											<ItemIcon key={item.icon?.src} item={item} />
 											<div className="app-copy">
 												{!(config.iconStyle === 1 && config.iconTextIconHideTitle) && (
 													<ItemTitle title={item.title} />

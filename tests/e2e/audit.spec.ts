@@ -61,7 +61,7 @@ test('HTTP LAN without randomUUID opens login and refreshes captcha after failed
 	expect(errors).toEqual([])
 })
 for (const reducedMotion of ['reduce', 'no-preference'] as const) {
-	test(`failed appearance saves preserve drafts and restore save controls in ${reducedMotion}`, async ({
+	test(`failed appearance autosaves preserve drafts and recover in ${reducedMotion}`, async ({
 		page,
 	}, info) => {
 		await page.emulateMedia({ reducedMotion })
@@ -71,27 +71,28 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) {
 		)
 		const draftName = `Retained draft ${reducedMotion} ${info.repeatEachIndex}`
 		const title = page.getByLabel('面板名称')
-		const save = page.locator('.save-bar').getByRole('button', { name: /保存/ })
-		await title.fill(draftName)
+		const status = page.locator('.auto-save-status')
+		const retry = status.getByRole('button', { name: '重试', exact: true })
 		let failedWrites = 0
 		await page.route('**/api/panel/userConfig/set', (route) => {
 			failedWrites++
 			return route.fulfill({ json: { code: 1200, msg: 'Database failed' } })
 		})
-		await expect(save).toHaveAccessibleName('保存')
-		await save.click()
-		await expect.poll(() => failedWrites).toBe(1)
+		await title.fill(draftName)
+		await expect(status).toHaveAttribute('data-save-status', 'error')
+		expect(failedWrites).toBe(1)
 		await expect(title).toHaveValue(draftName)
-		await expect(save).not.toHaveClass(/ant-btn-loading/)
-		await expect(save).toHaveAccessibleName('保存')
-		await expect(save.locator('.anticon-loading')).toHaveCount(0)
+		await expect(title).toBeEnabled()
+		await expect(retry).toBeEnabled()
+		await expect(retry.locator('.anticon-loading')).toHaveCount(0)
 		await page.getByRole('menuitem', { name: '导航分组', exact: true }).click()
 		const dialog = page.getByRole('dialog')
 		await expect(dialog).toContainText('放弃未保存')
 		await dialog.getByRole('button', { name: /取.*消/ }).click()
 		await expect(dialog).toHaveCount(0)
 		await expect(title).toHaveValue(draftName)
-		await expect(save).toHaveAccessibleName('保存')
+		await expect(retry).toBeEnabled()
+		expect(failedWrites).toBe(1)
 		await page.unroute('**/api/panel/userConfig/set')
 		let release!: () => void
 		const pending = new Promise<void>((resolve) => {
@@ -103,22 +104,24 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) {
 			await pending
 			await route.continue()
 		})
-		await save.click()
+		await retry.click()
 		try {
 			await expect.poll(() => successfulWrites).toBe(1)
-			await expect(title).toBeDisabled()
-			await expect(save).toHaveClass(/ant-btn-loading/)
+			await expect(title).toBeEnabled()
+			await expect(status).toHaveAttribute('data-save-status', 'saving')
 		} finally {
 			release()
 		}
+		await expect(status).toHaveAttribute('data-save-status', 'saved')
 		await expect(title).toBeEnabled()
 		await expect(title).toHaveValue(draftName)
-		await expect(save).toHaveAccessibleName('保存')
-		await expect(save.locator('.anticon-loading')).toHaveCount(0)
+		await expect(retry).toHaveCount(0)
+		await expect(status.locator('.anticon-loading')).toHaveCount(0)
 		await page.getByRole('menuitem', { name: '导航分组', exact: true }).click()
 		await expect(page).toHaveURL(/settings\/groups/)
 	})
 }
+
 test('removing an earlier search engine preserves the selected default and reloads it', async ({
 	page,
 	request,
@@ -136,7 +139,7 @@ test('removing an earlier search engine preserves the selected default and reloa
 	try {
 		await enter(page, '/settings/modules')
 		await page.locator('form').first().getByRole('button', { name: '删除', exact: true }).first().click()
-		await page.getByRole('button', { name: '保存', exact: true }).first().click()
+		await expect(page.locator('.auto-save-status').first()).toHaveAttribute('data-save-status', 'saved')
 		await expect
 			.poll(
 				async () => (await api(request, '/system/moduleConfig/getByName', { name })).searchEngineList.length,
@@ -360,7 +363,10 @@ test('Docker read failures replace the empty table and recover in place', async 
 			})
 		await route.fulfill({
 			json: containersFail
-				? { code: containerErrorCode, msg: 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock' }
+				? {
+						code: containerErrorCode,
+						msg: 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock',
+					}
 				: {
 						code: 0,
 						data: {
@@ -468,7 +474,9 @@ test('Docker read failures replace the empty table and recover in place', async 
 	await expect(failure).toHaveCount(0)
 })
 for (const target of ['stats', 'logs'] as const) {
-	test(`Docker first ${target} access failure keeps container actions hidden throughout retries`, async ({ page }, info) => {
+	test(`Docker first ${target} access failure keeps container actions hidden throughout retries`, async ({
+		page,
+	}, info) => {
 		let accessDenied = true
 		let holdRetry = false
 		let releaseRetry: (() => void) | undefined
@@ -479,7 +487,14 @@ for (const target of ['stats', 'logs'] as const) {
 					code: 0,
 					data: {
 						count: 1,
-						list: [{ id: 'access-container', names: 'Access protected container', image: 'nginx', state: 'running' }],
+						list: [
+							{
+								id: 'access-container',
+								names: 'Access protected container',
+								image: 'nginx',
+								state: 'running',
+							},
+						],
 					},
 				},
 			}),
@@ -496,9 +511,16 @@ for (const target of ['stats', 'logs'] as const) {
 					})
 			}
 			await route.fulfill({
-				json: endpoint === target && accessDenied
-					? { code: target === 'stats' ? 1005 : 1006 }
-					: { code: 0, data: endpoint === 'stats' ? [{ ID: 'access-container', CPUPerc: '13.0%' }] : { logs: 'restored access log' } },
+				json:
+					endpoint === target && accessDenied
+						? { code: target === 'stats' ? 1005 : 1006 }
+						: {
+								code: 0,
+								data:
+									endpoint === 'stats'
+										? [{ ID: 'access-container', CPUPerc: '13.0%' }]
+										: { logs: 'restored access log' },
+							},
 			})
 		})
 		await enter(page, '/settings/docker')
@@ -521,7 +543,11 @@ for (const target of ['stats', 'logs'] as const) {
 			await expect(page.getByRole('table')).toHaveCount(0)
 			await expect(page.getByRole('button', { name: '停止', exact: true })).toHaveCount(0)
 			await expect(page.locator('.settings-body')).not.toContainText('Access protected container')
-			await page.screenshot({ path: info.outputPath(`docker-${target}-access-retry-${succeeds ? 'success' : 'failure'}-pending.png`) })
+			await page.screenshot({
+				path: info.outputPath(
+					`docker-${target}-access-retry-${succeeds ? 'success' : 'failure'}-pending.png`,
+				),
+			})
 			holdRetry = false
 			releaseRetry!()
 			if (!succeeds) {
@@ -534,7 +560,10 @@ for (const target of ['stats', 'logs'] as const) {
 		await expect(failure).toHaveCount(0)
 		await expect(page.locator('.ant-table')).toContainText('Access protected container')
 		if (target === 'logs') await expect(page.locator('.log-output')).toHaveText('restored access log')
-		else await expect(page.getByRole('row').filter({ hasText: 'Access protected container' })).toContainText('13.0%')
+		else
+			await expect(page.getByRole('row').filter({ hasText: 'Access protected container' })).toContainText(
+				'13.0%',
+			)
 		expect(targetRequests).toBe(3)
 	})
 }

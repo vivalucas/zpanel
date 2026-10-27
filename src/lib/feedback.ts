@@ -35,13 +35,12 @@ export function useFeedback() {
 		}),
 		[modal],
 	)
-	const error = (err: unknown) => {
+	const error = (err: unknown, messageKey?: string, duration?: number) => {
 		if (!activeRef.current) return
 		if (err instanceof DOMException && err.name === 'AbortError') return
 		const key = err instanceof ApiError ? `apiErrorCode.${err.code}` : ''
-		void message.error(
-			key && t(key) !== key ? t(key) : err instanceof Error ? err.message : t('common.failed'),
-		)
+		const content = key && t(key) !== key ? t(key) : err instanceof Error ? err.message : t('common.failed')
+		void message.error(messageKey ? { key: messageKey, content, duration } : content)
 	}
 	return { message, modal: scopedModal, error, t }
 }

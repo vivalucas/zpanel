@@ -114,7 +114,10 @@ test('native modified and middle clicks bypass iframe interception and retain li
 	)
 	await enter(page)
 	const link = page.getByRole('link', { name: 'Boundary native link', exact: true })
-	for (const options of [{ button: 'middle' as const }, { modifiers: ['ControlOrMeta'] as 'ControlOrMeta'[] }]) {
+	for (const options of [
+		{ button: 'middle' as const },
+		{ modifiers: ['ControlOrMeta'] as 'ControlOrMeta'[] },
+	]) {
 		const opened = context.waitForEvent('page')
 		await link.click(options)
 		const popup = await opened
@@ -263,7 +266,9 @@ test('export read failures produce no download and successful export releases it
 test('mobile settings selection handles leave cancellation and unknown routes recover', async ({ page }) => {
 	await page.setViewportSize({ width: 390, height: 844 })
 	await enter(page, '/settings/appearance')
-	await page.getByLabel('面板名称').fill('Mobile draft')
+	const draft = 'Mobile draft'.repeat(20)
+	await page.getByLabel('面板名称').fill(draft)
+	await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'invalid')
 	await page.getByRole('combobox', { name: '设置', exact: true }).click()
 	await page.locator('.ant-select-dropdown:visible').getByText('导航分组', { exact: true }).click()
 	await page
@@ -271,6 +276,7 @@ test('mobile settings selection handles leave cancellation and unknown routes re
 		.getByRole('button', { name: /取.*消/ })
 		.click()
 	await expect(page.locator('.mobile-settings-nav')).toContainText('风格设置')
+	await expect(page.getByLabel('面板名称')).toHaveValue(draft)
 	await page.getByRole('combobox', { name: '设置', exact: true }).click()
 	await page.locator('.ant-select-dropdown:visible').getByText('导航分组', { exact: true }).click()
 	await page

@@ -86,101 +86,132 @@ test.beforeAll(async ({ request }) => {
 	account = json.data
 })
 
-for (const tone of ['light', 'dark', 'mixed'] as const) {
-	test(`automatic contrast keeps ${tone} wallpaper readable in both UI themes and narrow widths`, async ({
-		page,
-	}, info) => {
-		const errors: string[] = []
-		page.on('pageerror', (error) => errors.push(error.message))
-		await home(page, wallpapers[tone], { wallpaperAutoContrast: true })
-		await expect(page.locator('.home-page')).toHaveAttribute(
-			'data-wallpaper-tone',
-			tone === 'dark' ? 'dark' : 'light',
-		)
-		await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-mixed', String(tone === 'mixed'))
-		for (const theme of ['light', 'dark'] as const) {
-			await page.emulateMedia({ colorScheme: theme })
-			await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
-			for (const width of [320, 390, 1440]) {
-				await page.setViewportSize({ width, height: 1000 })
-				await expect
-					.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
-					.toBe(true)
-				await expect(page.locator('.home-identity')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-				for (const group of await page.locator('.navigation-group').all())
-					await expect(group).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-				const heading = await page
-					.locator('.group-heading h2')
-					.first()
-					.evaluate((element) => getComputedStyle(element).color)
-				// Ant buttons animate their foreground after wallpaper analysis and theme changes.
-				// Wait for the intended ink before measuring contrast, rather than sampling a transition.
-				for (const action of await page.locator('.empty-group .ant-btn').all())
-					await expect(action).toHaveCSS('color', heading)
-				await expect(page.getByRole('textbox', { name: '搜索', exact: true })).toHaveCSS('color', heading)
-				const contrast = await page.locator('.home-page').evaluate((root, kind) => {
-					const context = document.createElement('canvas').getContext('2d')!
-					const rgba = (value: string) => {
-						context.clearRect(0, 0, 1, 1)
-						context.fillStyle = value
-						context.fillRect(0, 0, 1, 1)
-						return [...context.getImageData(0, 0, 1, 1).data]
-					}
-					const mix = (front: number[], back: number[]) =>
-						front.slice(0, 3).map((value, i) => (value * front[3]) / 255 + back[i] * (1 - front[3] / 255))
-					const luminance = (rgb: number[]) =>
-						rgb
-							.map((n) => n / 255)
-							.map((n) => (n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4))
-							.reduce((sum, n, i) => sum + n * [0.2126, 0.7152, 0.0722][i], 0)
-					// Include the page-wide veil, using the least favorable fixture pixel.
-					const pixel = kind === 'dark' ? [20, 32, 45] : kind === 'light' ? [245, 240, 229] : [0, 0, 0]
-					const base = mix(
-						rgba(getComputedStyle(root.querySelector('.home-contrast-mask')!).backgroundColor),
-						pixel,
+for (const ink of ['white', 'black'] as const) {
+	for (const tone of ['light', 'dark', 'mixed'] as const) {
+		test(`automatic contrast keeps fixed ${ink} text readable on ${tone} wallpaper in both UI themes and narrow widths`, async ({
+			page,
+		}, info) => {
+			const errors: string[] = []
+			page.on('pageerror', (error) => errors.push(error.message))
+			await home(page, wallpapers[tone], {
+				wallpaperAutoContrast: true,
+				iconTextColor: ink === 'white' ? '#ffffff' : '#202733',
+			})
+			await expect(page.locator('.home-page')).toHaveAttribute(
+				'data-wallpaper-tone',
+				ink === 'white' ? 'dark' : 'light',
+			)
+			await expect(page.locator('.home-page')).toHaveAttribute(
+				'data-wallpaper-mixed',
+				String(tone === 'mixed'),
+			)
+			for (const theme of ['light', 'dark'] as const) {
+				await page.emulateMedia({ colorScheme: theme })
+				await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+				for (const width of [320, 390, 1440]) {
+					await page.setViewportSize({ width, height: 1000 })
+					await expect
+						.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+						.toBe(true)
+					await expect(page.locator('.home-identity')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+					for (const group of await page.locator('.navigation-group').all())
+						await expect(group).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+					const heading = await page
+						.locator('.group-heading h2')
+						.first()
+						.evaluate((element) => getComputedStyle(element).color)
+					// Ant buttons animate their foreground after wallpaper analysis and theme changes.
+					// Wait for the intended ink before measuring contrast, rather than sampling a transition.
+					for (const action of await page.locator('.empty-group .ant-btn').all())
+						await expect(action).toHaveCSS('color', heading)
+					await expect(page.getByRole('textbox', { name: '搜索', exact: true })).toHaveCSS('color', heading)
+					const contrast = await page.locator('.home-page').evaluate(
+						(root, { kind, ink }) => {
+							const context = document.createElement('canvas').getContext('2d')!
+							const rgba = (value: string) => {
+								context.clearRect(0, 0, 1, 1)
+								context.fillStyle = value
+								context.fillRect(0, 0, 1, 1)
+								return [...context.getImageData(0, 0, 1, 1).data]
+							}
+							const mix = (front: number[], back: number[]) =>
+								front.slice(0, 3).map((value, i) => (value * front[3]) / 255 + back[i] * (1 - front[3] / 255))
+							const luminance = (rgb: number[]) =>
+								rgb
+									.map((n) => n / 255)
+									.map((n) => (n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4))
+									.reduce((sum, n, i) => sum + n * [0.2126, 0.7152, 0.0722][i], 0)
+							// Include the page-wide veil, using the least favorable fixture pixel.
+							const pixel =
+								kind === 'dark'
+									? [20, 32, 45]
+									: kind === 'light'
+										? [245, 240, 229]
+										: ink === 'white'
+											? [255, 255, 255]
+											: [0, 0, 0]
+							const base = mix(
+								rgba(getComputedStyle(root.querySelector('.home-contrast-mask')!).backgroundColor),
+								pixel,
+							)
+							return [
+								...root.querySelectorAll(
+									'.group-heading h2, .empty-group-message, .empty-group .ant-btn, .app-copy strong, .app-copy > span',
+								),
+							].map((element) => {
+								const ancestors = []
+								for (let node: Element | null = element; node && node !== root; node = node.parentElement)
+									ancestors.unshift(node)
+								let background = base
+								for (const node of ancestors)
+									background = mix(rgba(getComputedStyle(node).backgroundColor), background)
+								const foreground = mix(rgba(getComputedStyle(element).color), background)
+								const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b)
+								return { text: element.textContent, ratio: (values[1] + 0.05) / (values[0] + 0.05) }
+							})
+						},
+						{ kind: tone, ink },
 					)
-					return [
-						...root.querySelectorAll(
-							'.group-heading h2, .empty-group-message, .empty-group .ant-btn, .app-copy strong, .app-copy > span',
-						),
-					].map((element) => {
-						const ancestors = []
-						for (let node: Element | null = element; node && node !== root; node = node.parentElement)
-							ancestors.unshift(node)
-						let background = base
-						for (const node of ancestors)
-							background = mix(rgba(getComputedStyle(node).backgroundColor), background)
-						const foreground = mix(rgba(getComputedStyle(element).color), background)
-						const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b)
-						return { text: element.textContent, ratio: (values[1] + 0.05) / (values[0] + 0.05) }
+					for (const value of contrast)
+						expect(value.ratio, `${theme} ${width} ${value.text}`).toBeGreaterThanOrEqual(4.5)
+					await page.screenshot({
+						path: info.outputPath(`${ink}-${tone}-${theme}-${width}.png`),
+						animations: 'disabled',
 					})
-				}, tone)
-				for (const value of contrast)
-					expect(value.ratio, `${theme} ${width} ${value.text}`).toBeGreaterThanOrEqual(4.5)
-				await page.screenshot({
-					path: info.outputPath(`${tone}-${theme}-${width}.png`),
-					animations: 'disabled',
-				})
+				}
 			}
-		}
-		await expect(page.getByRole('button', { name: '导入配置', exact: true })).toHaveCount(0)
-		await page.getByRole('button', { name: '设置', exact: true }).click()
-		await page.getByRole('menuitem', { name: '导入与导出', exact: true }).click()
-		await expect(page).toHaveURL(/settings\/backup/)
-		expect(errors).toEqual([])
-	})
+			await expect(page.getByRole('button', { name: '导入配置', exact: true })).toHaveCount(0)
+			await page.getByRole('button', { name: '设置', exact: true }).click()
+			await page.getByRole('menuitem', { name: '导入与导出', exact: true }).click()
+			await expect(page).toHaveURL(/settings\/backup/)
+			expect(errors).toEqual([])
+		})
+	}
 }
 
-test('wallpaper appearance follows the actual cover crop after resizing', async ({ page }) => {
+test('fixed white text keeps its color while the contrast veil follows the actual cover crop', async ({
+	page,
+}) => {
 	await page.setViewportSize({ width: 1440, height: 800 })
 	await home(
 		page,
 		svg('<path fill="#fff" d="M0 0h1600v1000H0z"/><path fill="#000" d="M600 0h400v1000H600z"/>'),
+		{ wallpaperAutoContrast: true },
 	)
-	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-tone', 'light')
+	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-tone', 'dark')
+	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-mixed', 'true')
+	await expect
+		.poll(() =>
+			page
+				.locator('.home-page')
+				.evaluate((element) => Number(getComputedStyle(element).getPropertyValue('--wallpaper-scrim'))),
+		)
+		.toBeGreaterThan(0)
 	await page.setViewportSize({ width: 320, height: 1000 })
 	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-tone', 'dark')
 	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-mixed', 'false')
+	await expect(page.locator('.home-page')).toHaveCSS('--wallpaper-scrim', '0')
+	await expect(page.locator('.group-heading h2').first()).toHaveCSS('color', 'rgb(255, 255, 255)')
 })
 
 test('uninspectable remote images preserve their brightness and explicit text overrides', async ({
@@ -192,10 +223,10 @@ test('uninspectable remote images preserve their brightness and explicit text ov
 		iconTextColor: '#b04171',
 		clockColor: '#316e91',
 	})
-	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-tone', 'dark')
+	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-tone', 'light')
 	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-mixed', 'true')
 	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'unreadable')
-	await expect(page.locator('.home-contrast-mask')).toHaveCSS('background-color', 'rgba(10, 15, 23, 0)')
+	await expect(page.locator('.home-contrast-mask')).toHaveCSS('background-color', 'rgba(250, 251, 253, 0)')
 	await expect(page.locator('.app-link')).toHaveCSS('color', 'rgb(176, 65, 113)')
 	await expect(page.locator('.app-copy strong')).toHaveCSS('color', 'rgb(176, 65, 113)')
 	await expect(page.locator('.app-copy > span')).toHaveCSS('color', 'rgb(176, 65, 113)')
@@ -210,7 +241,7 @@ test('fine mixed textures retain a readable veil at desktop and mobile sizes', a
 	const texture = svg(
 		'<defs><pattern id="p" width="8" height="8" patternUnits="userSpaceOnUse"><path fill="#fff" d="M0 0h4v8H0z"/></pattern></defs><path fill="#000" d="M0 0h1600v1000H0z"/><path fill="url(#p)" d="M0 0h1600v1000H0z"/>',
 	)
-	await home(page, texture, { backgroundBlur: 0, wallpaperAutoContrast: true })
+	await home(page, texture, { backgroundBlur: 0, wallpaperAutoContrast: true, iconTextColor: '#202733' })
 	for (const width of [1440, 320]) {
 		await page.setViewportSize({ width, height: 1000 })
 		await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-tone', 'light')
@@ -259,7 +290,7 @@ for (const tone of ['light', 'dark', 'none'] as const) {
 			tone === 'none' ? { backgroundImageSrc: '' } : {},
 			backgrounds,
 		)
-		if (tone !== 'none') await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-tone', tone)
+		await expect(page.locator('.home-page')).toHaveAttribute('data-home-text-tone', 'dark')
 		const ratios = await page.locator('.item-icon').evaluateAll((icons, kind) => {
 			const canvas = document.createElement('canvas')
 			canvas.width = canvas.height = 1
@@ -354,7 +385,7 @@ test('partial search and monitor failures keep readable neutral retry controls',
 		await expect(state).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
 		await expect(state.getByRole('button', { name: '重试', exact: true })).toHaveCSS(
 			'color',
-			'rgb(245, 247, 250)',
+			'rgb(255, 255, 255)',
 		)
 	}
 	await expect(page.getByRole('button', { name: '导入配置', exact: true })).toHaveCount(0)

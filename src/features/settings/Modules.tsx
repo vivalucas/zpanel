@@ -2,7 +2,7 @@ import { useUnsavedChanges } from '@/lib/unsaved'
 import { useSessionRequest } from '@/lib/session'
 import { randomId } from '@/lib/id'
 import { useFeedback } from '@/lib/feedback'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Button, Form, Input, Select, Space, Switch } from 'antd'
 import type { InputProps } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
@@ -13,6 +13,8 @@ import { Loading, QueryError, Section } from '@/components/shared'
 import { isSafeNavigationUrl } from '@/utils/navigation'
 import { findSearchEngineIndex } from '@/lib/searchEngine'
 import { isAccessError } from '@/lib/queryState'
+import { useAutoSave, useAutoSaveFeedback } from '@/lib/autoSave'
+import { AutoSaveStatus } from '@/components/AutoSaveStatus'
 
 function ColorInput({ value, ...props }: InputProps) {
 	return (
@@ -34,29 +36,64 @@ export default function Modules() {
 	const search = useSearchConfig()
 	const monitors = useMonitorConfig()
 	const client = useQueryClient()
-	const { t, error, message } = useFeedback()
+	const { t } = useFeedback()
 	const [searchForm] = Form.useForm()
 	const [monitorForm] = Form.useForm()
-	const [busy, setBusy] = useState<string | null>(null)
-	const [searchDirty, setSearchDirty] = useState(false)
-	const [monitorDirty, setMonitorDirty] = useState(false)
-	useUnsavedChanges(searchDirty || monitorDirty)
 	const engineList = Form.useWatch('searchEngineList', searchForm) || []
 	const paths = useQuery({
 		queryKey: ['mountpoints'],
 		queryFn: ({ signal }) =>
 			request<SystemMonitor.Mountpoint[]>('/system/monitor/getDiskMountpoints', {}, { signal }),
 	})
+	const searchSave = useAutoSave({
+		form: searchForm,
+		notify: false,
+		enabled: !!search.data && !isAccessError(search.error),
+		save: async (values) => {
+			const engines = values.searchEngineList as SearchConfig['searchEngineList']
+			if (!engines?.length) throw new Error(t('ui.oneEngineRequired'))
+			const value: SearchConfig = {
+				searchEngineList: engines,
+				currentSearchEngine: engines[values.selected] || engines[0],
+				newWindowOpen: values.newWindowOpen,
+			}
+			await client.cancelQueries({ queryKey: ['search'] })
+			await request('/system/moduleConfig/save', { name: 'module-deskModuleSearchBox', value })
+			void client.cancelQueries({ queryKey: ['search'] })
+			client.setQueryData(['search'], value)
+		},
+	})
+	const monitorSave = useAutoSave({
+		form: monitorForm,
+		notify: false,
+		enabled: !!monitors.data && !isAccessError(monitors.error) && !isAccessError(paths.error),
+		save: async (values) => {
+			await client.cancelQueries({ queryKey: ['monitors'] })
+			await request('/system/moduleConfig/save', { name: 'module-systemMonitor', value: values })
+			void client.cancelQueries({ queryKey: ['monitors'] })
+			client.setQueryData(['monitors'], values)
+		},
+	})
+	useAutoSaveFeedback([searchSave, monitorSave])
+	useUnsavedChanges(
+		searchSave.dirty || monitorSave.dirty,
+		(!searchSave.dirty ||
+			(!isAccessError(search.error) && ['pending', 'saving'].includes(searchSave.status))) &&
+			(!monitorSave.dirty ||
+				(!isAccessError(monitors.error) &&
+					!isAccessError(paths.error) &&
+					['pending', 'saving'].includes(monitorSave.status))),
+	)
 	useEffect(() => {
-		if (search.data && !searchDirty)
+		if (search.data && !searchSave.dirty)
 			searchForm.setFieldsValue({
 				...search.data,
 				selected: findSearchEngineIndex(search.data.searchEngineList, search.data.currentSearchEngine),
 			})
-	}, [search.data, searchForm, searchDirty])
+	}, [search.data, searchForm, searchSave.dirty])
 	useEffect(() => {
-		if (monitors.data && !monitorDirty) monitorForm.setFieldsValue(monitors.data)
-	}, [monitors.data, monitorForm, monitorDirty])
+		if (monitors.data && !monitorSave.dirty) monitorForm.setFieldsValue(monitors.data)
+	}, [monitors.data, monitorForm, monitorSave.dirty])
 	const monitorError = isAccessError(paths.error) ? paths.error : monitors.error
 	return (
 		<>
@@ -76,36 +113,7 @@ export default function Modules() {
 								retry={() => search.refetch()}
 							/>
 						)}
-						<Form
-							form={searchForm}
-							onValuesChange={() => setSearchDirty(true)}
-							disabled={busy !== null}
-							layout="vertical"
-							onFinish={async (values) => {
-								const engines = values.searchEngineList as SearchConfig['searchEngineList']
-								if (!engines?.length) return error(new Error(t('ui.oneEngineRequired')))
-								const value: SearchConfig = {
-									searchEngineList: engines,
-									currentSearchEngine: engines[values.selected] || engines[0],
-									newWindowOpen: values.newWindowOpen,
-								}
-								setBusy('search')
-								try {
-									await request('/system/moduleConfig/save', {
-										name: 'module-deskModuleSearchBox',
-										value,
-									})
-									client.setQueryData(['search'], value)
-									await client.invalidateQueries({ queryKey: ['search'] })
-									setSearchDirty(false)
-									void message.success(t('common.success'))
-								} catch (err) {
-									error(err)
-								} finally {
-									setBusy(null)
-								}
-							}}
-						>
+						<Form form={searchForm} onValuesChange={searchSave.changed} layout="vertical">
 							<Form.List name="searchEngineList">
 								{(fields, { add, remove }) => (
 									<>
@@ -120,7 +128,7 @@ export default function Modules() {
 														type="text"
 														aria-label={t('common.delete')}
 														icon={<DeleteOutlined aria-hidden="true" />}
-														disabled={busy !== null || fields.length <= 1}
+														disabled={fields.length <= 1}
 														onClick={() => {
 															const selected = searchForm.getFieldValue('selected')
 															remove(field.name)
@@ -190,16 +198,7 @@ export default function Modules() {
 							>
 								<Switch />
 							</Form.Item>
-							<div className="form-actions">
-								{searchDirty && (
-									<span className="settings-draft-hint" role="status">
-										{t('ui.unsavedChanges')}
-									</span>
-								)}
-								<Button type="primary" htmlType="submit" loading={busy === 'search'}>
-									{t('common.save')}
-								</Button>
-							</div>
+							<AutoSaveStatus state={searchSave} />
 						</Form>
 					</>
 				)}
@@ -224,26 +223,7 @@ export default function Modules() {
 							/>
 						)}
 						{paths.error && <QueryError error={paths.error} compact retry={() => paths.refetch()} />}
-						<Form
-							form={monitorForm}
-							onValuesChange={() => setMonitorDirty(true)}
-							disabled={busy !== null}
-							layout="vertical"
-							onFinish={async (values) => {
-								setBusy('monitors')
-								try {
-									await request('/system/moduleConfig/save', { name: 'module-systemMonitor', value: values })
-									client.setQueryData(['monitors'], values)
-									await client.invalidateQueries({ queryKey: ['monitors'] })
-									setMonitorDirty(false)
-									void message.success(t('common.success'))
-								} catch (err) {
-									error(err)
-								} finally {
-									setBusy(null)
-								}
-							}}
-						>
+						<Form form={monitorForm} onValuesChange={monitorSave.changed} layout="vertical">
 							<Form.List name="list">
 								{(fields, { add, remove, move }) => (
 									<>
@@ -256,7 +236,7 @@ export default function Modules() {
 													<Space>
 														<Button
 															size="small"
-															disabled={busy !== null || index === 0}
+															disabled={index === 0}
 															onClick={() => move(index, index - 1)}
 														>
 															{t('ui.moveUp')}
@@ -329,11 +309,6 @@ export default function Modules() {
 											</div>
 										))}
 										<div className="form-actions">
-											{monitorDirty && (
-												<span className="settings-draft-hint" role="status">
-													{t('ui.unsavedChanges')}
-												</span>
-											)}
 											<Button
 												icon={<PlusOutlined aria-hidden="true" />}
 												onClick={() =>
@@ -342,9 +317,7 @@ export default function Modules() {
 											>
 												{t('common.add')}
 											</Button>
-											<Button type="primary" htmlType="submit" loading={busy === 'monitors'}>
-												{t('common.save')}
-											</Button>
+											<AutoSaveStatus state={monitorSave} />
 										</div>
 									</>
 								)}

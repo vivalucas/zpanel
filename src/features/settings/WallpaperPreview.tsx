@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SearchOutlined } from '@ant-design/icons'
 import { WallpaperBackground } from '@/components/WallpaperBackground'
 import { useWallpaperAppearance } from '@/features/home/useWallpaperAppearance'
 import { useWallpaperViewport } from '@/features/home/useWallpaperViewport'
+import { resolveHomeText } from '@/lib/homeText'
 
 interface WallpaperPreviewProps {
 	src?: string
@@ -23,7 +25,8 @@ export default function WallpaperPreview({
 	textColor,
 }: WallpaperPreviewProps) {
 	const { t } = useTranslation()
-	const appearance = useWallpaperAppearance(src, shade, blur, autoContrast)
+	const text = useMemo(() => resolveHomeText(textColor), [textColor])
+	const appearance = useWallpaperAppearance(src, shade, blur, autoContrast, 160, text.tone, text.ink)
 	const frameRef = useRef<HTMLDivElement>(null)
 	const [availableWidth, setAvailableWidth] = useState(0)
 	const viewport = useWallpaperViewport()
@@ -45,14 +48,13 @@ export default function WallpaperPreview({
 	const viewportHeight = viewport?.height ?? 1
 	const scale = Math.min((availableWidth || 1) / viewportWidth, 220 / viewportHeight, 1)
 	const hasWallpaper = !!src && appearance.status !== 'error'
-	const appTextColor = textColor?.trim().toLowerCase() === '#1f2937' ? undefined : textColor || undefined
 	const status =
 		appearance.status === 'loading'
 			? 'ui.wallpaperPreviewLoading'
 			: appearance.status === 'error'
 				? 'ui.wallpaperPreviewFailed'
 				: appearance.status === 'unreadable'
-					? autoContrast
+					? autoContrast && appearance.scrim > 0
 						? 'ui.wallpaperPreviewAutoFallback'
 						: 'ui.wallpaperPreviewUnanalyzed'
 					: autoContrast && appearance.scrim > 0
@@ -66,7 +68,14 @@ export default function WallpaperPreview({
 					data-wallpaper-tone={hasWallpaper ? appearance.tone : undefined}
 					data-wallpaper-mixed={hasWallpaper ? appearance.mixed : undefined}
 					data-wallpaper-status={appearance.status}
-					style={{ width: viewportWidth * scale, height: viewportHeight * scale }}
+					data-home-text-tone={text.tone}
+					style={
+						{
+							width: viewportWidth * scale,
+							height: viewportHeight * scale,
+							'--home-text': text.color,
+						} as CSSProperties
+					}
 					aria-hidden="true"
 				>
 					<WallpaperBackground
@@ -89,7 +98,7 @@ export default function WallpaperPreview({
 							{['W', 'Z'].map((letter) => (
 								<div className="wallpaper-preview-app" key={letter}>
 									<span className="wallpaper-preview-icon">{letter}</span>
-									<span className="wallpaper-preview-name" style={{ color: appTextColor }}>
+									<span className="wallpaper-preview-name">
 										{letter === 'W' ? t('ui.wallpaperPreviewApp') : 'ZPanel'}
 									</span>
 								</div>
@@ -99,11 +108,20 @@ export default function WallpaperPreview({
 				</div>
 			</div>
 			<p className="wallpaper-preview-note">{t('ui.wallpaperPreviewDescription')}</p>
-			{status && (
-				<p className="wallpaper-preview-note" role="status" aria-live="polite">
-					{t(status)}
-				</p>
-			)}
+			<p className="wallpaper-preview-note wallpaper-preview-status" role="status" aria-live="polite">
+				{[
+					'wallpaperPreviewLoading',
+					'wallpaperPreviewFailed',
+					'wallpaperPreviewUnanalyzed',
+					'wallpaperPreviewAutoFallback',
+					'wallpaperPreviewAdjusted',
+				].map((key) => (
+					<span className="wallpaper-preview-status-size" aria-hidden="true" key={key}>
+						{t(`ui.${key}`)}
+					</span>
+				))}
+				<span>{status ? t(status) : null}</span>
+			</p>
 		</div>
 	)
 }

@@ -57,11 +57,14 @@ for (const language of ['zh-CN', 'en-US']) {
 		}
 	})
 }
-test('keyboard focus stays above the footer with and without the draft warning', async ({ page }) => {
+test('keyboard focus stays above the footer before and after automatic saving', async ({ page }) => {
 	await enter(page)
 	await page.setViewportSize({ width: 390, height: 844 })
 	for (const dirty of [false, true]) {
-		if (dirty) await page.locator('#logoText').fill('Keyboard draft')
+		if (dirty) {
+			await page.locator('#logoText').fill('Keyboard draft')
+			await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
+		}
 		await page.locator('#logoText').focus()
 		let checked = 0
 		for (let i = 0; i < 38; i++) {

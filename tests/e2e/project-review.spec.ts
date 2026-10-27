@@ -121,7 +121,7 @@ test('invalid style writes fail and legacy values show a repair path without cra
 	await expect(page.getByRole('button', { name: '修复外观配置' })).toBeVisible()
 	await page.getByRole('button', { name: '修复外观配置' }).click()
 	await expect(
-		page.getByText('部分外观配置不合法，已临时使用默认值。检查后点击保存即可修复，应用导航不受影响。'),
+		page.getByText('部分外观配置不合法，已临时使用默认值。检查后调整设置或点击修复，应用导航不受影响。'),
 	).toBeVisible()
 	expect(errors).toEqual([])
 })

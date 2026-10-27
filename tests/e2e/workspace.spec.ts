@@ -116,7 +116,7 @@ test('login, create a group and app, edit, search and keyboard-sort with persist
 test('appearance persists and dark/light theme reaches controls and home', async ({ page, request }) => {
 	await enter(page, '/settings/appearance')
 	await page.getByLabel('面板名称').fill('My Homelab')
-	await page.getByRole('button', { name: '保存', exact: true }).click()
+	await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
 	await expect
 		.poll(async () => (await api(request, '/panel/userConfig/get')).panel.logoText)
 		.toBe('My Homelab')
@@ -136,7 +136,8 @@ test('search/monitor settings and site customizations save; safe mode disables c
 	request,
 }) => {
 	await enter(page, '/settings/modules')
-	await page.getByRole('button', { name: '保存', exact: true }).first().click()
+	await page.locator('#searchEngineList_0_title').fill('Web search')
+	await expect(page.locator('.auto-save-status').first()).toHaveAttribute('data-save-status', 'saved')
 	await expect
 		.poll(
 			async () =>
@@ -144,7 +145,8 @@ test('search/monitor settings and site customizations save; safe mode disables c
 					?.searchEngineList.length,
 		)
 		.toBeGreaterThan(0)
-	await page.getByRole('button', { name: '保存', exact: true }).last().click()
+	await page.locator('#list_0_description').fill('CPU test')
+	await expect(page.locator('.auto-save-status').last()).toHaveAttribute('data-save-status', 'saved')
 	await expect
 		.poll(
 			async () =>

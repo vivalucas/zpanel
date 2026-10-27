@@ -81,7 +81,7 @@ export const defaultPanel: Panel.panelConfig = {
 	backgroundMaskNumber: 0.2,
 	wallpaperAutoContrast: false,
 	iconStyle: 1,
-	iconTextColor: '',
+	iconTextColor: '#ffffff',
 	iconTextInfoHideDescription: false,
 	iconTextIconHideTitle: false,
 	clockShowSecond: false,

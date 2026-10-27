@@ -10,29 +10,48 @@ import { Section } from '@/components/shared'
 import { ImageUpload } from '@/components/ImageUpload'
 import { passwordRule } from '@/lib/password'
 import { useUnsavedChanges } from '@/lib/unsaved'
+import { useAutoSave } from '@/lib/autoSave'
+import { AutoSaveStatus } from '@/components/AutoSaveStatus'
+import type { AuthInfo } from '@/lib/api'
 export default function Account({ user }: { user: User.Info }) {
 	const request = useSessionRequest()
 	const prefs = usePreferences()
 	const navigate = useNavigate()
 	const client = useQueryClient()
 	const { t, error, message, modal } = useFeedback()
-	const [saving, setSaving] = useState(false)
 	const [passwordBusy, setPasswordBusy] = useState(false)
 	const [uploading, setUploading] = useState(false)
 	const [form] = Form.useForm()
-	const [dirty, setDirty] = useState(false)
 	const [passwordDirty, setPasswordDirty] = useState(false)
 	const avatarRevisionRef = useRef(0)
-	const allowNavigation = useUnsavedChanges(dirty || passwordDirty)
+	const savedNicknameRef = useRef(user.name)
+	const profileSave = useAutoSave({
+		form,
+		paused: uploading,
+		save: async (values) => {
+			await client.cancelQueries({ queryKey: ['auth'] })
+			await request('/user/updateInfo', values)
+			void client.cancelQueries({ queryKey: ['auth'] })
+			savedNicknameRef.current = values.name
+			client.setQueryData<AuthInfo>(['auth'], (previous) =>
+				previous ? { ...previous, user: { ...previous.user, ...values } } : previous,
+			)
+			if (prefs.token && usePreferences.getState().token === prefs.token)
+				prefs.signIn({ token: prefs.token, user: { ...user, ...values } })
+		},
+	})
+	const allowNavigation = useUnsavedChanges(
+		profileSave.dirty || passwordDirty || uploading,
+		!passwordDirty && !uploading && ['pending', 'saving'].includes(profileSave.status),
+	)
 	const switchAccount = (token: string) => {
 		const proceed = () => {
 			allowNavigation()
-			setDirty(false)
 			setPasswordDirty(false)
 			prefs.selectAccount(token)
 			navigate('/')
 		}
-		if (dirty || passwordDirty)
+		if (profileSave.dirty || passwordDirty || uploading)
 			modal.confirm({ title: t('ui.leaveUnsaved'), content: t('review.unsaved'), onOk: proceed })
 		else proceed()
 	}
@@ -41,28 +60,11 @@ export default function Account({ user }: { user: User.Info }) {
 			<Section title={t('ui.profile')}>
 				<Form
 					form={form}
-					disabled={saving}
 					initialValues={user}
 					layout="vertical"
 					onValuesChange={(changed) => {
 						if ('headImage' in changed) avatarRevisionRef.current++
-						setDirty(true)
-					}}
-					onFinish={async (values) => {
-						if (saving || uploading) return
-						setSaving(true)
-						try {
-							await request('/user/updateInfo', values)
-							setDirty(false)
-							await client.invalidateQueries({ queryKey: ['auth'] })
-							if (prefs.token && usePreferences.getState().token === prefs.token)
-								prefs.signIn({ token: prefs.token, user: { ...user, ...values } })
-							void message.success(t('common.success'))
-						} catch (err) {
-							error(err)
-						} finally {
-							setSaving(false)
-						}
+						profileSave.changed()
 					}}
 				>
 					<div className="form-grid">
@@ -72,7 +74,8 @@ export default function Account({ user }: { user: User.Info }) {
 							rules={[
 								{ required: true },
 								// Existing nicknames remain valid until the user edits them.
-								({ getFieldValue }) => (getFieldValue('name') === user.name ? {} : { min: 3, max: 15 }),
+								({ getFieldValue }) =>
+									getFieldValue('name') === savedNicknameRef.current ? {} : { min: 3, max: 15 },
 							]}
 						>
 							<Input />
@@ -83,7 +86,7 @@ export default function Account({ user }: { user: User.Info }) {
 					</div>
 					<div className="form-actions">
 						<ImageUpload
-							disabled={saving}
+							disabled={profileSave.saving}
 							onUploadingChange={setUploading}
 							onStart={() => {
 								const revision = avatarRevisionRef.current
@@ -91,18 +94,11 @@ export default function Account({ user }: { user: User.Info }) {
 									if (avatarRevisionRef.current !== revision) return
 									avatarRevisionRef.current++
 									form.setFieldValue('headImage', url)
-									setDirty(true)
+									profileSave.changed()
 								}
 							}}
 						/>
-						{dirty && (
-							<span className="settings-draft-hint" role="status">
-								{t('ui.unsavedChanges')}
-							</span>
-						)}
-						<Button type="primary" htmlType="submit" loading={saving} disabled={uploading}>
-							{t('common.save')}
-						</Button>
+						<AutoSaveStatus state={profileSave} />
 					</div>
 				</Form>
 			</Section>

@@ -70,14 +70,14 @@ test('duplicate search URLs retain the selected engine and failed saves retain t
 	const selected = page.locator('.ant-select').filter({ has: page.locator('#selected') })
 	await expect(selected).toContainText('Beta')
 	await page.locator('#searchEngineList_0_title').fill('Alpha draft')
-	await search.getByRole('button', { name: '保存', exact: true }).click()
+	await expect(search.getByRole('button', { name: '保存', exact: true })).toHaveCount(0)
 	await expect.poll(() => attempts).toBe(1)
-	await expect(search.locator('.settings-draft-hint')).toHaveText('有未保存的更改')
+	await expect(search.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'error')
 	await expect(page.locator('#searchEngineList_0_title')).toHaveValue('Alpha draft')
 	await expect(selected).toContainText('Beta')
-	await search.getByRole('button', { name: '保存', exact: true }).click()
+	await search.locator('.auto-save-status').getByRole('button', { name: '重试', exact: true }).click()
 	await expect.poll(() => attempts).toBe(2)
-	await expect(search.locator('.settings-draft-hint')).toHaveCount(0)
+	await expect(search.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
 	await page.reload()
 	await expect(selected).toContainText('Beta')
 	await expect(page.locator('#searchEngineList_0_title')).toHaveValue('Alpha draft')
@@ -126,12 +126,11 @@ test('monitor colors stay collapsed and preserve complete CSS values through a f
 	const cssColor = 'color-mix(in srgb, red 25%, transparent)'
 	await color.fill(cssColor)
 	await advanced.locator('summary').click()
-	await monitor.getByRole('button', { name: '保存', exact: true }).click()
 	await expect.poll(() => attempts).toBe(1)
-	await expect(monitor.locator('.settings-draft-hint')).toHaveText('有未保存的更改')
-	await monitor.getByRole('button', { name: '保存', exact: true }).click()
+	await expect(monitor.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'error')
+	await monitor.locator('.auto-save-status').getByRole('button', { name: '重试', exact: true }).click()
 	await expect.poll(() => attempts).toBe(2)
-	await expect(monitor.locator('.settings-draft-hint')).toHaveCount(0)
+	await expect(monitor.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
 	expect(saved.list[0].extendParam).toEqual({
 		progressColor: cssColor,
 		progressRailColor: 'rgba(20, 30, 40, 0.2)',
@@ -140,8 +139,59 @@ test('monitor colors stay collapsed and preserve complete CSS values through a f
 	})
 })
 
+test('search auto-save waits for valid engines and queues edits made during a pending write', async ({
+	page,
+}) => {
+	const firstWrite = gate()
+	const engine = { title: 'Original', url: 'https://example.com/original?q=%s', iconSrc: '' }
+	const writes: { searchEngineList: (typeof engine)[]; currentSearchEngine: typeof engine }[] = []
+	await page.route('**/api/system/moduleConfig/getByName', (route) => {
+		if (route.request().postDataJSON().name !== 'module-deskModuleSearchBox') return route.continue()
+		return route.fulfill({
+			json: {
+				code: 0,
+				data: {
+					searchEngineList: [engine],
+					currentSearchEngine: engine,
+					newWindowOpen: true,
+				},
+			},
+		})
+	})
+	await page.route('**/api/system/moduleConfig/save', async (route) => {
+		writes.push(route.request().postDataJSON().value)
+		if (writes.length === 1) await firstWrite.pending
+		return route.fulfill({ json: { code: 0 } })
+	})
+	await enter(page, 'modules')
+	const search = page.locator('.settings-section').first()
+	await search.getByRole('button', { name: '添加搜索引擎', exact: true }).click()
+	const title = page.locator('#searchEngineList_1_title')
+	await title.fill('New engine')
+	await expect(search.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'invalid')
+	expect(writes).toHaveLength(0)
+	await page.locator('#searchEngineList_1_url').fill('https://example.com/new?q=%s')
+	try {
+		await expect.poll(() => writes.length).toBe(1)
+		await expect(title).toBeEnabled()
+		await title.fill('Latest engine')
+		await expect(search.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'pending')
+		await page.waitForTimeout(700)
+		expect(writes).toHaveLength(1)
+	} finally {
+		firstWrite.release()
+	}
+	await expect.poll(() => writes.length).toBe(2)
+	await expect(search.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
+	expect(writes[0].searchEngineList[1].title).toBe('New engine')
+	expect(writes[1].searchEngineList[1].title).toBe('Latest engine')
+	expect(writes[1].currentSearchEngine).toEqual(engine)
+	await expect(title).toHaveValue('Latest engine')
+})
+
 for (const kind of ['search', 'monitors'] as const) {
-	test(`${kind} keeps the saved configuration when its follow-up refresh fails`, async ({ page }) => {
+	test(`${kind} keeps automatically saved configuration when a later refresh fails`, async ({ page }) => {
+		await page.clock.install()
 		const engines = [
 			{ title: 'Alpha', url: 'https://example.com/alpha?q=%s', iconSrc: '/favicon.svg?alpha' },
 			{ title: 'Beta', url: 'https://example.com/beta?q=%s', iconSrc: '/favicon.svg?beta' },
@@ -190,12 +240,13 @@ for (const kind of ['search', 'monitors'] as const) {
 						newWindowOpen: false,
 					}
 				: { list: initial.list!.map((item) => ({ ...item, description: savedTitle })) }
-		const save = section.getByRole('button', { name: '保存', exact: true })
-		await save.click()
 		await expect.poll(() => attempts.length).toBe(1)
+		await expect(section.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
+		await page.clock.fastForward(31_000)
+		await page.getByRole('menuitem', { name: '关于', exact: true }).click()
+		await page.getByRole('menuitem', { name: '搜索与监控', exact: true }).click()
 		await expect(section.getByRole('alert')).toContainText('刷新失败')
-		await expect(section.locator('.settings-draft-hint')).toHaveCount(0)
-		await expect(save).toBeEnabled()
+		await expect(field).toBeEnabled()
 		await expect(field).toHaveValue(savedTitle)
 		if (kind === 'search') {
 			await expect(page.locator('#newWindowOpen')).toHaveAttribute('aria-checked', 'false')
@@ -204,11 +255,16 @@ for (const kind of ['search', 'monitors'] as const) {
 			)
 		}
 		expect(attempts[0]).toEqual(expected)
-		// Another save must retain the acknowledged configuration instead of re-saving stale data.
-		await save.click()
+		// Later edits must keep the other acknowledged fields after the failed refresh.
+		await field.fill(`${savedTitle} next`)
 		await expect.poll(() => attempts.length).toBe(2)
-		await expect(save).toBeEnabled()
-		expect(attempts[1]).toEqual(expected)
+		await expect(section.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
+		const next = structuredClone(expected)
+		if (next.searchEngineList && next.currentSearchEngine) {
+			next.searchEngineList[1].title = `${savedTitle} next`
+			next.currentSearchEngine.title = `${savedTitle} next`
+		} else next.list[0].description = `${savedTitle} next`
+		expect(attempts[1]).toEqual(next)
 	})
 }
 
@@ -255,10 +311,6 @@ for (const kind of ['search', 'monitors', 'mountpoints'] as const) {
 						: { code: 0, data: [{ mountpoint: '/audit/mount', device: '/dev/audit' }] },
 			}),
 		)
-		await page.route('**/api/system/moduleConfig/save', (route) => {
-			failure = 'temporary'
-			return route.fulfill({ json: { code: 0 } })
-		})
 		await enter(page, 'modules')
 		const section = page.locator('.settings-section').nth(kind === 'search' ? 0 : 1)
 		const other = page.locator('.settings-section').nth(kind === 'search' ? 1 : 0)
@@ -269,14 +321,14 @@ for (const kind of ['search', 'monitors', 'mountpoints'] as const) {
 			await expect(
 				page.locator('.ant-select').filter({ has: page.locator('#list_0_extendParam_path') }),
 			).toContainText('/audit/mount')
-			failure = 'temporary'
-			await page.clock.fastForward(31_000)
-			await page.getByRole('menuitem', { name: '关于', exact: true }).click()
-			await page.getByRole('menuitem', { name: '搜索与监控', exact: true }).click()
-		} else await section.getByRole('button', { name: '保存', exact: true }).click()
+		}
+		failure = 'temporary'
+		await page.clock.fastForward(31_000)
+		await page.getByRole('menuitem', { name: '关于', exact: true }).click()
+		await page.getByRole('menuitem', { name: '搜索与监控', exact: true }).click()
 		await expect(section.getByRole('alert')).toBeVisible()
 		await expect(field).toHaveValue(expected)
-		await expect(section.getByRole('button', { name: '保存', exact: true })).toBeEnabled()
+		await expect(field).toBeEnabled()
 		failure = 'access'
 		await section.getByRole('button', { name: '重试', exact: true }).click()
 		await expect(section.locator('form')).toHaveCount(0)
@@ -286,7 +338,7 @@ for (const kind of ['search', 'monitors', 'mountpoints'] as const) {
 		await section.getByRole('button', { name: '重试', exact: true }).click()
 		await expect(field).toHaveValue(expected)
 		await expect(section.getByRole('alert')).toHaveCount(0)
-		await expect(section.getByRole('button', { name: '保存', exact: true })).toBeEnabled()
+		await expect(field).toBeEnabled()
 	})
 }
 
@@ -431,23 +483,23 @@ test('late avatar uploads respect edits and a legacy nickname does not block pro
 	})
 	try {
 		await expect.poll(() => uploadStarted).toBe(true)
-		await expect(profile.getByRole('button', { name: '保存', exact: true })).toBeDisabled()
+		await expect(profile.getByRole('button', { name: '保存', exact: true })).toHaveCount(0)
+		await page.waitForTimeout(700)
+		expect(attempts).toBe(0)
 		await avatar.fill('/favicon.svg?newer-avatar')
 		await avatar.fill('/favicon.svg?original-avatar')
 	} finally {
 		upload.release()
 	}
-	await expect(profile.getByRole('button', { name: '保存', exact: true })).toBeEnabled()
 	await expect(avatar).toHaveValue('/favicon.svg?original-avatar')
-	await profile.getByRole('button', { name: '保存', exact: true }).click()
 	await expect.poll(() => attempts).toBe(1)
-	await expect(profile.locator('.settings-draft-hint')).toHaveText('有未保存的更改')
+	await expect(profile.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'error')
 	await expect(avatar).toHaveValue('/favicon.svg?original-avatar')
-	await profile.getByRole('button', { name: '保存', exact: true }).click()
+	await profile.locator('.auto-save-status').getByRole('button', { name: '重试', exact: true }).click()
 	await expect.poll(() => attempts).toBe(2)
-	await expect(profile.locator('.settings-draft-hint')).toHaveCount(0)
+	await expect(profile.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
 	await nickname.fill('Changed nickname too long')
-	await profile.getByRole('button', { name: '保存', exact: true }).click()
+	await expect(profile.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'invalid')
 	await expect(nickname).toHaveAttribute('aria-invalid', 'true')
 	expect(attempts).toBe(2)
 })

@@ -1,15 +1,22 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
-import { classifyWallpaper, getFallbackWallpaperAppearance, wallpaperBaseColors } from '@/lib/wallpaper'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import {
+	classifyWallpaper,
+	getFallbackWallpaperAppearance,
+	isAnalyzableWallpaperInk,
+	wallpaperBaseColors,
+} from '@/lib/wallpaper'
 import type { WallpaperAppearance } from '@/lib/wallpaper'
 import { useWallpaperViewport } from './useWallpaperViewport'
 
 export interface WallpaperState extends WallpaperAppearance {
 	status: 'none' | 'loading' | 'ready' | 'unreadable' | 'error'
 }
-type Sample = WallpaperState & { key: string; src: string }
+type Sample = WallpaperState & { key: string; context: string; src: string }
 
 function currentTheme(): WallpaperAppearance['tone'] {
-	return typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+	return typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark'
+		? 'dark'
+		: 'light'
 }
 
 function subscribeTheme(onChange: () => void) {
@@ -23,23 +30,54 @@ export function useWallpaperAppearance(
 	shade = 0,
 	blur = 0,
 	autoContrast = false,
+	analysisDelay = 0,
+	preferredTone?: WallpaperAppearance['tone'],
+	preferredInk?: readonly number[],
 ): WallpaperState {
 	const theme = useSyncExternalStore(subscribeTheme, currentTheme, currentTheme)
 	const viewport = useWallpaperViewport()
 	const [sample, setSample] = useState<Sample>()
-	const key = JSON.stringify([src, shade, blur, autoContrast, theme, viewport?.width, viewport?.height])
+	const imageRef = useRef<{ src: string; image: HTMLImageElement } | undefined>(undefined)
+	const context = JSON.stringify([
+		src,
+		autoContrast,
+		theme,
+		viewport?.width,
+		viewport?.height,
+		preferredTone,
+		preferredInk,
+	])
+	const key = JSON.stringify([
+		src,
+		shade,
+		blur,
+		autoContrast,
+		theme,
+		viewport?.width,
+		viewport?.height,
+		preferredTone,
+		preferredInk,
+	])
 	useEffect(() => {
 		if (!src || !viewport) return
 		let disposed = false
+		let timer = 0
 		let samplingImage: HTMLImageElement | undefined
-		const displayImage = new Image()
-		displayImage.decoding = 'async'
+		let displayImage: HTMLImageElement | undefined
 		const commit = (appearance: WallpaperAppearance, status: WallpaperState['status']) => {
-			if (!disposed) setSample({ src, key, ...appearance, status })
+			if (!disposed) setSample({ src, key, context, ...appearance, status })
 		}
-		const unreadable = () => commit(getFallbackWallpaperAppearance(autoContrast, theme), 'unreadable')
+		const unreadable = () =>
+			commit(
+				getFallbackWallpaperAppearance(autoContrast && !preferredInk, theme, preferredTone),
+				'unreadable',
+			)
 		const analyze = () => {
 			if (disposed || !samplingImage?.naturalWidth || !samplingImage.naturalHeight) return
+			if (preferredInk && !isAnalyzableWallpaperInk(preferredInk)) {
+				commit({ tone: preferredTone ?? theme, mixed: true, scrim: 0 }, 'ready')
+				return
+			}
 			const { width: viewportWidth, height: viewportHeight } = viewport
 			if (autoContrast && Math.ceil(viewportWidth) * Math.ceil(viewportHeight) > 8_388_608) {
 				unreadable()
@@ -47,7 +85,7 @@ export function useWallpaperAppearance(
 			}
 			try {
 				const canvas = document.createElement('canvas')
-				// Default mode only selects colors, so it never allocates a full-screen bitmap.
+				// Only automatic contrast needs full-screen color bounds; ordinary mode stays bounded.
 				const sampleScale = autoContrast ? 1 : Math.min(1, 256 / Math.max(viewportWidth, viewportHeight))
 				canvas.width = Math.max(1, Math.ceil(viewportWidth * sampleScale))
 				canvas.height = Math.max(1, Math.ceil(viewportHeight * sampleScale))
@@ -57,30 +95,69 @@ export function useWallpaperAppearance(
 					return
 				}
 				// The image expands by twice the blur radius on each side in both renderers.
-				const expansion = 4 * Math.max(0, blur)
+				const radius = Math.max(0, blur)
+				const expansion = 4 * radius
+				const layerWidth = viewportWidth + expansion
+				const layerHeight = viewportHeight + expansion
 				const scale = Math.max(
-					(viewportWidth + expansion) / samplingImage.naturalWidth,
-					(viewportHeight + expansion) / samplingImage.naturalHeight,
+					layerWidth / samplingImage.naturalWidth,
+					layerHeight / samplingImage.naturalHeight,
 				)
-				const width = viewportWidth / scale
-				const height = viewportHeight / scale
-				context.drawImage(
-					samplingImage,
-					(samplingImage.naturalWidth - width) / 2,
-					(samplingImage.naturalHeight - height) / 2,
-					width,
-					height,
-					0,
-					0,
-					canvas.width,
-					canvas.height,
-				)
+				if (radius > 0) {
+					// Composite the same expanded CSS background before filtering. Sampling only
+					// its original colors misses darker mixtures at colored blur boundaries.
+					const layer = document.createElement('canvas')
+					layer.width = Math.ceil(layerWidth * sampleScale)
+					layer.height = Math.ceil(layerHeight * sampleScale)
+					if (layer.width * layer.height > 16_777_216 || !('filter' in context)) {
+						unreadable()
+						return
+					}
+					const layerContext = layer.getContext('2d')
+					if (!layerContext) {
+						unreadable()
+						return
+					}
+					const width = layerWidth / scale
+					const height = layerHeight / scale
+					layerContext.fillStyle = `rgb(${wallpaperBaseColors[theme].join(',')})`
+					layerContext.fillRect(0, 0, layerWidth * sampleScale, layerHeight * sampleScale)
+					layerContext.drawImage(
+						samplingImage,
+						(samplingImage.naturalWidth - width) / 2,
+						(samplingImage.naturalHeight - height) / 2,
+						width,
+						height,
+						0,
+						0,
+						layerWidth * sampleScale,
+						layerHeight * sampleScale,
+					)
+					context.filter = `blur(${radius * sampleScale}px)`
+					context.drawImage(layer, -2 * radius * sampleScale, -2 * radius * sampleScale)
+				} else {
+					const width = viewportWidth / scale
+					const height = viewportHeight / scale
+					context.drawImage(
+						samplingImage,
+						(samplingImage.naturalWidth - width) / 2,
+						(samplingImage.naturalHeight - height) / 2,
+						width,
+						height,
+						0,
+						0,
+						canvas.width,
+						canvas.height,
+					)
+				}
 				commit(
 					classifyWallpaper(
 						context.getImageData(0, 0, canvas.width, canvas.height).data,
 						shade,
 						autoContrast,
 						wallpaperBaseColors[theme],
+						preferredTone,
+						preferredInk,
 					),
 					'ready',
 				)
@@ -88,37 +165,78 @@ export function useWallpaperAppearance(
 				unreadable()
 			}
 		}
-		// CSS backgrounds can display a remote image even when canvas CORS access is denied.
-		// Check ordinary display first so that CORS rejection is never reported as a broken image.
-		displayImage.onload = () => {
-			if (disposed) return
-			if (!displayImage.naturalWidth || !displayImage.naturalHeight) {
-				commit({ tone: theme, mixed: false, scrim: 0 }, 'error')
+		const load = () => {
+			if (imageRef.current?.src === src) {
+				samplingImage = imageRef.current.image
+				analyze()
 				return
 			}
-			samplingImage = new Image()
-			samplingImage.crossOrigin = 'anonymous'
-			samplingImage.decoding = 'async'
-			samplingImage.onload = () => {
-				if (!samplingImage?.naturalWidth || !samplingImage.naturalHeight) unreadable()
-				else analyze()
+			// CSS can display a remote image even when canvas CORS access is denied.
+			// Check ordinary display first so CORS rejection is not reported as a broken image.
+			displayImage = new Image()
+			displayImage.decoding = 'async'
+			displayImage.onload = () => {
+				if (disposed) return
+				if (!displayImage?.naturalWidth || !displayImage.naturalHeight) {
+					commit({ tone: preferredTone ?? theme, mixed: false, scrim: 0 }, 'error')
+					return
+				}
+				samplingImage = new Image()
+				samplingImage.crossOrigin = 'anonymous'
+				samplingImage.decoding = 'async'
+				samplingImage.onload = () => {
+					if (disposed) return
+					if (!samplingImage?.naturalWidth || !samplingImage.naturalHeight) unreadable()
+					else {
+						imageRef.current = { src, image: samplingImage }
+						analyze()
+					}
+				}
+				samplingImage.onerror = unreadable
+				samplingImage.src = src
 			}
-			samplingImage.onerror = unreadable
-			samplingImage.src = src
+			displayImage.onerror = () => commit({ tone: preferredTone ?? theme, mixed: false, scrim: 0 }, 'error')
+			displayImage.src = src
 		}
-		displayImage.onerror = () => commit({ tone: theme, mixed: false, scrim: 0 }, 'error')
-		displayImage.src = src
+		// Preview layers update immediately; defer image analysis until the slider settles.
+		if (analysisDelay > 0) timer = window.setTimeout(load, analysisDelay)
+		else load()
 		return () => {
 			disposed = true
-			displayImage.onload = null
-			displayImage.onerror = null
+			clearTimeout(timer)
+			if (displayImage) {
+				displayImage.onload = null
+				displayImage.onerror = null
+			}
 			if (samplingImage) {
 				samplingImage.onload = null
 				samplingImage.onerror = null
 			}
 		}
-	}, [src, shade, blur, autoContrast, theme, viewport, key])
-	if (!src) return { tone: theme, mixed: false, scrim: 0, status: 'none' }
+	}, [
+		src,
+		shade,
+		blur,
+		autoContrast,
+		theme,
+		viewport,
+		key,
+		context,
+		analysisDelay,
+		preferredTone,
+		preferredInk,
+	])
+	if (!src) return { tone: preferredTone ?? theme, mixed: false, scrim: 0, status: 'none' }
 	if (sample?.key === key) return sample
-	return { tone: sample?.src === src ? sample.tone : theme, mixed: false, scrim: 0, status: 'loading' }
+	if (sample?.context === context) {
+		// Keep the last preview colors and status stable while dragging. Home still exposes
+		// pending analysis, retaining its existing protection instead of flashing unmasked.
+		return analysisDelay > 0 ? sample : { ...sample, status: 'loading' }
+	}
+	return {
+		tone: preferredTone ?? (sample?.src === src ? sample.tone : theme),
+		mixed: false,
+		scrim: 0,
+		status: 'loading',
+	}
 }

@@ -4,6 +4,28 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.11 - 2026-10-27
+
+### Settings and Wallpaper Preview
+
+- Automatically save appearance, search, monitoring and profile preferences after editing settles. Serialize writes, retain edits made during a pending request, pause for uploads and active slider drags, and wait for normal saves before internal navigation. Invalid, failed, uploading and password drafts remain protected; site code/security, passwords, entity editing and data operations keep explicit actions.
+- Show wallpaper blur and darkness on matching 0–10 integer scales while preserving their internal ranges and existing values. Reading settings or saving unrelated fields does not quantize older values; no data migration is required.
+- Update preview layers immediately while coalescing image analysis, reusing decoded images and reserving status space so slider dragging does not move controls or repeatedly announce loading.
+
+### Homepage Appearance and Tools
+
+- Use fixed white homepage text by default, with modestly heavier type, a thin dark outline and a soft shadow. Offer explicit white, black and advanced custom colors through the existing setting; wallpaper crops, theme changes and image failures do not replace the selected color. Preserve icon artwork and explicitly configured clock/monitor colors.
+- Keep automatic contrast optional and limited to the wallpaper veil for the selected text color. Match analysis to the displayed crop, edge expansion, transparent background composition and blur, including mixed colors at blurred boundaries. Retain a clear fallback when canvas filters or reliable sampling are unavailable.
+- Preserve inherited, system and context-dependent CSS colors, including escaped expressions, without treating them as fixed colors for automatic contrast. Analyze supported fixed colors using their actual RGBA; unattainable custom colors do not receive a veil that worsens their original worst contrast.
+- Place the same horizontal tools at the bottom right on every viewport, with 44 px targets, safe-area spacing and footer clearance. Add a separated return-to-top action that expands left without shifting existing buttons, uses separate show/hide thresholds, restores keyboard focus and honors reduced motion.
+- Use paired system foreground/background colors with solid surfaces under higher-contrast and forced-color preferences.
+
+### Reliability and Verification
+
+- Aggregate search and monitoring save feedback across both sections. A successful section cannot hide another section's error or claim every draft is saved; feedback changes to saved only after all changed sections succeed, and confirmed discard clears the persistent error.
+- The cumulative implementation has final passing results for all 254 Chromium checks, plus 50 frontend unit tests, the Go suite, type checking, zero-warning lint, configuration/language review checks and standard/PWA builds. Added regressions cover actual blurred screenshot pixels, unsupported/contextual colors, concurrent save failures, slider dragging, keyboard focus and responsive tools.
+- Reviewed Chinese/English, light/dark themes, desktop, narrow and short windows. This was a same-round collaborative self-check. Real mobile devices, Safari/Firefox, assistive technologies, browser zoom, mobile soft-keyboard behavior, Windows/Ubuntu desktop sessions, MySQL/Redis/NAS, complete restore and PWA installation/upgrades remain outside the verified scope. Pure-touch iOS Safari still lacks an application-menu entry.
+
 ## 1.2.10 - 2026-10-26
 
 ### Wallpaper Appearance

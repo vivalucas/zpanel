@@ -5,6 +5,10 @@ const svg = (body: string) =>
 	`<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">${body}</svg>`
 const wallpapers: Record<string, string> = {
 	'gray.svg': svg('<path fill="#909090" d="M0 0h1440v900H0z"/>'),
+	'blur-colors.svg':
+		'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><path fill="#00c000" d="M0 0h200v400H0z"/><path fill="#ff00ff" d="M200 0h200v400H200z"/></svg>',
+	'blur-transparent.svg':
+		'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><path fill="#00c000" fill-opacity=".5" d="M0 0h200v400H0z"/><path fill="#ff00ff" fill-opacity=".7" d="M200 0h200v400H200z"/></svg>',
 	'gutter-outside.svg':
 		'<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000"><path fill="#000" d="M0 0h1600v1000H0z"/><path fill="#fff" d="M86 0h16v1000H86z"/></svg>',
 	'dark-highlight.svg': svg(
@@ -129,6 +133,108 @@ async function pixels(page: Page, target: Locator, points: [number, number][]) {
 		{ data: screenshot.toString('base64'), points },
 	)
 }
+
+function textContrast(ink: number[], surface: number[]) {
+	const luminance = (rgb: number[]) =>
+		rgb.reduce((sum, value, index) => {
+			const channel = value / 255
+			return (
+				sum +
+				[0.2126, 0.7152, 0.0722][index] *
+					(channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+			)
+		}, 0)
+	const values = [luminance(ink), luminance(surface)].sort((a, b) => a - b)
+	return (values[1] + 0.05) / (values[0] + 0.05)
+}
+
+for (const [width, height] of [
+	[1000, 700],
+	[390, 844],
+]) {
+	for (const textColor of ['#202733', '#ffffff']) {
+		test(`automatic contrast protects actual colored blur pixels for ${textColor} at ${width}x${height}`, async ({
+			page,
+		}, info) => {
+			await page.setViewportSize({ width, height })
+			const { panel, writes } = await fixture(page, {
+				image: 'blur-colors.svg',
+				panel: { backgroundBlur: 30, iconTextColor: textColor, wallpaperAutoContrast: false },
+			})
+			await enterHome(page)
+			const home = page.locator('.home-page')
+			await expect(home).toHaveAttribute('data-wallpaper-status', 'ready')
+			await expect(home).toHaveCSS('--wallpaper-scrim', '0')
+			const mask = page.locator('.home-contrast-mask')
+			const bounds = await mask.boundingBox()
+			const y = Math.round(bounds!.height * 0.7)
+			const points: [number, number][] = Array.from({ length: 41 }, (_, index) => [
+				Math.round(1 + ((bounds!.width - 3) * index) / 40),
+				y,
+			])
+			const ink = textColor === '#ffffff' ? [255, 255, 255] : [32, 39, 51]
+			const original = await pixels(page, mask, points)
+			if (textColor === '#202733')
+				expect(textContrast(ink, original[20])).toBeLessThan(3.2)
+			panel.wallpaperAutoContrast = true
+			await page.reload()
+			await expect(home).toHaveAttribute('data-wallpaper-status', 'ready')
+			await expect(home).not.toHaveCSS('--wallpaper-scrim', '0')
+			const protectedPixels = await pixels(page, mask, points)
+			for (const surface of protectedPixels)
+				expect(textContrast(ink, surface), `rendered ${surface}`).toBeGreaterThanOrEqual(4.5)
+			const veil = await mask.evaluate((element) => getComputedStyle(element).backgroundColor)
+			await page.screenshot({ path: info.outputPath('colored-blur-home.png'), animations: 'disabled' })
+			await page.getByRole('button', { name: '设置', exact: true }).click()
+			await expect(page.locator('.wallpaper-preview')).toHaveAttribute('data-wallpaper-status', 'ready')
+			await expect(page.locator('.wallpaper-preview-contrast')).toHaveCSS('background-color', veil)
+			expect(writes).toHaveLength(0)
+			await page.locator('.wallpaper-preview').screenshot({ path: info.outputPath('colored-blur-preview.png') })
+		})
+	}
+}
+
+for (const theme of ['light', 'dark'] as const) {
+	test(`blur analysis includes transparent wallpaper and the ${theme} base`, async ({ page }) => {
+		await page.setViewportSize({ width: 1000, height: 700 })
+		await fixture(page, {
+			image: 'blur-transparent.svg',
+			theme,
+			panel: {
+				backgroundBlur: 30,
+				backgroundMaskNumber: 0.25,
+				iconTextColor: '#202733',
+				wallpaperAutoContrast: true,
+			},
+		})
+		await enterHome(page)
+		await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'ready')
+		const mask = page.locator('.home-contrast-mask')
+		const bounds = await mask.boundingBox()
+		const points: [number, number][] = Array.from({ length: 41 }, (_, index) => [
+			Math.round(1 + ((bounds!.width - 3) * index) / 40),
+			Math.round(bounds!.height * 0.7),
+		])
+		for (const surface of await pixels(page, mask, points))
+			expect(textContrast([32, 39, 51], surface)).toBeGreaterThanOrEqual(4.5)
+	})
+}
+
+test('unsupported canvas blur uses the explicit analysis fallback instead of unblurred colors', async ({
+	page,
+}) => {
+	await page.addInitScript(() => {
+		Reflect.deleteProperty(CanvasRenderingContext2D.prototype, 'filter')
+	})
+	await fixture(page, {
+		image: 'blur-colors.svg',
+		panel: { backgroundBlur: 30, iconTextColor: '#202733', wallpaperAutoContrast: true },
+	})
+	await enterHome(page)
+	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'unreadable')
+	await expect(page.locator('.home-page')).toHaveCSS('--wallpaper-scrim', '0.68')
+	await expect(page.locator('.home-background')).toHaveCSS('filter', 'blur(30px)')
+})
 
 for (const image of ['dark-highlight.svg', 'texture.svg']) {
 	test(`legacy zero darkness preserves actual ${image} pixels without an automatic veil`, async ({
@@ -277,7 +383,7 @@ for (const theme of ['light', 'dark'] as const) {
 test('late results from a previous wallpaper cannot replace the current draft colors', async ({
 	page,
 }, info) => {
-	const { writes } = await fixture(page, { image: 'bright.svg' })
+	const { writes } = await fixture(page, { image: 'bright.svg', panel: { wallpaperAutoContrast: true } })
 	let release!: () => void
 	let started = false
 	let delivered = false
@@ -298,7 +404,7 @@ test('late results from a previous wallpaper cannot replace the current draft co
 		await expect.poll(() => started).toBe(true)
 		await address.fill('/wallpaper-fixture/bright.svg')
 		await expect(page.locator('.wallpaper-preview')).toHaveAttribute('data-wallpaper-status', 'ready')
-		await expect(page.locator('.wallpaper-preview')).toHaveAttribute('data-wallpaper-tone', 'light')
+		await expect(page.locator('.wallpaper-preview')).toHaveAttribute('data-wallpaper-tone', 'dark')
 	} finally {
 		release()
 	}
@@ -306,10 +412,22 @@ test('late results from a previous wallpaper cannot replace the current draft co
 	await page.evaluate(
 		() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
 	)
+	await expect
+		.poll(() =>
+			page.locator('.wallpaper-preview-contrast').evaluate((element) =>
+				Number(
+					getComputedStyle(element)
+						.backgroundColor.match(/[\d.]+/g)
+						?.at(-1),
+				),
+			),
+		)
+		.toBeGreaterThan(0.5)
 	await expect(address).toHaveValue('/wallpaper-fixture/bright.svg')
-	await expect(page.locator('.wallpaper-preview')).toHaveAttribute('data-wallpaper-tone', 'light')
+	await expect(page.locator('.wallpaper-preview')).toHaveAttribute('data-wallpaper-tone', 'dark')
 	await expect(page.locator('.wallpaper-preview-image')).toHaveCSS('background-image', /bright\.svg/)
-	expect(writes).toHaveLength(0)
+	await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
+	expect(writes.at(-1)?.backgroundImageSrc).toBe('/wallpaper-fixture/bright.svg')
 	await page.screenshot({ path: info.outputPath('latest-wallpaper-draft.png'), animations: 'disabled' })
 })
 
@@ -334,13 +452,12 @@ test('automatic contrast is a saved choice and preview and home render the same 
 			}),
 		)
 		.toBeGreaterThan(0)
-	expect(writes).toHaveLength(0)
 	const previewMasks = await page
 		.locator('.wallpaper-preview-shade, .wallpaper-preview-contrast')
 		.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).backgroundColor))
 	await page.screenshot({ path: info.outputPath('automatic-wallpaper-preview.png'), animations: 'disabled' })
-	await page.getByRole('button', { name: '保存', exact: true }).click()
 	await expect.poll(() => writes.length).toBe(1)
+	await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
 	expect(writes[0].wallpaperAutoContrast).toBe(true)
 	await expect(page.locator('.settings-draft-hint')).toHaveCount(0)
 	await page.getByRole('button', { name: '返回首页', exact: true }).click()
@@ -354,8 +471,8 @@ test('automatic contrast is a saved choice and preview and home render the same 
 	await expect(toggle).toBeChecked()
 	await toggle.uncheck()
 	expect(writes).toHaveLength(1)
-	await page.getByRole('button', { name: '保存', exact: true }).click()
 	await expect.poll(() => writes.length).toBe(2)
+	await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
 	expect(writes[1].wallpaperAutoContrast).toBe(false)
 	await expect(page.locator('.settings-draft-hint')).toHaveCount(0)
 	await page.getByRole('button', { name: '返回首页', exact: true }).click()
@@ -432,7 +549,7 @@ test('explicit automatic contrast retains a protected fallback for an uninspecta
 	})
 })
 
-test('restoring appearance defaults disables automatic contrast only after saving the draft', async ({
+test('restoring appearance defaults requires confirmation then saves automatically', async ({
 	page,
 }, info) => {
 	const { panel, writes } = await fixture(page, {
@@ -445,14 +562,13 @@ test('restoring appearance defaults disables automatic contrast only after savin
 	await page.getByRole('button', { name: '恢复默认值', exact: true }).click()
 	const confirmation = page.getByRole('dialog')
 	await expect(confirmation).toContainText('将首页外观设置恢复默认值？')
+	expect(writes).toHaveLength(0)
+	expect(panel.wallpaperAutoContrast).toBe(true)
 	await confirmation.getByRole('button', { name: '确定', exact: true }).click()
 	await expect(confirmation).toHaveCount(0)
 	await expect(toggle).not.toBeChecked()
-	await expect(page.locator('.settings-draft-hint')).toHaveText('有未保存的更改')
-	expect(writes).toHaveLength(0)
-	expect(panel.wallpaperAutoContrast).toBe(true)
-	await page.getByRole('button', { name: '保存', exact: true }).click()
 	await expect.poll(() => writes.length).toBe(1)
+	await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
 	expect(writes[0].wallpaperAutoContrast).toBe(false)
 	expect(panel.wallpaperAutoContrast).toBe(false)
 	await expect(page.locator('.settings-draft-hint')).toHaveCount(0)
@@ -468,8 +584,18 @@ test('higher contrast preferences give preview and home the same opaque control 
 	page,
 }, info) => {
 	const scenarios = [
-		{ theme: 'dark', image: 'bright.svg', tone: 'light', surface: 'rgb(248, 250, 255)' },
-		{ theme: 'light', image: 'dark.svg', tone: 'dark', surface: 'rgb(29, 35, 49)' },
+		{
+			theme: 'dark',
+			image: 'bright.svg',
+			tone: 'light',
+			panel: { iconTextColor: '#202733' },
+		},
+		{
+			theme: 'light',
+			image: 'dark.svg',
+			tone: 'dark',
+			panel: { iconTextColor: '#ffffff' },
+		},
 	] as const
 	for (const scenario of scenarios) {
 		await page.unroute('**/api/**')
@@ -482,7 +608,22 @@ test('higher contrast preferences give preview and home the same opaque control 
 		const homeSurfaces = await page
 			.locator('.search-box, .item-icon')
 			.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).backgroundColor))
-		expect(homeSurfaces).toEqual([scenario.surface, scenario.surface])
+		const systemColors = await page.evaluate(() => {
+			const probe = document.createElement('span')
+			probe.style.cssText = 'background:Canvas;color:CanvasText'
+			document.body.append(probe)
+			const style = getComputedStyle(probe)
+			const colors = { surface: style.backgroundColor, text: style.color }
+			probe.remove()
+			return colors
+		})
+		expect(homeSurfaces).toEqual([systemColors.surface, systemColors.surface])
+		for (const element of await page.locator('.home-logo-text, .group-heading h2, .app-copy strong').all()) {
+			await expect(element).toHaveCSS('color', systemColors.text)
+			await expect(element).toHaveCSS('-webkit-text-stroke-width', '0px')
+			await expect(element).toHaveCSS('text-shadow', 'none')
+		}
+		await expect(page.locator('.home-background')).toHaveCSS('visibility', 'hidden')
 		await page.getByRole('button', { name: '设置', exact: true }).click()
 		await expect(page.locator('.wallpaper-preview')).toHaveAttribute('data-wallpaper-status', 'ready')
 		await expect(page.locator('.wallpaper-preview')).toHaveAttribute('data-wallpaper-tone', scenario.tone)
@@ -497,11 +638,11 @@ test('higher contrast preferences give preview and home the same opaque control 
 	}
 })
 
-test('uniform middle gray chooses the stronger ink without changing wallpaper pixels', async ({
+test('explicit black text stays readable on middle gray without changing wallpaper pixels', async ({
 	page,
 }, info) => {
 	await page.setViewportSize({ width: 1440, height: 900 })
-	await fixture(page, { image: 'gray.svg', theme: 'dark' })
+	await fixture(page, { image: 'gray.svg', theme: 'dark', panel: { iconTextColor: '#202733' } })
 	await enterHome(page)
 	await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'ready')
 	await expect(page.locator('.home-page')).toHaveCSS('--wallpaper-scrim', '0')

@@ -1,4 +1,6 @@
 import { useUnsavedChanges } from '@/lib/unsaved'
+import { useAutoSave } from '@/lib/autoSave'
+import { AutoSaveStatus } from '@/components/AutoSaveStatus'
 import { useSessionRequest } from '@/lib/session'
 import { useFeedback } from '@/lib/feedback'
 import { useEffect, useRef, useState } from 'react'
@@ -23,13 +25,13 @@ import { usePreferences } from '@/app/store'
 import { Loading, QueryError, Section } from '@/components/shared'
 import { ImageUpload } from '@/components/ImageUpload'
 import WallpaperPreview from './WallpaperPreview'
+import HomeTextColor from './HomeTextColor'
 export default function Appearance() {
 	const request = useSessionRequest()
 	const panel = usePanel()
 	const [form] = Form.useForm<Panel.panelConfig>()
-	const [saving, setSaving] = useState(false)
 	const [uploading, setUploading] = useState(false)
-	const [dirty, setDirty] = useState(false)
+	const [adjusting, setAdjusting] = useState(false)
 	const wallpaper = Form.useWatch('backgroundImageSrc', form)
 	const wallpaperBlur = Form.useWatch('backgroundBlur', form) || 0
 	const wallpaperShade = Form.useWatch('backgroundMaskNumber', form) || 0
@@ -38,10 +40,36 @@ export default function Appearance() {
 	const logoText = Form.useWatch('logoText', form)
 	const logoImage = Form.useWatch('logoImageSrc', form)
 	const iconTextColor = Form.useWatch('iconTextColor', form)
-	useUnsavedChanges(dirty)
 	const client = useQueryClient()
-	const { t, error, message, modal } = useFeedback()
+	const { t, modal } = useFeedback()
+	const autoSave = useAutoSave({
+		form,
+		paused: uploading || adjusting,
+		enabled: !!panel.data && !isAccessError(panel.error),
+		save: async (values) => {
+			const config = { ...panel.data!, panel: { ...panel.data!.panel, ...values } }
+			await client.cancelQueries({ queryKey: ['panel'] })
+			await request('/panel/userConfig/set', config)
+			void client.cancelQueries({ queryKey: ['panel'] })
+			client.setQueryData(['panel'], { ...config, panelWarnings: [] })
+		},
+	})
+	const { dirty, saving } = autoSave
+	useUnsavedChanges(
+		dirty || uploading,
+		!uploading && !isAccessError(panel.error) && ['pending', 'saving'].includes(autoSave.status),
+	)
 	const prefs = usePreferences()
+	useEffect(() => {
+		if (!adjusting) return
+		const finish = () => setAdjusting(false)
+		window.addEventListener('pointerup', finish)
+		window.addEventListener('pointercancel', finish)
+		return () => {
+			window.removeEventListener('pointerup', finish)
+			window.removeEventListener('pointercancel', finish)
+		}
+	}, [adjusting])
 	useEffect(() => {
 		if (panel.data && !dirty) form.setFieldsValue(panel.data.panel)
 	}, [panel.data, form, dirty])
@@ -65,31 +93,12 @@ export default function Appearance() {
 		<Form
 			className="settings-form"
 			form={form}
-			disabled={saving}
 			layout="vertical"
 			onValuesChange={(changed) => {
 				if ('backgroundImageSrc' in changed) wallpaperRevisionRef.current++
-				setDirty(true)
+				autoSave.changed()
 			}}
-			onFinish={async (values) => {
-				if (saving || uploading) return
-				setSaving(true)
-				try {
-					await request('/panel/userConfig/set', { ...panel.data, panel: { ...panel.data.panel, ...values } })
-					client.setQueryData(['panel'], {
-						...panel.data,
-						panel: { ...panel.data.panel, ...values },
-						panelWarnings: [],
-					})
-					await client.invalidateQueries({ queryKey: ['panel'] })
-					setDirty(false)
-					void message.success(t('common.success'))
-				} catch (err) {
-					error(err)
-				} finally {
-					setSaving(false)
-				}
-			}}
+			onFinish={autoSave.retry}
 		>
 			<div className="settings-form-content">
 				{panel.error && (
@@ -101,7 +110,17 @@ export default function Appearance() {
 					/>
 				)}
 				{!!panel.data.panelWarnings.length && (
-					<Alert className="spaced" type="warning" showIcon title={t('review.panelRepairSave')} />
+					<Alert
+						className="spaced"
+						type="warning"
+						showIcon
+						title={t('review.panelRepairSave')}
+						action={
+							<Button disabled={saving || uploading} onClick={autoSave.changed}>
+								{t('review.repairAppearance')}
+							</Button>
+						}
+					/>
 				)}
 				<Section title={t('ui.theme')} description={t('ui.themeDescription')}>
 					<Segmented
@@ -163,16 +182,48 @@ export default function Appearance() {
 								if (revision !== wallpaperRevisionRef.current) return
 								wallpaperRevisionRef.current++
 								form.setFieldValue('backgroundImageSrc', url)
-								setDirty(true)
+								autoSave.changed()
 							}
 						}}
 					/>
-					<div className="form-grid spaced">
-						<Form.Item name="backgroundBlur" label={t('ui.wallpaperBlur')}>
-							<Slider min={0} max={30} ariaLabelForHandle={t('ui.wallpaperBlur')} />
+					<div
+						className="form-grid spaced"
+						onPointerDownCapture={(event) => {
+							if ((event.target as HTMLElement).closest('.ant-slider')) setAdjusting(true)
+						}}
+						onPointerCancel={() => setAdjusting(false)}
+					>
+						<Form.Item
+							name="backgroundBlur"
+							label={t('ui.wallpaperBlur')}
+							getValueProps={(value) => ({ value: (value || 0) / 3 })}
+							normalize={(value) => value * 3}
+						>
+							<Slider
+								min={0}
+								max={10}
+								step={1}
+								marks={{ 0: '0', 10: '10' }}
+								tooltip={{ formatter: (value) => `${value} / 10` }}
+								ariaLabelForHandle={t('ui.wallpaperBlur')}
+								onChangeComplete={() => setAdjusting(false)}
+							/>
 						</Form.Item>
-						<Form.Item name="backgroundMaskNumber" label={t('ui.wallpaperShade')}>
-							<Slider min={0} max={1} step={0.05} ariaLabelForHandle={t('ui.wallpaperShade')} />
+						<Form.Item
+							name="backgroundMaskNumber"
+							label={t('ui.wallpaperShade')}
+							getValueProps={(value) => ({ value: (value || 0) * 10 })}
+							normalize={(value) => value / 10}
+						>
+							<Slider
+								min={0}
+								max={10}
+								step={1}
+								marks={{ 0: '0', 10: '10' }}
+								tooltip={{ formatter: (value) => `${value} / 10` }}
+								ariaLabelForHandle={t('ui.wallpaperShade')}
+								onChangeComplete={() => setAdjusting(false)}
+							/>
 						</Form.Item>
 					</div>
 					<Form.Item
@@ -200,8 +251,21 @@ export default function Appearance() {
 								]}
 							/>
 						</Form.Item>
-						<Form.Item name="iconTextColor" label={t('ui.textColor')}>
-							<Input placeholder={t('ui.followTheme')} allowClear />
+						<Form.Item
+							name="iconTextColor"
+							label={t('ui.textColor')}
+							extra={t('ui.textColorHelp')}
+							rules={[
+								{ max: 100 },
+								{
+									validator: (_, value) =>
+										!value || CSS.supports('color', value)
+											? Promise.resolve()
+											: Promise.reject(new Error(t('ui.invalidTextColor'))),
+								},
+							]}
+						>
+							<HomeTextColor />
 						</Form.Item>
 						<Form.Item label={t('apps.baseSettings.maxWidth')} htmlFor="maxWidth">
 							<Space.Compact>
@@ -267,11 +331,7 @@ export default function Appearance() {
 				</Section>
 			</div>
 			<div className="save-bar">
-				{dirty && (
-					<span className="settings-draft-hint" role="status">
-						{t('ui.unsavedChanges')}
-					</span>
-				)}
+				<AutoSaveStatus state={autoSave} />
 				<Space>
 					<Button
 						disabled={saving || uploading}
@@ -281,15 +341,12 @@ export default function Appearance() {
 								onOk: () => {
 									wallpaperRevisionRef.current++
 									form.setFieldsValue(defaultPanel)
-									setDirty(true)
+									autoSave.changed()
 								},
 							})
 						}
 					>
 						{t('ui.resetDefaults')}
-					</Button>
-					<Button type="primary" htmlType="submit" loading={saving} disabled={uploading}>
-						{t('common.save')}
 					</Button>
 				</Space>
 			</div>

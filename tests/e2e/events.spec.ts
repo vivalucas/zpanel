@@ -156,10 +156,25 @@ test('group editor cannot close or open another editor during save', async ({ pa
 })
 
 for (const scope of ['appearance', 'account', 'item'] as const) {
-	test(`${scope} waits for image upload before allowing save`, async ({ page }) => {
+	test(`${scope} waits for image upload before saving`, async ({ page }) => {
 		await mockNavigation(page)
 		const wait = gate()
+		let uploading = false
+		let writes = 0
+		let savedImage: string | undefined
+		if (scope !== 'item') {
+			await page.route(
+				scope === 'appearance' ? '**/api/panel/userConfig/set' : '**/api/user/updateInfo',
+				(route) => {
+					writes++
+					const values = route.request().postDataJSON()
+					savedImage = scope === 'appearance' ? values.panel.backgroundImageSrc : values.headImage
+					return route.fulfill({ json: ok })
+				},
+			)
+		}
 		await page.route('**/api/file/uploadImg', async (route) => {
+			uploading = true
 			await wait.pending
 			await route.fulfill({ json: { code: 0, data: { imageUrl: '/favicon.svg?uploaded=1', fileId: 999 } } })
 		})
@@ -171,17 +186,28 @@ for (const scope of ['appearance', 'account', 'item'] as const) {
 		await page
 			.locator('input[type=file]')
 			.setInputFiles({ name: 'event.png', mimeType: 'image/png', buffer: Buffer.from('test-image') })
-		const save =
-			scope === 'item'
-				? page.getByRole('dialog').getByRole('button', { name: /确.*定/ })
-				: page.getByRole('button', { name: '保存', exact: true })
+		const save = page.getByRole('dialog').getByRole('button', { name: /确.*定/ })
 		try {
-			await expect(save).toBeDisabled()
+			await expect.poll(() => uploading).toBe(true)
+			if (scope === 'item') await expect(save).toBeDisabled()
+			else {
+				await page
+					.getByLabel(scope === 'appearance' ? '面板名称' : '昵称', { exact: true })
+					.fill('Upload draft')
+				// Wait beyond the autosave delay to verify that uploading pauses an otherwise valid draft.
+				await page.waitForTimeout(850)
+				expect(writes).toBe(0)
+			}
 		} finally {
 			wait.release()
 		}
 		await expect(page.locator('.ant-upload-list-item-done')).toBeVisible()
-		await expect(save).toBeEnabled()
+		if (scope === 'item') await expect(save).toBeEnabled()
+		else {
+			await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
+			expect(writes).toBe(1)
+			expect(savedImage).toBe('/favicon.svg?uploaded=1')
+		}
 	})
 }
 
@@ -304,16 +330,16 @@ test('LAN addresses participate in local search and IME Enter does not navigate'
 })
 
 test('detail card selection uses the accepted style value and survives saving', async ({ page }) => {
-	await enter(page, '/settings/appearance')
-	await page.getByRole('combobox', { name: '导航样式', exact: true }).click()
-	await page.getByText('详情图标', { exact: true }).click()
 	let payload: { panel: { iconStyle: number } } | undefined
 	await page.route('**/api/panel/userConfig/set', async (route) => {
 		payload = route.request().postDataJSON()
 		await route.continue()
 	})
-	await page.getByRole('button', { name: '保存', exact: true }).click()
+	await enter(page, '/settings/appearance')
+	await page.getByRole('combobox', { name: '导航样式', exact: true }).click()
+	await page.getByText('详情图标', { exact: true }).click()
 	await expect.poll(() => payload?.panel.iconStyle).toBe(2)
+	await expect(page.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
 	await page.getByRole('button', { name: '返回首页', exact: true }).click()
 	await expect(page.locator('.home-hero')).toBeVisible()
 	await expect(page.locator('.app-grid.icon-grid')).toHaveCount(0)
@@ -394,14 +420,15 @@ test('the latest selected backup wins when file reads finish out of order', asyn
 
 test('brand navigation respects unsaved appearance changes', async ({ page }) => {
 	await enter(page, '/settings/appearance')
-	await page.getByLabel('面板名称').fill('Unsaved brand draft')
+	const draft = 'Unsaved brand draft'.repeat(12)
+	await page.getByLabel('面板名称').fill(draft)
 	await page.locator('.settings-sidebar .brand').click()
 	await expect(page.getByRole('dialog')).toContainText('放弃未保存')
 	await page
 		.getByRole('dialog')
 		.getByRole('button', { name: /取.*消/ })
 		.click()
-	await expect(page.getByLabel('面板名称')).toHaveValue('Unsaved brand draft')
+	await expect(page.getByLabel('面板名称')).toHaveValue(draft)
 })
 
 test('closing the item editor restores focus to its action trigger', async ({ page }) => {

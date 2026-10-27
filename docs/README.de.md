@@ -6,7 +6,7 @@ Ein schlankes, selbst gehostetes Navigationspanel fuer NAS, Homelab, private Ser
 
 ---
 
-ZPanel soll leichtgewichtig, angenehm zu nutzen, einfach zu betreiben und standardmaessig offen sein, ohne bezahlte Lizenzschranken einzufuehren. Fuer Self-Hosting-Szenarien werden Frontend-Struktur, Benutzer- und Navigationsdaten, Personalisierung, Datei-Uploads, Docker-Verwaltung und Deployment-Ablauf weiter aufgeraeumt und verbessert. Dazu kommen Verbesserungen bei Login-Captcha, Zugriffskontrolle, Berechtigungspruefung, Login-Rate-Limiting, Sicherheits-Headern, Container-Healthchecks, CI-Qualitaetspruefungen und Projektdateien fuer die Zusammenarbeit.
+Open Source, leicht zu betreiben und ohne kostenpflichtige Freischaltung.
 
 ## Funktionen
 
@@ -15,11 +15,14 @@ ZPanel soll leichtgewichtig, angenehm zu nutzen, einfach zu betreiben und standa
 - Mehrere Konten, oeffentlicher Zugriff und schneller lokaler Kontowechsel
 - Anpassbare Hintergruende, Layouts, Footer, Login-Seite, CSS und JavaScript
 - Eigene Suchmaschinen und optionales Login-Captcha
-- Uploads, oeffentliche Galerie und `.zpanel.json` Backups
+- Uploads, oeffentliche Galerie und `.zpanel.json` Exporte fuer Navigation/Stil (ohne Uploads, Konten und Modulkonfiguration)
 - Systemstatus-Widgets
 - Docker-Verwaltung fuer Administratoren
+- Zugriffskontrolle, Login-Limits, Sicherheits-Header, Container-Healthchecks und CI
 
 ## Schnellstart
+
+Erstelle zuerst die Compose-Datei nach dem [Installationsleitfaden (Englisch)](../README.md#docker-compose); fuehre die Befehle im gleichen Deployment-Verzeichnis aus.
 
 ```bash
 docker compose up -d
@@ -40,18 +43,7 @@ Docker-Verwaltung erfordert Zugriff auf den Docker socket. Aktiviere dies nur in
 
 ## Entwicklung
 
-```bash
-fnm use
-corepack enable
-corepack prepare pnpm@11.1.3 --activate
-pnpm install --frozen-lockfile
-pnpm run dev
-```
-
-```bash
-cd service
-go run main.go
-```
+[Development setup & checks (English)](../CONTRIBUTING.md#development-setup)
 
 ## Lizenz
 

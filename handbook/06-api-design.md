@@ -1,245 +1,82 @@
 # API 设计
 
-## API 概览
+## 契约来源与认证
 
-后端基于 Gin，统一挂载在 `/api` 下。前端开发代理将 `/api` 转发到 `VITE_APP_API_BASE_URL`，默认后端地址为 `http://127.0.0.1:6521/`。
+Gin 接口统一挂载 `/api`。完整方法、路径和中间件以 [router](../service/router) 为准，前端调用/类型见 [api.ts](../src/lib/api.ts)；本文只维护特殊语义，避免再手抄一份不完整接口清单。开发代理和后端默认地址见 [07](07-environment.md)。
 
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| POST | `/api/login` | 登录 | 否 |
-| POST | `/api/logout` | 登出 | 是 |
-| GET | `/api/captcha/getImageByCaptchaId/:id/:width/:height` | 获取登录验证码图片 | 否 |
-| GET | `/api/openness/loginConfig` | 公开读取登录配置 | 否 |
-| GET | `/api/openness/getDisclaimer` | 公开读取免责声明 | 否 |
-| GET | `/api/openness/getAboutDescription` | 公开读取关于说明 | 否 |
-| GET | `/api/healthz` | 健康检查 | 否 |
-| POST | `/api/system/siteSetting/get` | 获取站点设置 | 是 |
-| POST | `/api/system/siteSetting/set` | 保存站点设置和登录验证码开关 | 管理员 |
-| POST | `/api/file/getList` | 获取当前用户上传文件 | 是 |
-| POST | `/api/file/getPublicList` | 获取公共图库文件列表 | 是 |
-| POST | `/api/file/deletes` | 删除当前用户上传文件 | 是 |
-| POST | `/api/panel/itemIcon/getListByGroupId` | 按分组读取导航项目 | 公开模式拦截 |
-| POST | `/api/panel/itemIcon/edit` | 新增 / 编辑导航项目 | 是 |
-| POST | `/api/panel/itemIcon/deletes` | 删除导航项目 | 是 |
-| POST | `/api/panel/itemIcon/saveSort` | 保存导航项目排序 | 是 |
-| POST | `/api/panel/itemIcon/addMultiple` | 批量新增导航项目 | 是 |
-| POST | `/api/panel/itemIcon/getSiteFavicon` | 获取站点 favicon | 是 |
-| POST | `/api/panel/itemIconGroup/edit` | 新增 / 编辑分组 | 是 |
-| POST | `/api/panel/itemIconGroup/getNavigation` | 读取分组与应用的完整导航快照 | 公开模式拦截 |
-| POST | `/api/panel/itemIconGroup/deletes` | 删除分组 | 是 |
-| POST | `/api/panel/itemIconGroup/saveSort` | 保存分组排序 | 是 |
-| POST | `/api/system/docker/containers` | Docker 容器列表 | 管理员 |
-| POST | `/api/system/docker/stats` | Docker 资源快照 | 管理员 |
-| POST | `/api/system/docker/action` | Docker 容器操作 | 管理员 |
-| POST | `/api/system/docker/logs` | Docker 容器日志 | 管理员 |
+- `LoginInterceptor`：需要登录的接口；请求头 `token` 传会话。
+- `PublicModeInterceptor`：公开模式下可读的面板数据；未公开时仍需登录。
+- `AdminInterceptor`：管理员接口；前端隐藏入口不能替代服务端权限。
+- 会话撤销、账号状态/角色及安全配置直接读数据库，避免 Redis 失效删除失败留下旧权限。用户列表及公开账号选择仅返回必要资料，不含密码 hash、算法或 session token。
 
-> 说明：本表先记录当前已确认的核心接口。完整接口需继续从 `service/router/**/*.go` 和 `src/lib/api.ts` 及其调用方双向核对后补齐。
+常规响应为 `{code,msg,data}`，`code=0` 成功；前端不能只按 HTTP 状态判断。常用业务码如下，完整文案以 [locales](../src/locales) 为准。
 
-`/api/file/deletes` 只删除当前登录用户拥有的文件。公共图库可以展示其他用户公开资源，但不改变删除权限。
-
-文件列表对支持缩略图的文件增加可选 `thumbnailSrc`，值为原 `/uploads/...` URL 加 `?thumbnail=1`。普通 URL 与 `src` 仍指向原图；此查询沿用既有公开上传边界，不增加账号或文件的可读范围。请求时惰性生成最长边 320px 的派生缓存；PNG/JPEG 在 10 MiB、16MP、最长边 16384 内且缩小有收益时处理，透明输出 PNG、其余 JPEG。WebP 不生成 `thumbnailSrc`，请求其缩略图参数也直接返回原图，不进入服务端缩略图解码；WebP 原图上传、URL 及浏览器展示保持。GIF/SVG/ICO/APNG、需 EXIF 旋转的 JPEG、无收益及处理失败同样回退原图。缓存按源文件变化失效，删除源文件时清理；不新增数据库字段或迁移，清空缓存后可重建。
-
-### 图片上传与内容去重
-
-`POST /api/file/uploadImg` 接收 multipart `imgfile`，返回 `{fileId,imageUrl}`；`POST /api/file/uploadFiles` 接收 multipart `files[]`，返回 `{succMap,errFiles}`，批量结果仍按本次上传文件名索引。
-
-两入口共用服务端去重：实际大小和 SHA256 相同，且属于当前账号、local 存储、public 可见、attachment 用途的活动文件，经磁盘常规文件/大小/内容校验后复用原记录和 URL。文件改名不影响判断；保留首次上传的原名与时间，不新增图库记录或上传对象。不同账号、可见性/用途/存储/状态不复用；软删除、缺失、损坏及没有指纹的历史文件不误命中。历史重复记录不自动合并或清理。
-
-服务端仍接收完整上传后查重，不提供上传前秒传。指纹校验后才创建新文件，查询失败不落盘、记录创建失败清理本次文件。上传复用/创建和删除/引用写入共用单进程写入锁，删除保护沿用现有引用扫描；不保证多实例共享上传目录的并发一致性。
-
-管理员用户列表接口应返回最小化用户资料字段，不返回密码 hash、密码算法或 session token 等认证实现细节。
-
-## 认证方式
-
-现有代码使用登录 token 和后端中间件控制访问：
-
-- `LoginInterceptor`：需要登录的管理接口。
-- `PublicModeInterceptor`：公开模式允许访问的面板数据接口。
-- `AdminInterceptor`：管理员权限接口。
-
-前端在 `src/lib/` 请求层 中通过请求头 `token` 传递当前登录 token；后端中间件从 `c.GetHeader("token")` 读取。
-
-## 统一响应格式
-
-前端按 `code` 判断请求结果。常见响应形态如下：
-
-```json
-{
-  "code": 0,
-  "msg": "ok",
-  "data": {}
-}
-```
-
-错误码文案目前在前端 locale 中维护，例如：
-
-| code | 说明 |
-|------|------|
+| code | 语义 |
+| --- | --- |
 | 1000 | 未登录 |
 | 1003 | 用户名或密码错误 |
-| 1004 | 账号已停用或未激活 |
-| 1005 | 当前无权限操作 |
+| 1004 | 账号停用或未激活 |
+| 1005 | 无权限 |
 | 1006 | 账号不存在 |
-| 1200 | 数据库出错 |
+| 1200 | 数据库错误 |
+| 1201 | 至少保留一个启用管理员或一个分组等业务保护 |
 | 1300 | 上传失败 |
 | 1400 | 参数格式错误 |
 | 2001 | 需要验证码或验证码错误 |
 
-## 接口详情
+## 登录、验证码与站点设置
 
-### `GET /api/healthz` — 健康检查
+- `GET /api/healthz` 无需认证，直接返回 `{"status":"ok"}`，供容器与 CI 使用。
+- `POST /api/login` 无需认证，接收 `{username,password,vcode?,email?}`，成功 `data={token}`。验证码开启时，`vcode` 为答案，历史字段 `email` 实际传 `captchaId`，不能擅自重命名。登录密码上限 72 UTF-8 字节，新密码为 6–72 字节（bcrypt 边界）。安全配置读取失败返回 1200，不回落为关闭验证码；密码更新/登出须在 session 撤销成功后才报告成功。
+- `GET /api/openness/loginConfig` 无参数，公开返回登录/注册、验证码及站点展示配置。
+- `GET /api/captcha/getImageByCaptchaId/:id/:width/:height` 生成 PNG，答案按前端生成的 id 缓存。width 为 80–320、height 为 30–120，越界分别回落 120/40；独立每 IP 每分钟限 30 次。可信代理配置见 [部署指南](../docs/deployment.zh-CN.md#反向代理)。
+- `POST /api/system/siteSetting/get` 需登录，返回 `siteSetting` 与 `loginCaptcha`；`set` 仅管理员。字段为 `siteTitle/siteIcon/loginTitle/loginSubtitle/loginFooter/customCss/customJs/loginCaptcha`；站点配置与验证码开关同事务保存，失败无部分写入，保留其他应用配置。
+- `POST /api/panel/users/getPublicVisitUser` 仍仅管理员，返回 `id/username/name`；角色编辑/删除不能移除最后一个启用管理员（1201）。原子性与数据锁见 [05](05-data-design.md)。
 
-用于 Dockerfile、docker-compose 和 CI 基础验证。
+## 导航、配置与导入
 
-**响应示例**：
+下列相对路径均在 `/api/panel/` 下，使用 POST；导航读取走公开模式拦截，写入需登录。
 
-```json
-{
-  "status": "ok"
-}
-```
+| 路径 | 特殊契约 |
+| --- | --- |
+| `itemIcon/getListByGroupId` | 请求 `{itemIconGroupId}`，保留既有按组读取入口 |
+| `itemIconGroup/getNavigation` | 请求 `{}`，`data` 为含 `items` 的分组数组；归属/顺序与旧接口相同，旧接口保留；正常已有数据用两次业务查询，不随分组增加请求 |
+| `itemIconGroup/edit` | 只绑定 `id/icon/title/description/sort`，归属由服务端确定，不绑定 ORM 关联 |
+| `itemIconGroup/deletes` | `{ids,moveToGroupId?}`；迁移目标须为本人且不在删除范围。无目标时删除组内应用，有目标时同事务迁移；删除最后一组返回 1201 |
+| `userConfig/set` | 只接收 `panel` 和可选 `searchEngine`，按当前账号写入；校验已知样式字段类型/范围，保留扩展字段 |
+| `userConfig/get` | 旧配置损坏可返回 `panelWarnings`，读取不修复数据库；恢复行为见 [05](05-data-design.md) |
 
-### `POST /api/login` — 登录
+项目/分组标题为 1–200 个 Unicode 字符；项目 `url/lanUrl` 至少一个有效，`openMethod` 为 1/2/3。编辑/批量新增拒绝脚本、data、file 等非 HTTP(S) 协议。
 
-**请求参数**：
+`POST /api/panel/userConfig/import` 需登录：`requestId` 为 16–64 字符，重试复用；`mode=append/replace`，可选 `icons`（分组的 `title/sort/children`）和 `panel`，至少选一项。请求最多 5 MiB、500 分组、10000 图标，覆盖图标至少一组。忽略输入的实体 ID、归属和 ORM 关联，全部归当前账号；同 ID 不同内容拒绝。收据与导入同事务，失败无部分写入，见 [05](05-data-design.md)。
 
-```json
-{
-  "username": "admin@zpanel.local",
-  "password": "example-password",
-  "vcode": "abcd",
-  "email": "captcha-id"
-}
-```
+访客监控要求公开账号的 `systemMonitorShow` 和 `systemMonitorPublicVisitModeShow` 均为 true；未开或配置损坏返回 1005，数据库失败为 1200，已登录用户沿用原监控权限。
 
-`vcode` 和 `email` 仅在登录验证码开启时需要。当前实现复用 `email` 字段传 `captchaId`，后续可单独重命名为 `captchaId`。
+## 文件与派生展示
 
-密码最多 72 个 UTF-8 字节；新密码至少 6 字节，与 bcrypt 边界一致。安全配置读取失败时登录返回 1200，不回落为关闭验证码。
+所有 `/api/file/*` 需登录，[路由](../service/router/system/file.go)、[响应字段](../service/api/api_v1/system/file.go)为实现来源。列表保留 `src/fileName/userId/path` 等旧字段及对象化元数据，`src` 始终为原图 URL。公共图库可显示他人公开活动文件，不增加删除权限。
 
-**响应示例**：
+### 图片上传与内容去重
 
-```json
-{
-  "code": 0,
-  "msg": "ok",
-  "data": {
-    "token": "example-token"
-  }
-}
-```
+- `POST /api/file/uploadImg`：multipart `imgfile`，返回 `{fileId,imageUrl}`。
+- `POST /api/file/uploadFiles`：multipart `files[]`，返回 `{succMap,errFiles}`，仍按本次上传文件名索引结果。
 
-### `GET /api/openness/loginConfig` — 登录配置
+两入口完整接收后共用查重，不提供上传前秒传。实际大小/SHA256 相同，且属于当前账号、local 存储、public 可见、attachment 用途的活动文件，经磁盘常规文件/大小/内容校验后复用原 ID/URL、首次名称与时间，不新增图库记录或上传对象。改名不影响判断；跨账号、其他可见性/用途/存储/状态、软删、缺失、损坏及空指纹历史记录不复用，历史重复不自动合并清理。
 
-**请求参数**：无。
+指纹校验后才创建新文件；查询失败不落盘，记录创建失败清理本次文件。上传解析/指纹在锁前完成，复用/创建与删除/引用写入共用单进程锁，多实例共享上传目录无一致性保证。实现见 [file_upload.go](../service/api/api_v1/system/file_upload.go)。
 
-**说明**：公开接口，用于登录页读取注册配置、验证码开关和站点展示配置。
+### 缩略图
 
-### `GET /api/captcha/getImageByCaptchaId/:id/:width/:height` — 验证码图片
+列表可选 `thumbnailSrc` 为原 `/uploads/...` URL 加 `?thumbnail=1`，沿用原有公开上传可读范围。惰性派生最长边 320px：只处理 10 MiB、16MP、最长边 16384 内且缩小有收益的 PNG/JPEG，透明输出 PNG，其余 JPEG。GIF/SVG/ICO/APNG、需 EXIF 旋转的 JPEG、无收益或失败均回原图。
 
-**请求参数**：URL 参数。
+WebP 不提供 `thumbnailSrc`，带缩略图参数也回原字节，禁止服务端派生解码；上传、原 URL 和浏览器展示保留。像素限制不能约束 WebP Huffman 元数据分配，伪装扩展名和旧派生缓存也不得绕过此边界。源文件变化使缓存失效，删除时清派生；缓存可重建，无数据库变更。实现与安全回归见 [thumbnail.go](../service/lib/storage/thumbnail.go)、[thumbnail_test.go](../service/lib/storage/thumbnail_test.go)、[uploads_test.go](../service/router/uploads_test.go)。
 
-| 参数 | 说明 |
-|------|------|
-| `id` | 前端生成的验证码 ID |
-| `width` | 图片宽度 |
-| `height` | 图片高度 |
+### 引用查询、替换与删除
 
-**说明**：后端生成 PNG 图片，并把答案按 `id` 缓存在验证码 Store 中。
+- `POST /api/file/usage`：`{id}`，仅本人或公共活动文件。返回 `{kind,id,title}[]`，kind 为 `icon/wallpaper/avatar/module/site/reference`；他人引用的 id/title 隐去，管理员可看站点引用。
+- `POST /api/file/replace`：`{id,replacementId}`，不同 ID，源须为本人活动文件，目标为本人或公共活动文件。同事务只改本人引用，管理员额外改站点；他人引用不变，原文件保留。
+- `POST /api/file/deletes`：只删本人活动文件，先核对当前业务引用；返回 `{deletedIds,failedIds}`，不能以 HTTP 成功视为全部删除成功。引用扫描与软删除兼容见 [05](05-data-design.md)。
 
-### `POST /api/system/siteSetting/get` — 获取站点设置
+## Docker 操作
 
-**响应说明**：返回 `siteSetting` 和 `loginCaptcha`。
-
-### `POST /api/system/siteSetting/set` — 保存站点设置
-
-**认证**：管理员。
-
-站点设置和验证码开关使用同一数据库事务，失败不保留部分写入；保留其他应用配置。
-
-**请求字段**：
-
-```json
-{
-  "siteTitle": "ZPanel",
-  "siteIcon": "/favicon.svg",
-  "loginTitle": "ZPanel",
-  "loginSubtitle": "",
-  "loginFooter": "Powered By ZPanel",
-  "customCss": "",
-  "customJs": "",
-  "loginCaptcha": true
-}
-```
-
-### `POST /api/panel/itemIcon/getListByGroupId` — 获取分组导航项目
-
-**请求示例**：
-
-```json
-{
-  "itemIconGroupId": 1
-}
-```
-
-**说明**：通过 `PublicModeInterceptor` 控制公开模式访问。
-
-### `POST /api/system/docker/action` — Docker 容器操作
-
-**认证**：管理员。
-
-**请求示例**：
-
-```json
-{
-  "id": "container-id",
-  "action": "restart"
-}
-```
-
-**允许的 action**：`start`、`stop`、`restart`、`pause`、`unpause`。
-
-**说明**：后端通过 Docker CLI 执行操作，部署环境必须具备 Docker 权限。
-
----
-
-## 变更记录
-
-| 日期 | 变更内容 | 原因 |
-|------|----------|------|
-| 2026-05-21 | 文件 API 响应补充 `objectKey`、`relativePath`、`mimeType`、`size`、`sha256`、`visibility`、`purpose`、`status` 等字段 | 文件存储模型已切换为对象化资源表 |
-| 2026-05-21 | 更新默认后端地址 6521 并补充 `/api/healthz` | 1.0.0 发布整理已统一端口并加入健康检查 |
-| 2026-05-20 | 补充站点设置、验证码、公共图库和 Docker 管理 API | PRO 功能开源化第一版已实现 |
-| 2026-05-20 | 初始化 API 设计文档 | 项目建立后建立接口维护基线 |
-
-## 2026-09-12 API 增补
-
-### POST /api/panel/userConfig/import（登录）
-
-请求：`requestId`（16–64 字符，重试必须复用）、`mode`（append/replace）、可选 `icons`（分组数组：title/sort/children）、可选 `panel`（样式对象）。至少选择一种数据。最大请求 5 MiB，500 分组、10000 图标；覆盖图标时至少一组。接口忽略导入的实体 ID、所属用户及 ORM 关联，统一归属当前账号。成功 code=0，失败不保留部分写入；同 ID 不同内容拒绝。
-
-### POST /api/file/usage（登录）
-
-请求 `{id}`。仅可查询本人或公共活动文件。返回 `{kind,id,title}[]`；他人记录的 id/title 为空，避免共享图库泄露私有名称。kind 为 icon/wallpaper/avatar/module/site/reference。
-
-### POST /api/file/replace（登录）
-
-请求 `{id,replacementId}`。源文件须属于调用者，目标须为本人或公共活动文件，两 ID 不同。事务内替换本人引用；管理员额外替换站点配置。原文件保留；跨用户引用不变。
-
-### 既有接口行为修正
-
-- 验证码 width 限 80–320、height 限 30–120，越界回落 120×40 对应维度；独立每 IP 每分钟 30 次限流。
-- 用户角色编辑/删除无法移除最后一个启用管理员（1201）。
-- 密码更新/登出不得在 session 撤销失败时报告成功。
-- Docker 请求最长 30 秒，输出最多 2 MiB；超时需刷新核实状态，不自动重试变更。
-- 导航编辑/批量新增拒绝脚本、data、file 等非 HTTP(S) 协议。
-
-## 导航与配置边界
-
-- `itemIconGroup/getNavigation` 请求 `{}`，响应 `data` 为分组数组，各组包含 `items`。归属、顺序与既有列表接口一致；旧接口保留。正常已有数据使用两次业务查询，不随分组数增加请求。
-- `itemIconGroup/edit` 仅接收 id/icon/title/description/sort，归属由服务端确定，不绑定 ORM 关联。
-- `itemIconGroup/deletes` 接收 `{ids,moveToGroupId?}`；目标须为本人且不在删除范围内。省略目标仍删除组内应用，传入目标则事务迁移。删除最后一个分组返回 1201。
-- 项目/分组标题均限制 1–200 个 Unicode 字符；项目 url/lanUrl 至少一个有效，openMethod 为 1/2/3。
-- `userConfig/set` 只接收 panel 和可选 searchEngine，按当前账号写入。样式写入/导入校验已知字段类型与范围，保留扩展字段；读取旧配置返回可选 panelWarnings，读取不修复数据库。
-- 访客监控需公开账号的 systemMonitorShow 和 systemMonitorPublicVisitModeShow 均为 true；未开启或配置损坏返回 1005，数据库失败返回 1200。已登录用户沿用监控权限。
-- `users/getPublicVisitUser` 仍限管理员，响应仅 id/username/name。
-- 会话撤销、账号状态/角色及安全配置直接读取数据库，避免 Redis 失效删除失败留下旧权限。
+`/api/system/docker/{containers,stats,action,logs}` 均为 POST、仅管理员，通过宿主机 Docker CLI 执行。`action` 请求 `{id,action}`，动作限 `start/stop/restart/pause/unpause`。请求最长 30 秒、输出最多 2 MiB；超时须刷新核实状态，不自动重试变更。部署需 Docker 权限，见 [指南](../docs/deployment.zh-CN.md#排障)。

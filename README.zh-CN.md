@@ -4,19 +4,10 @@
 
 简体中文 | [English](README.md) | [日本語](docs/README.ja.md) | [한국어](docs/README.ko.md) | [Deutsch](docs/README.de.md) | [Français](docs/README.fr.md) | [Español](docs/README.es.md) | [Português](docs/README.pt-BR.md) | [Italiano](docs/README.it.md) | [繁體中文](docs/README.zh-TW.md) | [Русский](docs/README.ru.md)
 
----
+采用 MIT 许可，保持轻量、易部署和默认开放，不引入付费授权系统。
 
-ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放，不引入付费授权系统。围绕自托管使用场景，ZPanel 对前端工程结构、用户与导航数据、个性化配置、文件上传、Docker 管理和部署流程做了持续整理与优化；同时补强了登录验证码、访问拦截、权限校验、登录限流、安全响应头、容器健康检查、CI 质量门禁和项目协作文件，让项目更适合作为可维护、可部署、可二次开发的开源样例。
-
-关键词：自托管导航页、NAS 导航面板、Homelab Dashboard、个人服务器首页、Docker 管理面板、内网服务导航、浏览器主页。
-
-## 为什么选择 ZPanel
-
-- **部署简单**：Docker Compose 一条命令启动，默认使用 SQLite，本地目录持久化配置、数据库和上传文件。
-- **面向真实自托管场景**：支持内网 / 外网地址切换、公开访问模式、多账号、本地快速切换账号、文件上传和系统状态组件。
-- **高度可定制**：背景、模糊、遮罩、图标样式、布局宽度、页脚、站点标题、登录页、自定义 CSS / JavaScript 都可以在线调整。
-- **更适合长期维护**：补充健康检查、CI、依赖更新配置、PR / Issue 模板、贡献指南和安全策略，方便个人使用，也方便团队二次开发。
-- **安全默认值更清晰**：支持登录验证码、登录限流、权限拦截、安全响应头；Docker socket、公开访问、自定义 JS 等高权限能力在文档中明确提示风险。
+<a id="为什么选择-zpanel"></a>
+<a id="适用场景"></a>
 
 ## 功能
 
@@ -35,7 +26,6 @@ ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放�
 - 自定义站点标题、站点图标、登录页标题、副标题和底部内容
 - 在线编辑自定义 CSS 和 JavaScript
 - 自定义搜索引擎，无人为数量限制
-- 可选登录图形验证码
 - 暗色 / 亮色 / 自动主题和多语言界面
 
 **用户和数据**
@@ -44,7 +34,7 @@ ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放�
 - 本地多账号快速切换
 - 用户数据隔离
 - 导航项目和样式配置导入 / 导出
-- ZPanel 原生 `.zpanel.json` 备份文件
+- ZPanel 原生 `.zpanel.json` 迁移文件，不含上传、账号或模块配置，不能代替整站备份
 - 管理员可设置公开访问用户
 
 **文件和媒体**
@@ -55,14 +45,13 @@ ZPanel 的目标很简单：保持轻量、好用、易部署，并默认开放�
 
 **系统和 Docker**
 
-- 系统状态组件
-- CPU、内存、磁盘等状态展示
+- CPU、内存、磁盘等系统状态组件
 - Docker 卡片能力和容器资源快照
 - 管理员 Docker 应用管理：容器列表、资源快照、启动、停止、重启、暂停、恢复和日志
 
 **工程和安全**
 
-- 登录验证码、登录限流、权限拦截和安全响应头
+- 可选登录图形验证码、登录限流、权限拦截和安全响应头
 - Docker / Compose 健康检查接口：`GET /api/healthz`
 - GitHub Actions 前后端质量检查
 - Issue 模板、PR 模板、贡献指南和安全策略
@@ -420,50 +409,13 @@ sudo docker compose logs --tail=100 zpanel
 sudo docker compose exec zpanel su-exec zpanel docker version
 ```
 
-## 适用场景
-
-- NAS、软路由、迷你主机、家庭服务器的统一入口页
-- Homelab 服务导航，例如 Jellyfin、qBittorrent、Home Assistant、Git、监控系统等
-- 公司或团队内网工具导航
-- 个人浏览器主页和常用网址收藏
-- 需要公开分享的只读导航页
-- 需要轻量 Docker 容器管理入口的自托管环境
-
 ## 本地开发
 
-前端采用 **React + TypeScript + Vite + Ant Design**，使用统一主题和设置中心。目录、状态管理与验证流程见 [前端开发说明](docs/frontend.zh-CN.md) · [视觉设计规范](docs/ui-design.zh-CN.md) · [自查与验证范围](docs/frontend-audit.zh-CN.md)。
-
-```bash
-fnm use
-corepack enable
-corepack prepare pnpm@11.1.3 --activate
-pnpm install --frozen-lockfile
-pnpm run dev
-```
-
-后端：
-
-```bash
-cd service
-go run main.go
-```
-
-默认情况下，前端开发服务器运行在 `http://127.0.0.1:1002`，并将 API 请求代理到 `http://127.0.0.1:6521`。
+前端采用 **React + TypeScript + Vite + Ant Design**。固定 Node.js/pnpm/Go 工具链、安装、双服务启动及构建命令见 [贡献指南](CONTRIBUTING.md#development-setup)，配置与换机见 [07 环境](handbook/07-environment.md)。架构见 [前端开发说明](docs/frontend.zh-CN.md)，页面规则见 [视觉规范](docs/ui-design.zh-CN.md)。
 
 ## 质量检查
 
-```bash
-pnpm run type-check
-pnpm run lint
-pnpm test
-pnpm test:review
-pnpm run build
-cd service && go test ./...
-```
-
-浏览器回归：先执行 `pnpm build` 和 `pnpm exec playwright install chromium`，再执行 `pnpm test:e2e`。测试使用临时 Go 服务和数据库。
-
-GitHub Actions 会在 Pull Request 和主分支推送时运行前后端检查。
+执行 [贡献指南中的相关检查](CONTRIBUTING.md#quality-checks)。浏览器回归使用生产构建及隔离 Go/SQLite 服务；PR 和 main 推送运行 CI。源码、发行、生产与验证缺口统一见 [01 当前状态](handbook/01-current-status.md)，活跃计划见 [09](handbook/09-current-plan.md)。
 
 ## 贡献与安全
 

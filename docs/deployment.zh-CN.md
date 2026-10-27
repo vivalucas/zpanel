@@ -1,6 +1,6 @@
 # 部署配置与运维参考
 
-首次安装见 [Ubuntu 局域网指南](../README.zh-CN.md#ubuntu-局域网部署推荐)。本文对应 1.2.11，推荐单实例 Docker、SQLite、默认存储路径。默认部署不需要 Node.js、Go、MySQL 或 Redis。部署验证与恢复验收缺口见 [当前状态](../handbook/01-current-status.md)。
+首次安装见 [Ubuntu 局域网指南](../README.zh-CN.md#ubuntu-局域网部署推荐)。本文对应已发布的 1.2.11，推荐单实例 Docker、SQLite、默认存储路径。默认部署不需要 Node.js、Go、MySQL 或 Redis。部署验证与恢复验收缺口见 [当前状态](../handbook/01-current-status.md)。
 
 ## 配置来源与生效
 
@@ -15,19 +15,7 @@
 
 ### 后端配置索引
 
-| 节与键 | 默认值 / 用途 |
-|---|---|
-| `base.http_port` | `6521`，容器内服务端口 |
-| `base.trusted_proxies` | 空，不信任转发头；多个受控代理 IP/CIDR 逗号分隔 |
-| `base.database_drive` | `sqlite`，可选 `mysql` |
-| `base.cache_drive` / `base.queue_drive` | `memory`，可选 `redis` |
-| `sqlite.file_path` | `./data/database/zpanel.db` |
-| `storage.data_path` | `./data` |
-| `storage.uploads_path` | `./data/uploads` |
-| `storage.temp_path` / `storage.cache_path` | `./data/runtime/temp` / `./data/runtime/cache` |
-| `storage.logs_path` / `storage.backups_path` | `./data/runtime/logs` / `./data/backups` |
-| `mysql.host/port/username/password/db_name/wait_timeout` | 外部数据库连接；模板密码只是示例，不能直接用于生产 |
-| `redis.address/password/prefix/db` | Redis 连接及命名空间；默认缓存/队列不使用 Redis |
+完整键、节和默认值直接查 [配置模板](../service/assets/conf.example.ini)，不在本文重复字段清单。默认数据库为 SQLite，缓存与队列为 memory；MySQL/Redis 仅在已部署外部服务时启用。私网 favicon 的管理员精确源配置见 [07 环境](../handbook/07-environment.md#私网-favicon)。
 
 只改对外端口时，把映射改成 `"${ZPANEL_BIND_IP:?请设置IP}:8080:6521"`，访问 `http://IP:8080`，不用改 `http_port`。如果修改容器内端口，必须同时修改端口映射右侧和 Compose 健康检查地址，覆盖镜像内默认的 6521 健康检查。
 

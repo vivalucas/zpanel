@@ -4,21 +4,10 @@ A clean, lightweight, self-hosted navigation panel and server homepage for NAS, 
 
 [简体中文](README.zh-CN.md) | English | [日本語](docs/README.ja.md) | [한국어](docs/README.ko.md) | [Deutsch](docs/README.de.md) | [Français](docs/README.fr.md) | [Español](docs/README.es.md) | [Português](docs/README.pt-BR.md) | [Italiano](docs/README.it.md) | [繁體中文](docs/README.zh-TW.md) | [Русский](docs/README.ru.md)
 
----
+MIT-licensed and open by default, with no paid authorization system.
 
-The goal is simple: keep the panel lightweight, pleasant to use, easy to deploy, open by default, and free of a paid authorization system. ZPanel continues to refine the frontend architecture, user and navigation data flows, personalization settings, file uploads, Docker management, and deployment workflow. It also adds practical hardening and maintainability work around login captcha, access interception, permission checks, login rate limiting, security headers, container health checks, CI quality gates, and project collaboration files.
-
----
-
-Keywords: self-hosted dashboard, NAS dashboard, homelab dashboard, personal server homepage, Docker management panel, internal service navigation, browser homepage.
-
-## Why ZPanel
-
-- **Simple deployment**: start with Docker Compose, use SQLite by default, and persist configuration, uploads, and database files in local directories.
-- **Built for real self-hosting**: LAN / WAN URL switching, optional public access, multiple users, fast local account switching, uploads, and system status widgets.
-- **Highly customizable**: background, blur, mask, icon style, layout width, footer, site title, login page, custom CSS, and custom JavaScript can be adjusted from the UI.
-- **Maintenance friendly**: health checks, CI, dependency update configuration, PR / Issue templates, contribution guide, and security policy are included.
-- **Clearer security posture**: login captcha, login rate limiting, permission interception, and security headers are built in; high-privilege features such as Docker socket access, public mode, and custom JavaScript are documented explicitly.
+<a id="why-zpanel"></a>
+<a id="use-cases"></a>
 
 ## Features
 
@@ -37,7 +26,6 @@ Keywords: self-hosted dashboard, NAS dashboard, homelab dashboard, personal serv
 - Custom site title, site icon, login title, login subtitle, and login footer
 - Online custom CSS and JavaScript editing
 - Custom search engines without artificial limits
-- Optional login captcha
 - Dark / light / auto theme and multilingual UI
 
 **Users and data**
@@ -46,7 +34,7 @@ Keywords: self-hosted dashboard, NAS dashboard, homelab dashboard, personal serv
 - Fast local account switching
 - Per-user navigation data isolation
 - Import / export for navigation items and style configuration
-- ZPanel native `.zpanel.json` backup files
+- ZPanel native `.zpanel.json` migration files; uploaded images, accounts and module settings require separate backup
 - Administrator-controlled public access user
 
 **Files and media**
@@ -57,14 +45,13 @@ Keywords: self-hosted dashboard, NAS dashboard, homelab dashboard, personal serv
 
 **System and Docker**
 
-- System status widgets
-- CPU, memory, and disk status display
+- System status widgets for CPU, memory and disk
 - Docker cards and container stats snapshots
 - Docker application management for administrators: container list, stats snapshot, start, stop, restart, pause, unpause, and logs
 
 **Engineering and security**
 
-- Login captcha, login rate limiting, permission interception, and security headers
+- Optional login captcha, login rate limiting, permission interception, and security headers
 - Docker / Compose health check endpoint: `GET /api/healthz`
 - GitHub Actions checks for frontend and backend quality
 - Issue templates, PR template, contribution guide, and security policy
@@ -73,7 +60,7 @@ Keywords: self-hosted dashboard, NAS dashboard, homelab dashboard, personal serv
 
 ## Screenshots
 
-ZPanel is still refreshing its own branding, screenshots, and documentation assets. New screenshots will be added after the first ZPanel release build is verified.
+ZPanel is still refreshing its own branding, screenshots, and documentation assets. New screenshots are still pending; see [current status](handbook/01-current-status.md) for release and deployment facts.
 
 ---
 
@@ -81,11 +68,13 @@ ZPanel is still refreshing its own branding, screenshots, and documentation asse
 
 ### Docker Compose
 
-For a complete, copy-and-paste Ubuntu LAN deployment walkthrough—including Docker installation, choosing the correct LAN IP, firewall caveats, verification, upgrades, backups, password recovery, and troubleshooting—see [Ubuntu 局域网部署（简体中文）](README.zh-CN.md#ubuntu-局域网部署推荐).
+Install Docker Engine and Compose first; the [Ubuntu LAN walkthrough (Chinese)](README.zh-CN.md#ubuntu-局域网部署推荐) covers installation, IP selection and firewall checks.
 
-The example below is intentionally bound to `127.0.0.1` for reverse-proxy deployments. It is **not reachable from another device on your LAN**. For direct LAN access, bind the published port to the Ubuntu host's actual LAN IP, for example `192.168.1.50:6521:6521`; replace that address with your own.
+This example binds `127.0.0.1` for a host reverse proxy and is **unreachable from other LAN devices**. For direct LAN access, replace the host address with your actual LAN IP, e.g. `192.168.1.50:6521:6521`. A bare `6521:6521` listens on all interfaces, which may include untrusted networks. For internet access, keep loopback binding and use HTTPS plus access controls through Nginx, Caddy, Traefik or another reverse proxy.
 
-Create an empty deployment directory, enter it, and create a `docker-compose.yml` file. Run all following Compose commands from that directory:
+Create and enter an empty deployment directory. Save this as `docker-compose.yml`; run all following Compose commands there:
+
+SQLite is the default and needs no external database. Keep both mounts below to persist configuration, the database and uploads across container recreation.
 
 ```yaml
 services:
@@ -100,67 +89,18 @@ services:
     restart: always
 ```
 
-Then start ZPanel:
-
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-Default image:
+Check `GET /api/healthz` for `{"status":"ok"}`, then sign in with `admin@zpanel.local` / `12345678` and change the password. The health response alone does not verify login or data persistence.
 
-```text
-vivalucas/zpanel:latest
-```
-
-Default port:
-
-```text
-6521
-```
-
-Default persistent directories:
-
-```text
-./conf
-./data
-```
-
-For direct LAN access, prefer a specific host mapping such as `192.168.1.50:6521:6521`. Using `6521:6521` listens on all host interfaces, which may include interfaces outside your trusted LAN. For public internet access, keep the service bound to `127.0.0.1` and put HTTPS and access controls in front of it with Nginx, Caddy, Traefik, or a similar reverse proxy.
+For broken custom CSS/JS, open `http://your-zpanel-host/?safeMode=1` (also `?zpanelSafeMode=1`). This skips custom code for the current page load so you can sign in and remove it from settings. See [configuration, persistence, upgrades and recovery](docs/deployment.md) before changing paths or upgrading.
 
 ### Releases
 
-Version tags create GitHub Releases with release notes, Linux amd64 deployment packages, and `SHA256SUMS`. The Docker image is still the recommended deployment artifact for most users:
-
-- `ghcr.io/vivalucas/zpanel:<version>`
-- `vivalucas/zpanel:<version>`
-
-`latest` points to the most recently published stable image. If you need repeatable rollbacks, use an explicit version tag such as `vivalucas/zpanel:1.2.11`.
-
-Health check endpoint:
-
-```text
-GET /api/healthz
-```
-
-Default account:
-
-```text
-Username: admin@zpanel.local
-Password: 12345678
-```
-
-Change the default password after the first login.
-
-Custom CSS / JS recovery:
-
-```text
-http://your-zpanel-host/?safeMode=1
-```
-
-Safe mode skips custom CSS and custom JavaScript for the current page load, so you can sign in and remove a broken customization from settings. `?zpanelSafeMode=1` is also supported.
-
-See [Configuration, persistence, upgrades and recovery](docs/deployment.md) before customizing paths or upgrading. Pushing `main` does not publish images; check the [container workflow](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml) for completion.
+Version tags produce GitHub Releases with notes, Linux amd64 packages and `SHA256SUMS`. Docker is recommended; both registries publish `vivalucas/zpanel:<version>` and `ghcr.io/vivalucas/zpanel:<version>`. Pin a version such as `1.2.11` for repeatable rollback; `latest` follows the last stable image. A `main` push does not publish images: verify the [container workflow](https://github.com/vivalucas/zpanel/actions/workflows/container-ghcr.yml).
 
 ### Docker Management
 
@@ -196,87 +136,23 @@ The official image includes `docker-cli`, and Docker management works by running
 
 ---
 
-## Use Cases
-
-- A unified homepage for NAS, routers, mini PCs, and home servers
-- Homelab service navigation for Jellyfin, qBittorrent, Home Assistant, Git, monitoring tools, and more
-- Internal service directory for teams or small organizations
-- Personal browser homepage and bookmark dashboard
-- Read-only public navigation page for sharing selected links
-- Lightweight Docker container management entry point for trusted self-hosted environments
-
----
-
 ## Local Development
 
-The frontend uses **React + TypeScript + Vite + Ant Design**, with shared theme tokens and a unified settings center. Architecture details are documented in [the frontend guide (Chinese)](docs/frontend.zh-CN.md) · [Audit and verification scope (Chinese)](docs/frontend-audit.zh-CN.md).
-
-Frontend requirements:
-
-- Node.js `24.15.0`
-- pnpm `11.1.3`
-
-```bash
-fnm use
-corepack enable
-corepack prepare pnpm@11.1.3 --activate
-pnpm install --frozen-lockfile
-pnpm run dev
-```
-
-Backend requirements:
-
-- Go `1.26.3`
-
-```bash
-cd service
-go run main.go
-```
-
-By default, the frontend dev server listens on `http://127.0.0.1:1002` and proxies API requests to the backend at `http://127.0.0.1:6521/`.
-
----
+Use the fixed Node.js/pnpm/Go toolchain, setup commands and production build instructions in [CONTRIBUTING.md](CONTRIBUTING.md#development-setup). The frontend uses React + TypeScript + Vite + Ant Design; see [the frontend guide](docs/frontend.zh-CN.md) for architecture and UI conventions.
 
 ## Quality Checks
 
-```bash
-pnpm run type-check
-pnpm run lint
-pnpm test
-pnpm test:review
-pnpm run build
-cd service && go test ./...
-```
-
-Browser regression tests: run `pnpm build`, `pnpm exec playwright install chromium`, and `pnpm test:e2e`. The suite starts an isolated Go server with a temporary database.
-
-GitHub Actions runs the same frontend and backend checks on pull requests and pushes to the main branches.
-
----
+Run the [quality checks](CONTRIBUTING.md#quality-checks) for the affected paths. Browser regression uses a production build and an isolated Go/SQLite service. CI runs on pull requests and pushes to `main`; test results and coverage limits are recorded in [current status](handbook/01-current-status.md).
 
 ## Build
 
-```bash
-pnpm run build
-```
-
-Backend binary build:
-
-```bash
-cd service
-go build -o zpanel --ldflags="-X zpanel/global.RUNCODE=release" main.go
-```
-
----
+See [build commands and packaging requirements](CONTRIBUTING.md#build).
 
 ## Project Status
 
-ZPanel has completed a broad engineering pass across product behavior, deployment, security posture, and repository standards. Frontend type-check, lint, production build, backend tests, and backend release build are expected to pass before release.
+[Current status](handbook/01-current-status.md) separates source changes, published artifacts, production deployment and verification gaps. New branding/screenshots remain incomplete; external platform and integration coverage must be checked there before relying on a result.
 
-Still pending before a polished release:
-
-- New ZPanel logo, screenshots, and release assets
-- Security review for custom JS / CSS, Docker socket access, and public gallery behavior
+Further security review for custom CSS/JS, Docker socket access and public gallery behavior remains pending. Existing permission and hardening boundaries are recorded in [design decisions](handbook/11-decisions.md#管理员能力与安全数据边界).
 
 ---
 
@@ -290,11 +166,7 @@ Security reports should follow [SECURITY.md](./SECURITY.md).
 
 ## Roadmap
 
-- Finish backend build and full local integration verification
-- Refresh screenshots, logo, favicon, and documentation assets
-- Add safer recovery paths for custom CSS / JS misconfiguration
-- Improve Docker management UX and deployment documentation
-- Explore plugin, widget, and application-center ideas for future versions
+Active and deferred work is maintained in [the current plan](handbook/09-current-plan.md). Plugin, widget and application-center ideas remain exploratory and are not implementation commitments.
 
 ---
 

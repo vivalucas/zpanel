@@ -1,6 +1,6 @@
 # Configuration and operations
 
-For first installation, use the [Compose quick start](../README.md#docker-compose). This guide targets 1.2.11, one instance, SQLite and the default paths. Docker deployment does not require Node.js, Go, MySQL or Redis on the host. Deployment verification and remaining recovery gaps are recorded in the [current status](../handbook/01-current-status.md).
+For first installation, use the [Compose quick start](../README.md#docker-compose). This guide targets the published 1.2.11 release, one instance, SQLite and the default paths. Docker deployment does not require Node.js, Go, MySQL or Redis on the host. Deployment verification and remaining recovery gaps are recorded in the [current status](../handbook/01-current-status.md).
 
 ## Configuration and persistence
 

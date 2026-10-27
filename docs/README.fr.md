@@ -6,7 +6,7 @@ Un panneau de navigation auto-heberge, propre et leger, pour NAS, homelab, serve
 
 ---
 
-ZPanel vise a rester leger, agreable a utiliser, facile a deployer et ouvert par defaut, sans introduire de barriere de licence payante. Pour les usages auto-heberges, ZPanel continue d'ameliorer la structure frontend, les donnees utilisateur et de navigation, la personnalisation, les televersements, la gestion Docker et le flux de deploiement. Le projet renforce aussi le captcha de connexion, l'interception des acces, les controles de permission, la limitation des tentatives de connexion, les en-tetes de securite, les health checks de conteneur, les controles CI et les fichiers de collaboration.
+Open source, facile a deployer et sans licence payante.
 
 ## Fonctionnalites
 
@@ -15,11 +15,14 @@ ZPanel vise a rester leger, agreable a utiliser, facile a deployer et ouvert par
 - Multi-comptes, acces public optionnel et changement rapide de compte local
 - Personnalisation de l'arriere-plan, de la mise en page, du pied de page, de la page de connexion, du CSS et du JavaScript
 - Moteurs de recherche personnalises et captcha de connexion optionnel
-- Televersements, galerie publique et sauvegardes `.zpanel.json`
+- Televersements, galerie publique et exports `.zpanel.json` de navigation/style (sans images, comptes ni configuration des modules)
 - Widgets d'etat systeme
 - Gestion Docker pour les administrateurs
+- Controle d'acces, limites de connexion, en-tetes de securite, health checks et CI
 
 ## Demarrage rapide
+
+Creez d'abord le fichier Compose selon le [guide d'installation (anglais)](../README.md#docker-compose), puis executez les commandes dans ce meme repertoire.
 
 ```bash
 docker compose up -d
@@ -40,18 +43,7 @@ La gestion Docker necessite l'acces au socket Docker. Activez-la uniquement dans
 
 ## Developpement
 
-```bash
-fnm use
-corepack enable
-corepack prepare pnpm@11.1.3 --activate
-pnpm install --frozen-lockfile
-pnpm run dev
-```
-
-```bash
-cd service
-go run main.go
-```
+[Development setup & checks (English)](../CONTRIBUTING.md#development-setup)
 
 ## Licence
 

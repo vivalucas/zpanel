@@ -1,147 +1,53 @@
-# 环境配置
+# 环境与换机
 
 ## 环境要求
 
-| 项目 | 版本 | 说明 |
-|------|------|------|
-| Node.js | 24.15.0 | 前端构建，使用 fnm 读取 `.node-version` |
-| pnpm | 11.1.3 | 当前 `pnpm-lock.yaml` 为 lockfile v9 |
-| Go | 1.26.3 | 后端构建 |
-| Docker | 未固定 | 容器部署 |
-| SQLite | 随 Go sqlite driver | 默认数据库 |
-| MySQL | 未固定 | 可选数据库 |
-| Redis | 未固定 | 可选缓存 / 队列 |
+| 工具 | 固定版本与权威来源 | 用途 |
+|---|---|---|
+| Node.js | 24.15.0，[.node-version](../.node-version) | 前端开发与构建，`fnm use` 读取版本 |
+| pnpm | 11.1.3，[package.json](../package.json) 的 `packageManager` | 沿用 [pnpm-lock.yaml](../pnpm-lock.yaml)，当前 lockfile v9 |
+| Go | 1.26.3，[service/go.mod](../service/go.mod) | 后端开发、构建与浏览器测试服务 |
+
+Docker、可选 MySQL/Redis 未固定版本；SQLite 随 Go driver。默认 Docker 部署不需要宿主机安装开发工具链。安装依赖、启动与验证命令统一见 [贡献指南](../CONTRIBUTING.md#development-setup)；前端 `http://127.0.0.1:1002` 代理到后端 `http://127.0.0.1:6521/`，需分别启动两个服务。
 
 ## 前端环境变量
 
-来自项目根目录 `.env`：
+根 [.env](../.env) 是 Vite 构建/开发配置，与部署目录中供 Compose 插值的 `.env` 分开。修改前者后重启开发服务或重新构建；镜像运行时不会重新编译前端。
 
-| 变量名 | 说明 | 示例值 | 必填 |
-|--------|------|--------|------|
-| `VITE_GLOB_API_URL` | 前端请求 API 前缀 | `/api` | 是 |
-| `VITE_APP_API_BASE_URL` | Vite 开发代理目标后端 | `http://127.0.0.1:6521/` | 是 |
-| `VITE_GLOB_OPEN_LONG_REPLY` | 历史遗留配置，当前用途待确认 | `false` | 否 |
-| `VITE_GLOB_APP_PWA` | 是否启用 PWA | `false` | 否 |
+| 变量 | 语义与回落 |
+|---|---|
+| `VITE_GLOB_API_URL` | 浏览器 API 前缀，缺省 `/api`；见 [api.ts](../src/lib/api.ts) |
+| `VITE_APP_API_BASE_URL` | Vite 的 `/api`、`/uploads` 开发代理目标，缺省 `http://127.0.0.1:6521/` |
+| `VITE_GLOB_APP_PWA` | 只有字符串 `true` 才在构建时启用 PWA；生命周期验收缺口见 [01](01-current-status.md) |
+| `VITE_APP_VERSION` | Vite 回落版本；正常构建优先读取生成的 `.zpanel-build-version` |
 
-## 后端配置文件
+版本权威源为 [package.json](../package.json) 与 [service/assets/version](../service/assets/version)（格式 `1|版本号`）；[构建脚本](../scripts/add-frontend-version.js)要求两者一致，再生成前端版本文件。源码、正式镜像与生产版本分开记录在 [01](01-current-status.md)，此处不维护第三份版本快照。
 
-配置模板：`service/assets/conf.example.ini`
+`VITE_GLOB_OPEN_LONG_REPLY`、`VITE_CRYPTO_SECRET` 仍在根 `.env`，当前源码未发现运行读取；不能据此声称支持长回复或前端加密。本次保留配置，删除前须重新核对消费者。
 
-| 配置项 | 说明 | 默认值 |
-|--------|------|--------|
-| `base.http_port` | 后端 HTTP 端口 | `6521` |
-| `base.database_drive` | 数据库驱动，支持 `sqlite` / `mysql` | `sqlite` |
-| `base.cache_drive` | 缓存驱动，支持 `memory` / `redis` | `memory` |
-| `base.queue_drive` | 队列驱动，支持 `memory` / `redis` | `memory` |
-| `sqlite.file_path` | SQLite 文件路径 | `./data/database/zpanel.db` |
-| `mysql.host` | MySQL 主机 | `127.0.0.1` |
-| `mysql.port` | MySQL 端口 | `3306` |
-| `mysql.username` | MySQL 用户名 | `root` |
-| `mysql.password` | MySQL 密码 | 示例值，不应用于生产 |
-| `mysql.db_name` | MySQL 数据库名 | `zpanel` |
-| `redis.address` | Redis 地址 | `127.0.0.1:6379` |
-| `redis.password` | Redis 密码 | 空 |
-| `redis.prefix` | Redis key 前缀 | `zpanel:` |
-| `redis.db` | Redis DB 编号 | `0` |
-| `network.favicon_private_origins` | 管理员可获取 favicon 的私网源，逗号分隔完整 scheme/host/port | 空，默认拒绝 |
+## 后端配置与运行目录
 
-说明：可变运行时数据已收敛到 `./data` 根目录。旧的 `base.source_path` 和 `base.source_temp_path` 已从新配置模板移除。
+键和默认值以 [conf.example.ini](../service/assets/conf.example.ini) 为准；配置生效、目录迁移、代理和外部数据库的操作边界统一见 [部署参考](../docs/deployment.zh-CN.md)。`base.source_path/source_temp_path` 已由 `storage.*` 替代，不再用于当前模板。
 
-## 目标运行时目录配置
+可变数据默认归 `./data`，当前目录方案已落地。变更默认值时核对模板、[storage fallback](../service/lib/storage/storage.go)、README 和 Compose 挂载；子路径、迁移和备份边界查部署参考，不另维护一份操作正文。
 
-旧的 `source_path` 只表达“上传文件根目录”，不足以覆盖数据库、上传文件、临时文件、缓存、日志、备份之间的边界。新基线采用以下配置模型：
-
-| 配置项 | 建议默认值 | 说明 |
-|--------|------------|------|
-| `storage.data_path` | `./data` | 所有可变数据根目录 |
-| `storage.uploads_path` | `./data/uploads` | 用户上传、系统上传、公共图库 |
-| `storage.temp_path` | `./data/runtime/temp` | 临时上传、导入解压、导出打包 |
-| `storage.cache_path` | `./data/runtime/cache` | favicon、缩略图等可再生成缓存 |
-| `storage.logs_path` | `./data/runtime/logs` | 运行日志 |
-| `sqlite.file_path` | `./data/database/zpanel.db` | SQLite 数据库 |
-| `storage.backups_path` | `./data/backups` | 备份目录预留，未实现自动定时任务 |
-
-目录原则：
-
-- Docker 部署优先挂载 `./data` 一个主目录，减少用户理解和备份成本。
-- 上传文件不再按日期目录保存，改为 `data/uploads/users/{user_id}/{purpose}/{object_key}.{ext}`、`data/uploads/public/gallery/{object_key}.{ext}` 或 `data/uploads/system/{area}/{object_key}.{ext}`。
-- 临时文件、缓存、日志和上传资源分离；缓存和临时文件可清理，上传资源和数据库必须备份。
-- 配置默认值必须与 `conf.example.ini`、代码内 fallback、README、Compose volume 保持一致。
-
-## 敏感信息规则
-
-- handbook 中只记录变量名、用途、假示例值和配置位置。
-- 不写入真实数据库密码、Redis 密码、token、cookie、私钥。
-- 生产环境必须替换配置模板中的示例密码。
-- 如果真实密钥曾被提交或写入文档，立即轮换密钥，并在 `11-decisions.md` 记录处理方式。
-
-## 第三方服务
-
-| 服务 | 用途 | 配置方式 |
-|------|------|----------|
-| Iconify | 前端图标资源 | 前端依赖 / 用户输入图标名 |
-| Redis | 可选缓存和队列 | `conf.ini` |
-| MySQL | 可选数据库 | `conf.ini` |
-| Docker CLI / Docker socket | 可选 Docker 应用管理 | 部署环境 / compose volumes |
-
-## 版本与健康检查
-
-| 项目 | 当前值 | 来源 |
-|------|--------|------|
-| 产品版本 | `1.2.11` | `service/assets/version` 与 `package.json` |
-| 后端版本源 | `1|1.2.11` | `service/assets/version` |
-| 健康检查 | `GET /api/healthz` | `service/router/router.go` |
-| 默认 HTTP 端口 | `6521` | `service/assets/conf.example.ini` |
-
-## 功能相关配置
-
-| 配置 | 存储位置 | 说明 |
-|------|----------|------|
-| 登录验证码开关 | `system_setting.system_application` | `loginCaptcha`，由站点设置页面保存 |
-| 站点标题 / 图标 / 登录页文案 | `system_setting.site_setting` | 全局站点展示配置 |
-| 自定义 CSS / JS | `system_setting.site_setting` | 前端启动时动态注入 |
-| 多账号快速切换 | 浏览器 localStorage | 仅本机浏览器保存，不写入服务端 |
-| 自定义搜索引擎 | `module_config` | 按用户保存搜索模块配置 |
-
-## 本地开发配置
-
-```bash
-# 1. 安装前端依赖
-fnm use
-corepack enable
-corepack prepare pnpm@11.1.3 --activate
-pnpm install --frozen-lockfile
-
-# 2. 启动前端开发服务
-pnpm run dev
-
-# 3. 启动后端
-cd service
-go run main.go
-```
-
-## 变更记录
-
-| 日期 | 变更内容 | 原因 |
-|------|----------|------|
-| 2026-05-24 | 更新版本源到 `1.0.3` | 发布安全渲染和类型收敛优化 |
-| 2026-05-21 | 移除新配置模板中的 `base.source_path` / `base.source_temp_path` | 当前项目无历史包袱，直接采用 `storage.*` 作为运行时存储配置 |
-| 2026-05-21 | 将当前运行时默认路径同步为 `./data` | 基础结构重构已开始落地 |
-| 2026-05-21 | 补充目标运行时目录配置 | 后续需要替换按日期分散的上传目录，并统一数据库、上传、缓存、日志、备份路径 |
-| 2026-05-21 | 更新默认端口 6521、版本源和健康检查说明 | 1.0.0 发布整理已统一端口和版本 |
-| 2026-05-20 | 补充 PRO 功能相关配置位置 | 已新增站点设置、验证码、搜索和 Docker 管理 |
-| 2026-05-20 | 初始化环境配置文档 | 项目建立后记录当前运行配置 |
-
-## 2026-09-12 新配置
-
-`[base] trusted_proxies`：逗号分隔受控反向代理的 IP/CIDR；默认空。示例仅用于说明：`127.0.0.1,192.0.2.10/32`，应替换为真实代理地址。无效值启动时明确报错，不回退到信任所有代理。生效需重启。
-
-Docker 操作固定 30 秒上下文超时、2 MiB 输出限制；验证码固定安全尺寸范围和独立 IP 限额，本轮未增加额外环境变量。
+上传路径由 storage 生成：`data/uploads/users/{user_id}/{purpose}/{object_key}.{ext}`、`data/uploads/public/gallery/{object_key}.{ext}`、`data/uploads/system/{purpose}/{object_key}.{ext}`。临时文件/缓存可再生成，数据库/原上传必须纳入备份；不可按日期目录推断当前对象路径。完整备份与恢复见 [部署参考](../docs/deployment.zh-CN.md#持久化和权限)。
 
 ### 私网 favicon
 
-在 `conf/conf.ini` 的 `[network]` 中设置 `favicon_private_origins`，例如 `http://192.168.1.10:8080,https://nas.example:8443`，修改后重启。示例是占位地址，不代表本项目设备。仅管理员可使用私网名单，普通用户仍只可访问公网；scheme、host、有效端口须完全匹配。环回、链路本地与云元数据地址始终拒绝；重定向和实际 DNS 连接同样检查，不能通过其他端口或源扩大范围。
+在 `conf/conf.ini` 的 `[network]` 配置 `favicon_private_origins`，修改后重启。例如 `http://192.168.1.10:8080,https://nas.example:8443` 仅为占位源，默认空即拒绝。仅管理员可用名单，普通账号仍只能访问公网；scheme、host、有效端口必须完全匹配。环回、链路本地、云元数据始终拒绝，重定向与实际 DNS 连接同样检查，不允许扩大到其他源或端口。
 
-## 2026-09-12 部署配置边界
+## 功能配置与换机
 
-完整用户说明见 docs/deployment.zh-CN.md 与 docs/deployment.md。运行时 `conf/conf.ini` 与 Compose `.env` 分工独立；INI 修改重启，Compose 修改重建。data_path 不覆盖已显式配置的子路径，sqlite.file_path 独立；容器外路径需新增挂载和写权限。默认 conf/data 挂载覆盖 SQLite 与上传文件；外部 MySQL、浏览器本地存储不在此备份内。
+| 内容 | 保存位置 / 边界 |
+|---|---|
+| 验证码 `loginCaptcha` | `system_setting.system_application` |
+| 站点标题、图标、登录文案及 CSS/JS | `system_setting.site_setting`，自定义代码由前端加载 |
+| 用户搜索引擎 | `module_config` |
+| 快捷账号与浏览器偏好 | localStorage，仅本机浏览器；不随服务器备份迁移 |
+| Iconify | 前端图标资源与用户输入的图标名 |
+| Docker 管理 | Docker CLI/socket、Compose 挂载与附加组 |
+
+换机先按导航核对 main 的提交和未提交工作，拉取规则见 [Git 与跨设备同步](README.md#git-与跨设备同步)。依赖按锁文件重装；真实 INI/Compose `.env`、运行数据库和上传另行安全迁移，不入 Git。健康入口 `GET /api/healthz` 只证明服务可响应，不能代替登录、数据或代理验收。
+
+共享文档只记变量、用途和假示例，不复制密码、token、Cookie 或私钥；生产须替换模板示例密码。若密钥曾公开，轮换并在 [11](11-decisions.md)保留脱敏处理依据。

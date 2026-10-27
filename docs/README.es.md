@@ -6,7 +6,7 @@ Un panel de navegacion autoalojado, limpio y ligero, para NAS, homelab, servidor
 
 ---
 
-ZPanel busca ser ligero, agradable de usar, facil de desplegar y abierto por defecto, sin introducir barreras de licencia de pago. Para escenarios autoalojados, ZPanel sigue mejorando la estructura frontend, los datos de usuarios y navegacion, la personalizacion, las subidas de archivos, la gestion Docker y el flujo de despliegue. Tambien refuerza el captcha de login, la interceptacion de acceso, las comprobaciones de permisos, la limitacion de intentos de login, los encabezados de seguridad, los health checks de contenedor, las puertas de calidad CI y los archivos de colaboracion del proyecto.
+Codigo abierto, facil de desplegar y sin autorizaciones de pago.
 
 ## Funciones
 
@@ -15,11 +15,14 @@ ZPanel busca ser ligero, agradable de usar, facil de desplegar y abierto por def
 - Multiusuario, acceso publico opcional y cambio rapido de cuenta local
 - Personalizacion de fondo, diseno, pie de pagina, login, CSS y JavaScript
 - Motores de busqueda personalizados y captcha opcional
-- Subidas, galeria publica y copias `.zpanel.json`
+- Subidas, galeria publica y exportaciones `.zpanel.json` de navegacion/estilo (sin imagenes, cuentas ni configuracion de modulos)
 - Widgets de estado del sistema
 - Gestion Docker para administradores
+- Control de acceso, limites de login, encabezados de seguridad, health checks y CI
 
 ## Inicio rapido
+
+Primero crea el archivo Compose siguiendo la [guia de instalacion (ingles)](../README.md#docker-compose); ejecuta los comandos desde ese directorio.
 
 ```bash
 docker compose up -d
@@ -40,18 +43,7 @@ La gestion Docker requiere acceso al socket de Docker. Usala solo en entornos de
 
 ## Desarrollo
 
-```bash
-fnm use
-corepack enable
-corepack prepare pnpm@11.1.3 --activate
-pnpm install --frozen-lockfile
-pnpm run dev
-```
-
-```bash
-cd service
-go run main.go
-```
+[Development setup & checks (English)](../CONTRIBUTING.md#development-setup)
 
 ## Licencia
 

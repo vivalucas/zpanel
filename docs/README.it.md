@@ -6,7 +6,7 @@ Un pannello di navigazione self-hosted, pulito e leggero, per NAS, homelab, serv
 
 ---
 
-ZPanel punta a essere leggero, piacevole da usare, facile da distribuire e aperto per impostazione predefinita, senza introdurre barriere di licenza a pagamento. Per scenari self-hosted, ZPanel continua a migliorare struttura frontend, dati utente e di navigazione, personalizzazione, upload, gestione Docker e flusso di deployment. Il progetto rafforza anche captcha di login, intercettazione degli accessi, controlli dei permessi, rate limiting del login, header di sicurezza, health check dei container, controlli di qualita CI e file di collaborazione.
+Open source, facile da distribuire e senza autorizzazioni a pagamento.
 
 ## Funzioni
 
@@ -15,11 +15,14 @@ ZPanel punta a essere leggero, piacevole da usare, facile da distribuire e apert
 - Multi-account, accesso pubblico opzionale e cambio rapido account locale
 - Personalizzazione di sfondo, layout, footer, login, CSS e JavaScript
 - Motori di ricerca personalizzati e captcha opzionale
-- Upload, galleria pubblica e backup `.zpanel.json`
+- Upload, galleria pubblica ed esportazioni `.zpanel.json` di navigazione/stile (senza immagini, account e configurazioni dei moduli)
 - Widget di stato del sistema
 - Gestione Docker per amministratori
+- Controllo degli accessi, limiti di login, header di sicurezza, health check e CI
 
 ## Avvio rapido
+
+Crea prima il file Compose seguendo la [guida di installazione (inglese)](../README.md#docker-compose); esegui i comandi dalla stessa directory.
 
 ```bash
 docker compose up -d
@@ -40,18 +43,7 @@ La gestione Docker richiede accesso al socket Docker. Abilitala solo in ambienti
 
 ## Sviluppo
 
-```bash
-fnm use
-corepack enable
-corepack prepare pnpm@11.1.3 --activate
-pnpm install --frozen-lockfile
-pnpm run dev
-```
-
-```bash
-cd service
-go run main.go
-```
+[Development setup & checks (English)](../CONTRIBUTING.md#development-setup)
 
 ## Licenza
 

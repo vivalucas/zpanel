@@ -10,28 +10,30 @@ Requirements:
 - pnpm `11.1.3`
 - Go `1.26.3`
 
-Frontend: React + TypeScript + Ant Design. See [frontend architecture and UI conventions](docs/frontend.zh-CN.md).
+Frontend: React + TypeScript + Ant Design. See [frontend architecture and UI conventions](docs/frontend.zh-CN.md). Toolchain sources and configuration semantics are maintained in [Environment and machine handoff](handbook/07-environment.md).
 
+Run from the repository root:
 
 ```bash
+fnm use
 corepack enable
 corepack prepare pnpm@11.1.3 --activate
 pnpm install --frozen-lockfile
 pnpm run dev
 ```
 
-Backend:
+In another terminal, from the repository root:
 
 ```bash
 cd service
 go run main.go
 ```
 
-The frontend dev server listens on `http://127.0.0.1:1002` and proxies API requests to `http://127.0.0.1:6521`.
+The frontend is available at `http://127.0.0.1:1002` and proxies API/uploads to `http://127.0.0.1:6521`. Vite binds all interfaces by default.
 
 ## Quality Checks
 
-Run these before opening a pull request:
+From the repository root, run checks appropriate to the change before opening a pull request:
 
 ```bash
 pnpm run type-check
@@ -50,6 +52,17 @@ Browser tests require Go and run the production build against a disposable SQLit
 The entrypoint checks use disposable paths and mocked operating-system commands, including large Docker socket GIDs and optional setup failures. They do not contact Docker; also verify the resulting service UID/groups in an isolated Linux container before release.
 
 If Go is not installed locally, mention that in the pull request verification notes.
+
+## Build
+
+`pnpm run build` checks matching frontend/backend versions and produces `dist/`. For a backend release binary, run from the repository root:
+
+```bash
+cd service
+go build -o zpanel --ldflags="-X zpanel/global.RUNCODE=release" main.go
+```
+
+The binary also needs the packaged frontend and runtime directories; deployment is covered in [the operations guide](docs/deployment.md#binary-packages).
 
 ## Pull Request Guidelines
 

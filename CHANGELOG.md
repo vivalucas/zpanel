@@ -4,6 +4,14 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.3.0 - 2026-10-28
+
+### Maintenance
+
+- Align frontend and backend versions at 1.3.0, retaining the homepage loading and image-handling changes documented under 1.2.12.
+- Consolidate development, UI, API, operations and regression documentation. Remove repeated instructions and completed-task logs while retaining active gaps, compatibility boundaries and reproducible historical evidence through fixed Git revisions.
+- Preserve existing data structures, dependencies and deployment behavior.
+
 ## 1.2.12 - 2026-10-27
 
 ### Homepage Loading and Recovery

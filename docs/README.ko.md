@@ -6,7 +6,7 @@ NAS, Homelab, 개인 서버, 브라우저 홈페이지를 위한 가볍고 깔�
 
 ---
 
-ZPanel은 가볍고, 사용하기 쉽고, 배포하기 쉬우며 기본적으로 열린 패널을 목표로 하고, 유료 라이선스 게이트를 도입하지 않습니다. 셀프 호스팅 환경을 위해 프론트엔드 구조, 사용자와 내비게이션 데이터, 개인화 설정, 파일 업로드, Docker 관리, 배포 흐름을 계속 정리하고 개선합니다. 또한 로그인 CAPTCHA, 접근 차단, 권한 검증, 로그인 속도 제한, 보안 응답 헤더, 컨테이너 헬스 체크, CI 품질 게이트, 프로젝트 협업 파일도 보강했습니다.
+쉽게 배포할 수 있는 오픈 소스 패널이며 유료 라이선스 제한이 없습니다.
 
 ## 기능
 
@@ -15,11 +15,14 @@ ZPanel은 가볍고, 사용하기 쉽고, 배포하기 쉬우며 기본적으로
 - 다중 계정, 공개 접근 모드, 빠른 로컬 계정 전환
 - 배경, 레이아웃, 푸터, 로그인 화면, CSS / JavaScript 사용자 지정
 - 사용자 지정 검색 엔진과 로그인 CAPTCHA
-- 이미지 업로드, 공개 갤러리, `.zpanel.json` 백업
+- 이미지 업로드, 공개 갤러리, 탐색·스타일 `.zpanel.json` 내보내기(이미지·계정·모듈 설정 제외)
 - 시스템 상태 위젯
 - 관리자용 Docker 컨테이너 관리
+- 접근·권한 제어, 로그인 속도 제한, 보안 응답 헤더, 컨테이너 헬스 체크, CI
 
 ## 빠른 시작
+
+먼저 [설치 안내(영어)](../README.md#docker-compose)에 따라 Compose 파일을 만들고 같은 배포 디렉터리에서 실행하세요.
 
 ```bash
 docker compose up -d
@@ -40,18 +43,7 @@ Docker 관리 기능을 사용하려면 Docker socket을 마운트해야 합니�
 
 ## 개발
 
-```bash
-fnm use
-corepack enable
-corepack prepare pnpm@11.1.3 --activate
-pnpm install --frozen-lockfile
-pnpm run dev
-```
-
-```bash
-cd service
-go run main.go
-```
+[Development setup & checks (English)](../CONTRIBUTING.md#development-setup)
 
 ## 라이선스
 

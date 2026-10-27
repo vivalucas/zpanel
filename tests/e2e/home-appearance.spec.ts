@@ -189,6 +189,88 @@ for (const ink of ['white', 'black'] as const) {
 	}
 }
 
+test('viewport and theme reanalysis retain the existing wallpaper veil until the new result commits', async ({
+	page,
+}) => {
+	await page.emulateMedia({ colorScheme: 'light' })
+	await home(page, wallpapers.mixed, { wallpaperAutoContrast: true, iconTextColor: '#ffffff' })
+	const root = page.locator('.home-page')
+	await expect(root).toHaveAttribute('data-wallpaper-status', 'ready')
+	await expect(root).not.toHaveCSS('--wallpaper-scrim', '0')
+	interface Reading {
+		status: string | null
+		scrim: number
+		theme: string | null
+		width: number
+	}
+	await page.evaluate(() => {
+		const probe = { readings: [] as Reading[] }
+		Object.assign(window, { wallpaperReanalysisProbe: probe })
+		const readPixels = CanvasRenderingContext2D.prototype.getImageData
+		CanvasRenderingContext2D.prototype.getImageData = function (sx, sy, sw, sh, settings) {
+			if (this.canvas.width > 1 && this.canvas.height > 1) {
+				const root = document.querySelector('.home-page')!
+				// This runs after the loading DOM commits, before its analysis can commit a result.
+				probe.readings.push({
+					status: root.getAttribute('data-wallpaper-status'),
+					scrim: Number(getComputedStyle(root).getPropertyValue('--wallpaper-scrim')),
+					theme: document.documentElement.getAttribute('data-theme'),
+					width: this.canvas.width,
+				})
+			}
+			return readPixels.call(this, sx, sy, sw, sh, settings)
+		}
+	})
+	const readings = () =>
+		page.evaluate(
+			() =>
+				(window as typeof window & { wallpaperReanalysisProbe: { readings: Reading[] } })
+					.wallpaperReanalysisProbe.readings,
+		)
+	for (const [theme, width] of [
+		['light', 320],
+		['dark', 320],
+		['dark', 1440],
+		['light', 1440],
+	] as const) {
+		const before = (await readings()).length
+		await page.emulateMedia({ colorScheme: theme })
+		await page.setViewportSize({ width, height: 1000 })
+		// Waiting for this viewport's readback avoids accepting the previous ready state
+		// during the viewport probe's debounce.
+		await expect
+			.poll(async () =>
+				(await readings())
+					.slice(before)
+					.some((value) => value.width === width && value.theme === theme && value.status === 'loading'),
+			)
+			.toBe(true)
+		for (const value of (await readings())
+			.slice(before)
+			.filter((value) => value.width === width && value.theme === theme)) {
+			expect(value.scrim, `${theme} ${width} while sampling`).toBeGreaterThan(0)
+		}
+		await expect(root).toHaveAttribute('data-wallpaper-status', 'ready')
+		const ratio = await page.locator('.home-contrast-mask').evaluate((mask) => {
+			const components = getComputedStyle(mask)
+				.backgroundColor.match(/[\d.]+/g)!
+				.map(Number)
+			const alpha = components.length === 4 ? components[3] : 1
+			const surface = [10, 15, 23].map((channel) => 255 * (1 - alpha) + channel * alpha)
+			const luminance = surface.reduce((sum, channel, index) => {
+				const value = channel / 255
+				return (
+					sum +
+					[0.2126, 0.7152, 0.0722][index] *
+						(value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+				)
+			}, 0)
+			return 1.05 / (luminance + 0.05)
+		})
+		expect(ratio).toBeGreaterThanOrEqual(4.5)
+	}
+})
+
 test('fixed white text keeps its color while the contrast veil follows the actual cover crop', async ({
 	page,
 }) => {

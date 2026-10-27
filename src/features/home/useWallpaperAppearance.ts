@@ -11,7 +11,7 @@ import { useWallpaperViewport } from './useWallpaperViewport'
 export interface WallpaperState extends WallpaperAppearance {
 	status: 'none' | 'loading' | 'ready' | 'unreadable' | 'error'
 }
-type Sample = WallpaperState & { key: string; context: string; src: string }
+type Sample = WallpaperState & { key: string; context: string; protection: string; src: string }
 
 function currentTheme(): WallpaperAppearance['tone'] {
 	return typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark'
@@ -38,6 +38,7 @@ export function useWallpaperAppearance(
 	const viewport = useWallpaperViewport()
 	const [sample, setSample] = useState<Sample>()
 	const imageRef = useRef<{ src: string; image: HTMLImageElement } | undefined>(undefined)
+	const protection = JSON.stringify([src, autoContrast, preferredTone, preferredInk])
 	const context = JSON.stringify([
 		src,
 		autoContrast,
@@ -65,7 +66,7 @@ export function useWallpaperAppearance(
 		let samplingImage: HTMLImageElement | undefined
 		let displayImage: HTMLImageElement | undefined
 		const commit = (appearance: WallpaperAppearance, status: WallpaperState['status']) => {
-			if (!disposed) setSample({ src, key, context, ...appearance, status })
+			if (!disposed) setSample({ src, key, context, protection, ...appearance, status })
 		}
 		const unreadable = () =>
 			commit(
@@ -222,6 +223,7 @@ export function useWallpaperAppearance(
 		viewport,
 		key,
 		context,
+		protection,
 		analysisDelay,
 		preferredTone,
 		preferredInk,
@@ -232,6 +234,15 @@ export function useWallpaperAppearance(
 		// Keep the last preview colors and status stable while dragging. Home still exposes
 		// pending analysis, retaining its existing protection instead of flashing unmasked.
 		return analysisDelay > 0 ? sample : { ...sample, status: 'loading' }
+	}
+	if (
+		autoContrast &&
+		sample?.protection === protection &&
+		(sample.status === 'ready' || sample.status === 'unreadable')
+	) {
+		// A viewport/theme change invalidates the analysis, not the protection already
+		// shown for this image and ink. Replace it only when the new result is ready.
+		return { ...sample, status: 'loading' }
 	}
 	return {
 		tone: preferredTone ?? (sample?.src === src ? sample.tone : theme),

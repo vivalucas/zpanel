@@ -431,6 +431,107 @@ test('late results from a previous wallpaper cannot replace the current draft co
 	await page.screenshot({ path: info.outputPath('latest-wallpaper-draft.png'), animations: 'disabled' })
 })
 
+test('changing contrast semantics clears the old veil and late image loads cannot restore it', async ({
+	page,
+}) => {
+	await page.clock.install()
+	await fixture(page, {
+		image: 'bright.svg',
+		panel: { wallpaperAutoContrast: true, iconTextColor: '#ffffff' },
+	})
+	await page.goto('/#/settings/appearance')
+	const preview = page.locator('.wallpaper-preview')
+	const mask = page.locator('.wallpaper-preview-contrast')
+	const alpha = () =>
+		mask.evaluate((element) => {
+			const components = getComputedStyle(element)
+				.backgroundColor.match(/[\d.]+/g)!
+				.map(Number)
+			return components.length === 4 ? components[3] : 1
+		})
+	await expect(preview).toHaveAttribute('data-wallpaper-status', 'ready')
+	await expect.poll(alpha).toBeGreaterThan(0)
+	await page.clock.pauseAt(await page.evaluate(() => Date.now() + 50))
+	const toggle = page.getByRole('switch', { name: '自动调整壁纸对比度', exact: true })
+	await toggle.uncheck()
+	await expect(preview).toHaveAttribute('data-wallpaper-status', 'loading')
+	expect(await alpha()).toBe(0)
+	await page.clock.runFor(200)
+	await expect(preview).toHaveAttribute('data-wallpaper-status', 'ready')
+	expect(await alpha()).toBe(0)
+	await toggle.check()
+	await expect(preview).toHaveAttribute('data-wallpaper-status', 'loading')
+	expect(await alpha()).toBe(0)
+	await page.clock.runFor(200)
+	await expect(preview).toHaveAttribute('data-wallpaper-status', 'ready')
+	await expect.poll(alpha).toBeGreaterThan(0)
+	for (const label of ['黑色', '白色']) {
+		await page.getByRole('combobox', { name: '首页文字颜色', exact: true }).click()
+		await page
+			.locator('.ant-select-dropdown:visible .ant-select-item-option')
+			.filter({ hasText: label })
+			.click()
+		await expect(preview).toHaveAttribute('data-wallpaper-status', 'loading')
+		expect(await alpha()).toBe(0)
+		await page.clock.runFor(200)
+		await expect(preview).toHaveAttribute('data-wallpaper-status', 'ready')
+		if (label === '黑色') expect(await alpha()).toBe(0)
+		else await expect.poll(alpha).toBeGreaterThan(0)
+	}
+	let releaseImage!: () => void
+	const gate = new Promise<void>((resolve) => {
+		releaseImage = resolve
+	})
+	await page.evaluate(() => {
+		Object.assign(window, { darkWallpaperImageStarts: 0 })
+		const source = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src')!
+		Object.defineProperty(HTMLImageElement.prototype, 'src', {
+			...source,
+			get() {
+				return source.get!.call(this)
+			},
+			set(value: string) {
+				if (value.endsWith('/wallpaper-fixture/dark.svg')) {
+					const probe = window as typeof window & { darkWallpaperImageStarts: number }
+					probe.darkWallpaperImageStarts++
+				}
+				source.set!.call(this, value)
+			},
+		})
+	})
+	let imageRequests = 0
+	await page.route('**/wallpaper-fixture/dark.svg', async (route) => {
+		imageRequests++
+		await gate
+		await route.fulfill({ contentType: 'image/svg+xml', body: wallpapers['dark.svg'] })
+	})
+	const address = page.locator('#backgroundImageSrc')
+	await address.fill('/wallpaper-fixture/dark.svg')
+	await expect(preview).toHaveAttribute('data-wallpaper-status', 'loading')
+	expect(await alpha()).toBe(0)
+	await page.clock.runFor(200)
+	await expect.poll(() => imageRequests).toBeGreaterThan(0)
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() => (window as typeof window & { darkWallpaperImageStarts: number }).darkWallpaperImageStarts,
+			),
+		)
+		.toBeGreaterThan(0)
+	await address.fill('/wallpaper-fixture/bright.svg')
+	await page.clock.runFor(200)
+	await expect(preview).toHaveAttribute('data-wallpaper-status', 'ready')
+	const restored = await alpha()
+	expect(restored).toBeGreaterThan(0)
+	const lateResponse = page.waitForResponse('**/wallpaper-fixture/dark.svg')
+	releaseImage()
+	await lateResponse
+	await page.clock.runFor(50)
+	await expect(preview).toHaveAttribute('data-wallpaper-status', 'ready')
+	expect(await alpha()).toBe(restored)
+	await expect(address).toHaveValue('/wallpaper-fixture/bright.svg')
+})
+
 test('automatic contrast is a saved choice and preview and home render the same masks', async ({
 	page,
 }, info) => {

@@ -6,6 +6,11 @@ All notable changes to ZPanel will be documented in this file.
 
 ## 1.3.0 - 2026-10-28
 
+### Wallpaper Recovery
+
+- Keep the established contrast veil while the same wallpaper and text colors are reanalyzed after a viewport or theme change. Apply the new result together; do not briefly reset the veil to transparent. Changing the image, text color or automatic-contrast setting retains its own reset and cancellation behavior.
+- Add regressions that inspect the visible veil during analysis, as well as setting changes and late image loads; final contrast requirements remain unchanged.
+
 ### Maintenance
 
 - Align frontend and backend versions at 1.3.0, retaining the homepage loading and image-handling changes documented under 1.2.12.

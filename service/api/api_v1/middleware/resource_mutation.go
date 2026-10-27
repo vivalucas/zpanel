@@ -8,16 +8,14 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"zpanel/api/api_v1/common/apiReturn"
 	"zpanel/global"
+	"zpanel/lib/resourceguard"
 	"zpanel/models"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
-
-var mutationMu sync.Mutex
 
 // ResourceMutation serializes related writes in this server, including legacy
 // JSON references, so a delete cannot race a settings save or import.
@@ -34,8 +32,8 @@ func ResourceMutation(c *gin.Context) {
 	var value interface{}
 	validJSON := json.Unmarshal(body, &value) == nil
 	// Never hold the shared write lock while waiting for a client to upload.
-	mutationMu.Lock()
-	defer mutationMu.Unlock()
+	unlock := resourceguard.LockMutation()
+	defer unlock()
 	if validJSON {
 		if err := checkLocalFiles(value); err != nil {
 			apiReturn.Error(c, err.Error())

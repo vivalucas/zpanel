@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import type { ComponentType } from 'react'
 import {
 	createHashRouter,
 	createRoutesFromElements,
@@ -13,12 +14,16 @@ import { Button } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useAuth, useSite } from '@/lib/queries'
 import { ApiError } from '@/lib/api'
+import { useQueryClient } from '@tanstack/react-query'
+import { clearUnverifiedHomeData } from '@/lib/homeCache'
+import type { AuthInfo } from '@/lib/api'
 import { usePreferences } from './store'
 import { Loading, QueryError, StatusState } from '@/components/shared'
 import defaultSiteIcon from '@/assets/logo.svg?no-inline'
+import { HomeStartupShell } from '@/components/HomeStartupShell'
 const Login = lazy(() => import('@/features/auth/Login'))
-const Home = lazy(() => import('@/features/home/Home'))
-const Settings = lazy(() => import('@/features/settings/Settings'))
+const loadHome = () => import('@/features/home/Home')
+const loadSettings = () => import('@/features/settings/Settings')
 
 let executedCustomJs: string | undefined
 let hasExecutedCustomJs = false
@@ -68,16 +73,47 @@ function SiteCustomization() {
 	return null
 }
 function Protected({ settings = false }: { settings?: boolean }) {
-	const auth = useAuth()
+	const { t } = useTranslation()
+	const auth = useAuth(!settings)
+	const client = useQueryClient()
 	const location = useLocation()
 	const { token, forgetAccount } = usePreferences()
+	const [loadedRoute, setLoadedRoute] = useState<
+		{ settings: boolean } & ({ Page: ComponentType<{ auth: AuthInfo }> } | { error: unknown })
+	>()
+	useEffect(() => {
+		let active = true
+		// Route code is public; load it alongside authentication without reading account data.
+		// Only reveal code-load failures after access is established.
+		void (settings ? loadSettings() : loadHome())
+			.then(({ default: Page }) => {
+				if (active) {
+					if (settings) clearUnverifiedHomeData(client)
+					setLoadedRoute({ settings, Page })
+				}
+			})
+			.catch((error: unknown) => {
+				if (active) setLoadedRoute({ settings, error })
+			})
+		return () => {
+			active = false
+		}
+	}, [settings, client])
 	useEffect(() => {
 		if (token && auth.data?.visitMode === 1) forgetAccount(token)
 	}, [auth.data?.visitMode, token, forgetAccount])
-	if (auth.isPending) return <Loading />
+	const pending = (label: string) =>
+		settings ? <Loading label={label} /> : <HomeStartupShell label={label} />
+	if (auth.isPending) return pending(t('ui.checkingAccess'))
 	if (auth.error) {
 		if (auth.error instanceof ApiError && [1000, 1001, 1004].includes(auth.error.code))
 			return <Navigate to="/login" replace state={{ from: location.pathname }} />
+		if (!settings)
+			return (
+				<HomeStartupShell>
+					<QueryError error={auth.error} retry={() => auth.refetch()} compact />
+				</HomeStartupShell>
+			)
 		return (
 			<div className="error-page">
 				<QueryError error={auth.error} retry={() => auth.refetch()} />
@@ -85,13 +121,26 @@ function Protected({ settings = false }: { settings?: boolean }) {
 		)
 	}
 	if (settings && auth.data.visitMode !== 0) return <Navigate to="/login" replace />
-	return settings ? (
-		<Suspense fallback={<Loading />}>
-			<Settings auth={auth.data} />
-		</Suspense>
-	) : (
-		<Suspense fallback={<Loading />}>
-			<Home auth={auth.data} />
+	// A ready component avoids suspending again on an already-downloaded import promise.
+	if (loadedRoute?.settings !== settings) return pending(t('ui.loadingHome'))
+	if ('error' in loadedRoute) {
+		if (settings) throw loadedRoute.error
+		return (
+			<HomeStartupShell>
+				<StatusState
+					error
+					compact
+					title={t('ui.contentUnavailable')}
+					description={t('ui.optionalModuleRefreshHint')}
+					action={<Button onClick={() => window.location.reload()}>{t('ui.refreshPage')}</Button>}
+				/>
+			</HomeStartupShell>
+		)
+	}
+	const Page = loadedRoute.Page
+	return (
+		<Suspense fallback={pending(t('ui.loadingHome'))}>
+			<Page auth={auth.data} />
 		</Suspense>
 	)
 }

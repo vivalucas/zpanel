@@ -2,14 +2,29 @@ import { useMemo, useState } from 'react'
 import { theme } from 'antd'
 import { Icon } from '@iconify/react'
 import { iconForeground } from '@/lib/iconColor'
+import { uploadIconDisplaySrc } from '@/lib/displayImage'
 
 type IconItem = Pick<Panel.ItemInfo, 'icon' | 'title'>
 
 function IconContent({ item }: { item: IconItem }) {
 	const [failed, setFailed] = useState(false)
+	const [thumbnailFailed, setThumbnailFailed] = useState(false)
 	const icon = item.icon
-	if (icon?.itemType === 2 && icon.src && !failed)
-		return <img src={icon.src} alt="" loading="lazy" onError={() => setFailed(true)} />
+	if (icon?.itemType === 2 && icon.src && !failed) {
+		const displaySrc = thumbnailFailed ? icon.src : uploadIconDisplaySrc(icon.src, location.origin)
+		return (
+			<img
+				src={displaySrc}
+				alt=""
+				loading="lazy"
+				decoding="async"
+				onError={() => {
+					if (displaySrc !== icon.src) setThumbnailFailed(true)
+					else setFailed(true)
+				}}
+			/>
+		)
+	}
 	if (icon?.itemType === 3 && icon.text)
 		return (
 			<span className="item-icon-symbol">

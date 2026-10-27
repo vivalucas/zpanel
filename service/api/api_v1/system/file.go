@@ -22,7 +22,7 @@ type FileApi struct{}
 var allowedImageExts = []string{".png", ".jpg", ".gif", ".jpeg", ".webp", ".ico"}
 
 func (a *FileApi) UploadImg(c *gin.Context) {
-	// The file limit excludes multipart headers; StoreUpload enforces its actual size.
+	// The file limit excludes multipart headers; PrepareUpload enforces its actual size.
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, storage.DefaultUploadMaxBytes+64*1024)
 	userInfo, _ := base.GetCurrentUserInfo(c)
 	f, err := c.FormFile("imgfile")
@@ -31,29 +31,12 @@ func (a *FileApi) UploadImg(c *gin.Context) {
 		return
 	}
 
-	stored, err := storage.StoreUpload(f, userInfo.ID, models.FilePurposeAttachment, models.FileVisibilityPublic, allowedImageExts)
+	file, err := storeUploadedImage(f, userInfo.ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "unsupported") {
 			apiReturn.ErrorByCode(c, 1301)
 			return
 		}
-		apiReturn.ErrorDatabase(c, err.Error())
-		return
-	}
-	file, err := (&models.File{}).AddFile(models.AddFileInput{
-		OwnerID:      userInfo.ID,
-		ObjectKey:    stored.ObjectKey,
-		RelativePath: stored.RelativePath,
-		OriginalName: f.Filename,
-		MimeType:     stored.MimeType,
-		Ext:          stored.Ext,
-		Size:         stored.Size,
-		SHA256:       stored.SHA256,
-		Visibility:   models.FileVisibilityPublic,
-		Purpose:      models.FilePurposeAttachment,
-	})
-	if err != nil {
-		_ = os.Remove(stored.AbsolutePath)
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
@@ -76,27 +59,10 @@ func (a *FileApi) UploadFiles(c *gin.Context) {
 	errFiles := []string{}
 	succMap := map[string]string{}
 	for _, f := range files {
-		stored, storeErr := storage.StoreUpload(f, userInfo.ID, models.FilePurposeAttachment, models.FileVisibilityPublic, allowedImageExts)
+		file, storeErr := storeUploadedImage(f, userInfo.ID)
 		if storeErr != nil {
 			errFiles = append(errFiles, f.Filename)
 		} else {
-			file, addErr := (&models.File{}).AddFile(models.AddFileInput{
-				OwnerID:      userInfo.ID,
-				ObjectKey:    stored.ObjectKey,
-				RelativePath: stored.RelativePath,
-				OriginalName: f.Filename,
-				MimeType:     stored.MimeType,
-				Ext:          stored.Ext,
-				Size:         stored.Size,
-				SHA256:       stored.SHA256,
-				Visibility:   models.FileVisibilityPublic,
-				Purpose:      models.FilePurposeAttachment,
-			})
-			if addErr != nil {
-				_ = os.Remove(stored.AbsolutePath)
-				errFiles = append(errFiles, f.Filename)
-				continue
-			}
 			succMap[f.Filename] = storage.PublicPath(file.RelativePath)
 		}
 	}
@@ -222,6 +188,7 @@ func (a *FileApi) Deletes(c *gin.Context) {
 			failedIDs = append(failedIDs, v.ID)
 			continue
 		}
+		storage.RemoveThumbnails(v.RelativePath)
 		if err := global.Db.Delete(&models.File{}, "id=?", v.ID).Error; err != nil {
 			_ = global.Db.Model(&models.File{}).Where("id=?", v.ID).Update("status", models.FileStatusDeleteFailed).Error
 			failedIDs = append(failedIDs, v.ID)
@@ -243,7 +210,7 @@ func (a *FileApi) DeletesBatch(c *gin.Context) {
 
 func fileResponse(v models.File) map[string]interface{} {
 	src := storage.PublicPath(v.RelativePath)
-	return map[string]interface{}{
+	response := map[string]interface{}{
 		"src":          src,
 		"fileName":     v.OriginalName,
 		"originalName": v.OriginalName,
@@ -263,6 +230,10 @@ func fileResponse(v models.File) map[string]interface{} {
 		"purpose":      v.Purpose,
 		"status":       v.Status,
 	}
+	if storage.SupportsThumbnail(v.RelativePath) {
+		response["thumbnailSrc"] = src + "?thumbnail=1"
+	}
+	return response
 }
 
 // Usage only reveals names belonging to the caller; another user's private

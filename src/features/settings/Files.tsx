@@ -12,6 +12,21 @@ interface Usage {
 	title: string
 	id: string
 }
+
+function GalleryImage({ file }: { file: File.Info }) {
+	const [thumbnailFailed, setThumbnailFailed] = useState(false)
+	return (
+		<Image
+			src={thumbnailFailed ? file.src : file.thumbnailSrc || file.src}
+			alt={file.originalName}
+			loading="lazy"
+			decoding="async"
+			preview={{ src: file.src }}
+			onError={() => setThumbnailFailed(true)}
+		/>
+	)
+}
+
 export default function Files({ user }: { user: User.Info }) {
 	const request = useSessionRequest()
 	const [tab, setTab] = useState('own')
@@ -96,7 +111,7 @@ export default function Files({ user }: { user: User.Info }) {
 							{files.data.list.map((file) => (
 								<article key={file.id} className="file-card">
 									<div className="file-image">
-										<Image src={file.src} alt={file.originalName} />
+										<GalleryImage key={`${file.src}:${file.thumbnailSrc || ''}`} file={file} />
 									</div>
 									<div className="file-copy">
 										<strong title={file.originalName}>{file.originalName}</strong>

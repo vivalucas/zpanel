@@ -20,40 +20,27 @@ import { usePreferences } from '@/app/store'
 import { Loading, QueryError } from '@/components/shared'
 import { SafeHtml } from '@/components/SafeHtml'
 import { WallpaperBackground } from '@/components/WallpaperBackground'
-import { SortableGrid } from '@/components/Sortable'
 import { isSafeNavigationUrl } from '@/utils/navigation'
-import ItemEditor from './ItemEditor'
+import HomeGrid from './HomeGrid'
 import ItemIcon from './ItemIcon'
 import ItemTitle from './ItemTitle'
-import ItemActionMenu from './ItemActionMenu'
 import type { ItemMenuTarget } from './ItemActionMenu'
 import HomeBackToTop from './HomeBackToTop'
 import { useWallpaperAppearance } from './useWallpaperAppearance'
 import { findSearchEngineIndex } from '@/lib/searchEngine'
 import { isAccessError } from '@/lib/queryState'
 import { resolveHomeText } from '@/lib/homeText'
+import { useUnverifiedHomeData } from '@/lib/useHomeCache'
+import { HomeClock } from '@/components/HomeClock'
+import { HomeStartupShell } from '@/components/HomeStartupShell'
+import {
+	OptionalModuleBoundary,
+	OptionalModuleDialog,
+	OptionalModuleFailure,
+} from '@/components/OptionalModuleBoundary'
 const MonitorCards = lazy(() => import('./MonitorCards'))
-function Clock({ seconds, color }: { seconds?: boolean; color?: string }) {
-	const [now, setNow] = useState(() => new Date())
-	const language = usePreferences((s) => s.language)
-	useEffect(() => {
-		const timer = setInterval(() => setNow(new Date()), 1000)
-		return () => clearInterval(timer)
-	}, [])
-	return (
-		<div className="clock" style={{ color: color || undefined }}>
-			<time>
-				{now.toLocaleTimeString(language, {
-					hour: '2-digit',
-					minute: '2-digit',
-					...(seconds ? { second: '2-digit' } : {}),
-					hour12: false,
-				})}
-			</time>
-			<span>{now.toLocaleDateString(language, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-		</div>
-	)
-}
+const ItemEditor = lazy(() => import('./ItemEditor'))
+const ItemActionMenu = lazy(() => import('./ItemActionMenu'))
 export default function Home({ auth }: { auth: AuthInfo }) {
 	const request = useSessionRequest()
 	const groups = useGroups()
@@ -64,7 +51,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		[panel.data?.panel.iconTextColor],
 	)
 	const wallpaperAppearance = useWallpaperAppearance(
-		panel.data && groups.data ? panel.data.panel.backgroundImageSrc : undefined,
+		panel.data?.panel.backgroundImageSrc,
 		panel.data?.panel.backgroundMaskNumber ?? 0,
 		panel.data?.panel.backgroundBlur ?? 0,
 		panel.data?.panel.wallpaperAutoContrast ?? false,
@@ -75,12 +62,16 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const searchConfig = useSearchConfig()
 	const navigate = useNavigate()
 	const client = useQueryClient()
+	const navigationUnverified = useUnverifiedHomeData(client, 'groups')
+	const searchUnverified = useUnverifiedHomeData(client, 'search')
 	const { t, error, modal, message } = useFeedback()
 	const preferences = usePreferences()
 	const [search, setSearch] = useState('')
 	const [engine, setEngine] = useState<Engine>()
 	const [engineSaving, setEngineSaving] = useState(false)
+	const [monitorHidden, setMonitorHidden] = useState(false)
 	const [sortingGroupId, setSortingGroupId] = useState<number | null>(null)
+	const sortTriggerRef = useRef<HTMLElement | null>(null)
 	const [savingSort, setSavingSort] = useState(false)
 	const [editor, setEditor] = useState<{ item?: Panel.ItemInfo; groupId?: number } | null>(null)
 	const editorTriggerRef = useRef<HTMLElement | number | null>(null)
@@ -107,25 +98,68 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		[itemMenu],
 	)
 	useEffect(() => {
+		if (!itemMenu) return
+		// Dismiss even while the menu chunk is still loading.
+		const outside = (event: Event) => {
+			if (document.querySelector('.optional-module-dialog')) return
+			if (event.target instanceof Element && event.target.closest('.item-action-popup')) return
+			closeItemMenu(false)
+		}
+		const dismiss = () => closeItemMenu(false)
+		const escape = (event: KeyboardEvent) => {
+			// A failed menu becomes a modal with its own Escape handling and focus trap.
+			if (document.querySelector('.optional-module-dialog')) return
+			if (event.key === 'Escape' || event.key === 'Tab') closeItemMenu(true)
+			if (
+				!document.querySelector('.item-action-popup') &&
+				(event.key === 'Enter' || event.key === ' ') &&
+				event.target instanceof Node &&
+				itemMenu.trigger.contains(event.target)
+			)
+				event.preventDefault()
+		}
+		document.addEventListener('pointerdown', outside, true)
+		document.addEventListener('contextmenu', outside, true)
+		document.addEventListener('keydown', escape)
+		window.addEventListener('scroll', outside, true)
+		window.addEventListener('resize', dismiss)
+		window.addEventListener('blur', dismiss)
+		return () => {
+			document.removeEventListener('pointerdown', outside, true)
+			document.removeEventListener('contextmenu', outside, true)
+			document.removeEventListener('keydown', escape)
+			window.removeEventListener('scroll', outside, true)
+			window.removeEventListener('resize', dismiss)
+			window.removeEventListener('blur', dismiss)
+		}
+	}, [itemMenu, closeItemMenu])
+	useEffect(() => {
 		if (!editor) {
 			const trigger = editorTriggerRef.current
 			;(typeof trigger === 'number' ? itemTriggersRef.current.get(trigger) : trigger)?.focus()
 		}
 	}, [editor])
 	const [frame, setFrame] = useState<{ url: string; title: string } | null>(null)
+	const [navigationFailure, setNavigationFailure] = useState<unknown>()
+	if (groups.error && groups.error !== navigationFailure) setNavigationFailure(groups.error)
+	if (groups.isSuccess && navigationFailure) setNavigationFailure(undefined)
+	const navigationError = groups.error || (!groups.data ? navigationFailure : undefined)
 	const editable = auth.visitMode === 0
-	if (panel.isPending || groups.isPending) return <Loading />
-	if (!panel.data || !groups.data || isAccessError(panel.error) || isAccessError(groups.error))
+	const navigationAvailable = !!groups.data && !isAccessError(groups.error)
+	const navigationGroups = navigationAvailable ? groups.data! : []
+	if (isAccessError(groups.error) || isAccessError(panel.error)) {
+		// Discard hidden interactions before committing, so recovery cannot reopen old content.
+		if (editor) setEditor(null)
+		if (itemMenu) setItemMenu(null)
+		if (sortingGroupId !== null) setSortingGroupId(null)
+		if (frame) setFrame(null)
+	}
+	if (panel.isPending) return <HomeStartupShell label={t('ui.loadingHome')} />
+	if (!panel.data || isAccessError(panel.error))
 		return (
-			<div className="error-page">
-				<QueryError
-					error={panel.error || groups.error}
-					retry={() => {
-						void panel.refetch()
-						void groups.refetch()
-					}}
-				/>
-			</div>
+			<HomeStartupShell>
+				<QueryError error={panel.error} retry={() => panel.refetch()} compact />
+			</HomeStartupShell>
 		)
 	const config = panel.data.panel
 	const searchData = isAccessError(searchConfig.error) ? undefined : searchConfig.data
@@ -133,9 +167,9 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		? findSearchEngineIndex(searchData.searchEngineList, engine || searchData.currentSearchEngine)
 		: -1
 	const wallpaper = wallpaperAppearance.status === 'error' ? '' : config.backgroundImageSrc
-	const showEditHint = editable && groups.data.length > 0 && !preferences.homeEditHintDismissed
+	const showEditHint = editable && navigationGroups.length > 0 && !preferences.homeEditHintDismissed
 	const configSearchEnabled = config.searchBoxSearchIcon
-	const filtered = (groups.data || [])
+	const filtered = navigationGroups
 		.map((group) => ({
 			...group,
 			items: group.items.filter((item) =>
@@ -287,12 +321,12 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 					} as CSSProperties
 				}
 			>
-				{(panel.error || groups.error) && (
+				{panel.error && (
 					<QueryError
-						error={panel.error || groups.error}
+						error={panel.error}
 						title={t('ui.refreshFailedWithPreviousData')}
 						compact
-						retry={() => Promise.all([panel.refetch(), groups.refetch()])}
+						retry={() => panel.refetch()}
 					/>
 				)}
 				{editable && !!panel.data.panelWarnings.length && (
@@ -313,7 +347,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 							{config.logoText || 'ZPanel'}
 						</strong>
 						<span className="home-identity-divider" aria-hidden="true" />
-						<Clock seconds={config.clockShowSecond} color={config.clockColor} />
+						<HomeClock seconds={config.clockShowSecond} color={config.clockColor} />
 					</div>
 					{config.searchBoxShow && (
 						<div className="search-box">
@@ -344,7 +378,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 							/>
 							<Select
 								aria-label={t('ui.searchEngine')}
-								disabled={engineSaving || !searchData}
+								disabled={engineSaving || !searchData || searchUnverified}
 								loading={engineSaving}
 								variant="borderless"
 								styles={{ root: { outline: 'none' } }}
@@ -390,11 +424,27 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						/>
 					)}
 				</section>
-				{config.systemMonitorShow && (editable || config.systemMonitorPublicVisitModeShow) && (
-					<Suspense fallback={<Loading />}>
-						<MonitorCards showTitle={config.systemMonitorShowTitle} />
-					</Suspense>
-				)}
+				{config.systemMonitorShow &&
+					!monitorHidden &&
+					(editable || config.systemMonitorPublicVisitModeShow) && (
+						<OptionalModuleBoundary
+							fallback={
+								<div className="home-navigation-state home-module-failure">
+									<OptionalModuleFailure
+										compact
+										onCancel={() => {
+											setMonitorHidden(true)
+											topRef.current?.focus({ preventScroll: true })
+										}}
+									/>
+								</div>
+							}
+						>
+							<Suspense fallback={<Loading />}>
+								<MonitorCards showTitle={config.systemMonitorShowTitle} />
+							</Suspense>
+						</OptionalModuleBoundary>
+					)}
 				{showEditHint && (
 					<aside className="home-edit-hint">
 						<span>{t('ui.homeEditHint')}</span>
@@ -407,7 +457,24 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						</Button>
 					</aside>
 				)}
-				{!groups.data.length ? (
+				{!navigationAvailable && groups.isPending && !navigationError ? (
+					<div className="home-navigation-state" aria-busy="true">
+						<Loading label={t('ui.loadingNavigation')} />
+					</div>
+				) : !navigationAvailable ? (
+					<div className="home-navigation-state">
+						<QueryError error={navigationError} retry={() => groups.refetch()} compact />
+					</div>
+				) : null}
+				{navigationAvailable && groups.error && (
+					<QueryError
+						error={groups.error}
+						title={t('ui.refreshFailedWithPreviousData')}
+						compact
+						retry={() => groups.refetch()}
+					/>
+				)}
+				{!navigationAvailable ? null : !navigationGroups.length ? (
 					<div className="empty-collection">
 						<Empty
 							image={<AppstoreOutlined aria-hidden="true" style={{ fontSize: 36, color: 'inherit' }} />}
@@ -439,6 +506,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											size="small"
 											aria-label={`${group.title} ${t('iconItem.add')}`}
 											icon={<PlusOutlined aria-hidden="true" />}
+											disabled={navigationUnverified}
 											onClick={(event) => {
 												editorTriggerRef.current = event.currentTarget
 												setEditor({ groupId: group.id })
@@ -450,8 +518,9 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											size="small"
 											aria-label={`${group.title} ${t(sortingGroupId === group.id ? 'common.done' : 'ui.sort')}`}
 											icon={<SwapOutlined aria-hidden="true" />}
-											disabled={savingSort || group.items.length < 2}
-											onClick={() => {
+											disabled={navigationUnverified || savingSort || group.items.length < 2}
+											onClick={(event) => {
+												sortTriggerRef.current = event.currentTarget
 												setSortingGroupId(sortingGroupId === group.id ? null : group.id)
 												setSearch('')
 											}}
@@ -459,7 +528,12 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 									</Space>
 								)}
 							</div>
-							<SortableGrid
+							<HomeGrid
+								sorting={sortingGroupId === group.id}
+								onCancel={() => {
+									setSortingGroupId(null)
+									sortTriggerRef.current?.focus({ preventScroll: true })
+								}}
 								className={`app-grid ${config.iconStyle === 1 ? 'icon-grid' : ''}`}
 								items={group.items as (Panel.ItemInfo & { id: number })[]}
 								getItemLabel={(item) => item.title}
@@ -537,7 +611,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 										</a>
 									</article>
 								)}
-							</SortableGrid>
+							</HomeGrid>
 							{!group.items.length && (
 								<div className="empty-group">
 									<span className="empty-group-message">{t('ui.emptyGroup')}</span>
@@ -546,6 +620,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 											<Button
 												className="home-action"
 												icon={<PlusOutlined aria-hidden="true" />}
+												disabled={navigationUnverified}
 												onClick={(event) => {
 													editorTriggerRef.current = event.currentTarget
 													setEditor({ groupId: group.id })
@@ -565,26 +640,57 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 				</footer>
 			</div>
 			{itemMenu && activeMenuItem && !editor && !frame && (
-				<ItemActionMenu
-					item={activeMenuItem}
-					target={itemMenu}
-					editable={editable}
-					onClose={closeItemMenu}
-					onOpen={(url, method) => open(activeMenuItem, url, method)}
-					onCopy={(url) => void copyAddress(url)}
-					onEdit={() => {
-						if (!editable) return
-						editorTriggerRef.current = activeMenuItem.id!
-						setEditor({ item: activeMenuItem })
-					}}
-					onDelete={() => {
-						if (editable) deleteItem(activeMenuItem)
-					}}
-				/>
+				<OptionalModuleBoundary
+					fallback={<OptionalModuleDialog title={t('ui.more')} onCancel={() => closeItemMenu(true)} />}
+				>
+					<Suspense fallback={null}>
+						<ItemActionMenu
+							item={activeMenuItem}
+							target={itemMenu}
+							editable={editable && !navigationUnverified}
+							onClose={closeItemMenu}
+							onOpen={(url, method) => open(activeMenuItem, url, method)}
+							onCopy={(url) => void copyAddress(url)}
+							onEdit={() => {
+								if (!editable || navigationUnverified) return
+								editorTriggerRef.current = activeMenuItem.id!
+								setEditor({ item: activeMenuItem })
+							}}
+							onDelete={() => {
+								if (editable && !navigationUnverified) deleteItem(activeMenuItem)
+							}}
+						/>
+					</Suspense>
+				</OptionalModuleBoundary>
 			)}
-			{editor && <ItemEditor {...editor} groups={groups.data} onClose={() => setEditor(null)} />}
+			{editor && navigationAvailable && (
+				<OptionalModuleBoundary
+					fallback={
+						<OptionalModuleDialog
+							title={t(editor.item ? 'common.edit' : 'iconItem.add')}
+							onCancel={() => setEditor(null)}
+						/>
+					}
+				>
+					<Suspense
+						fallback={
+							<Modal
+								open
+								title={t(editor.item ? 'common.edit' : 'iconItem.add')}
+								footer={<Button onClick={() => setEditor(null)}>{t('common.cancel')}</Button>}
+								onCancel={() => setEditor(null)}
+								focusTriggerAfterClose={false}
+							>
+								<Loading />
+							</Modal>
+						}
+					>
+						<ItemEditor {...editor} groups={navigationGroups} onClose={() => setEditor(null)} />
+					</Suspense>
+				</OptionalModuleBoundary>
+			)}
 			<Modal
-				open={!!frame}
+				open={!!frame && navigationAvailable}
 				title={frame?.title}
 				footer={null}
 				width="90vw"
@@ -597,7 +703,7 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 						{t('iconItem.newWindowOpen')}
 					</a>
 				</p>
-				{frame && (
+				{frame && navigationAvailable && (
 					<iframe
 						className="app-frame"
 						src={frame.url}

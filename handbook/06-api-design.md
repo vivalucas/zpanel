@@ -33,9 +33,19 @@
 | POST | `/api/system/docker/action` | Docker 容器操作 | 管理员 |
 | POST | `/api/system/docker/logs` | Docker 容器日志 | 管理员 |
 
-> 说明：本表先记录当前已确认的核心接口。完整接口需继续从 `service/router/**/*.go` 和 `src/api/**/*.ts` 双向核对后补齐。
+> 说明：本表先记录当前已确认的核心接口。完整接口需继续从 `service/router/**/*.go` 和 `src/lib/api.ts` 及其调用方双向核对后补齐。
 
 `/api/file/deletes` 只删除当前登录用户拥有的文件。公共图库可以展示其他用户公开资源，但不改变删除权限。
+
+文件列表对支持缩略图的文件增加可选 `thumbnailSrc`，值为原 `/uploads/...` URL 加 `?thumbnail=1`。普通 URL 与 `src` 仍指向原图；此查询沿用既有公开上传边界，不增加账号或文件的可读范围。请求时惰性生成最长边 320px 的派生缓存；PNG/JPEG 在 10 MiB、16MP、最长边 16384 内且缩小有收益时处理，透明输出 PNG、其余 JPEG。WebP 不生成 `thumbnailSrc`，请求其缩略图参数也直接返回原图，不进入服务端缩略图解码；WebP 原图上传、URL 及浏览器展示保持。GIF/SVG/ICO/APNG、需 EXIF 旋转的 JPEG、无收益及处理失败同样回退原图。缓存按源文件变化失效，删除源文件时清理；不新增数据库字段或迁移，清空缓存后可重建。
+
+### 图片上传与内容去重
+
+`POST /api/file/uploadImg` 接收 multipart `imgfile`，返回 `{fileId,imageUrl}`；`POST /api/file/uploadFiles` 接收 multipart `files[]`，返回 `{succMap,errFiles}`，批量结果仍按本次上传文件名索引。
+
+两入口共用服务端去重：实际大小和 SHA256 相同，且属于当前账号、local 存储、public 可见、attachment 用途的活动文件，经磁盘常规文件/大小/内容校验后复用原记录和 URL。文件改名不影响判断；保留首次上传的原名与时间，不新增图库记录或上传对象。不同账号、可见性/用途/存储/状态不复用；软删除、缺失、损坏及没有指纹的历史文件不误命中。历史重复记录不自动合并或清理。
+
+服务端仍接收完整上传后查重，不提供上传前秒传。指纹校验后才创建新文件，查询失败不落盘、记录创建失败清理本次文件。上传复用/创建和删除/引用写入共用单进程写入锁，删除保护沿用现有引用扫描；不保证多实例共享上传目录的并发一致性。
 
 管理员用户列表接口应返回最小化用户资料字段，不返回密码 hash、密码算法或 session token 等认证实现细节。
 

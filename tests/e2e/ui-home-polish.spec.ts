@@ -131,7 +131,7 @@ test('permission failure hides cached navigation instead of treating it as stale
 	const state = await fixture(page)
 	state.navigationError = 403
 	await revisitHome(page)
-	await expect(page.locator('.error-page')).toBeVisible()
+	await expect(page.locator('.home-navigation-state .status-state')).toBeVisible()
 	await expect(page.getByRole('link', { name: app.title, exact: true })).toHaveCount(0)
 })
 
@@ -227,6 +227,7 @@ for (const change of ['address', 'type'] as const) {
 			else {
 				await page.getByLabel('图标类型', { exact: true }).click()
 				await page.locator('.ant-select-dropdown').getByText('文字图标', { exact: true }).click()
+				await expect(page.locator('.ant-select-dropdown:visible')).toHaveCount(0)
 				await page.getByLabel('图标类型', { exact: true }).click()
 				await page.locator('.ant-select-dropdown').getByText('图片图标', { exact: true }).click()
 			}

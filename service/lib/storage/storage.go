@@ -86,67 +86,12 @@ func EnsureRuntimeDirs() error {
 }
 
 func StoreUpload(file *multipart.FileHeader, ownerID uint, purpose, visibility string, allowedExts []string) (StoredFile, error) {
-	ext := strings.ToLower(filepath.Ext(file.Filename))
-	if ext == "" {
-		return StoredFile{}, fmt.Errorf("missing file extension")
-	}
-	if file.Size > DefaultUploadMaxBytes {
-		return StoredFile{}, fmt.Errorf("file too large: %d bytes", file.Size)
-	}
-	if len(allowedExts) > 0 && !contains(allowedExts, ext) {
-		return StoredFile{}, fmt.Errorf("unsupported file extension: %s", ext)
-	}
-
-	src, err := file.Open()
+	prepared, err := PrepareUpload(file, allowedExts)
 	if err != nil {
 		return StoredFile{}, err
 	}
-	defer src.Close()
-
-	objectKey := uuid.NewString()
-	relativePath := buildRelativePath(ownerID, purpose, visibility, objectKey, ext)
-	absolutePath := filepath.Join(UploadsPath(), filepath.FromSlash(relativePath))
-	if err := os.MkdirAll(filepath.Dir(absolutePath), 0755); err != nil {
-		return StoredFile{}, err
-	}
-
-	dst, err := os.OpenFile(absolutePath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
-	if err != nil {
-		return StoredFile{}, err
-	}
-	defer dst.Close()
-
-	hasher := sha256.New()
-	limited := io.LimitReader(src, DefaultUploadMaxBytes+1)
-	size, err := io.Copy(io.MultiWriter(dst, hasher), limited)
-	if err != nil {
-		_ = os.Remove(absolutePath)
-		return StoredFile{}, err
-	}
-	if size > DefaultUploadMaxBytes {
-		_ = os.Remove(absolutePath)
-		return StoredFile{}, fmt.Errorf("file too large: %d bytes", size)
-	}
-
-	mimeType := file.Header.Get("Content-Type")
-	if mimeType == "" {
-		if detected := mime.TypeByExtension(ext); detected != "" {
-			mimeType = detected
-		} else {
-			mimeType = "application/octet-stream"
-		}
-	}
-
-	return StoredFile{
-		ObjectKey:    objectKey,
-		RelativePath: relativePath,
-		AbsolutePath: absolutePath,
-		PublicPath:   PublicPath(relativePath),
-		MimeType:     mimeType,
-		Ext:          ext,
-		Size:         size,
-		SHA256:       hex.EncodeToString(hasher.Sum(nil)),
-	}, nil
+	defer prepared.Close()
+	return prepared.Store(ownerID, purpose, visibility)
 }
 
 func DownloadRemoteFile(rawURL string, ownerID uint, purpose, visibility string, maxSize int64, allowedExts []string) (StoredFile, error) {

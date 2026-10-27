@@ -108,11 +108,19 @@ async function fixture(
 
 async function expectColor(target: Locator, color: string) {
 	await expect(target.first()).toBeAttached()
+	if (await target.page().locator('.home-page').count()) {
+		await expect(target.page().locator('.home-navigation-state')).toHaveCount(0)
+		await expect(target.page().locator('.home-footer-content')).toBeVisible()
+	}
 	await expect
 		.poll(async () =>
-			target.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).color)),
+			target.evaluateAll(
+				(elements, expected) =>
+					elements.length > 0 && elements.every((element) => getComputedStyle(element).color === expected),
+				color,
+			),
 		)
-		.toEqual(Array.from({ length: await target.count() }).fill(color))
+		.toBe(true)
 	expect(await target.count()).toBeGreaterThan(0)
 }
 
@@ -136,8 +144,8 @@ async function wallpaperTextContrast(page: Page, background: number[]) {
 		}
 		return {
 			ink: rgba(getComputedStyle(root.querySelector('.group-heading h2')!).color),
-			layers: [...root.querySelectorAll('.home-mask, .home-contrast-mask')].map(
-				(layer) => rgba(getComputedStyle(layer).backgroundColor),
+			layers: [...root.querySelectorAll('.home-mask, .home-contrast-mask')].map((layer) =>
+				rgba(getComputedStyle(layer).backgroundColor),
 			),
 		}
 	})
@@ -335,17 +343,17 @@ for (const color of [
 		})
 		await page.goto('/#/')
 		await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'ready')
-		const originalColors = await page.locator(mainText).evaluateAll((elements) =>
-			elements.map((element) => getComputedStyle(element).color),
-		)
+		const originalColors = await page
+			.locator(mainText)
+			.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).color))
 		const originalContrast = await wallpaperTextContrast(page, [0, 0, 0])
 		panel.wallpaperAutoContrast = true
 		await page.reload()
 		await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'ready')
 		expect(
-			await page.locator(mainText).evaluateAll((elements) =>
-				elements.map((element) => getComputedStyle(element).color),
-			),
+			await page
+				.locator(mainText)
+				.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).color)),
 		).toEqual(originalColors)
 		await expect(page.locator('.home-page')).toHaveCSS('--wallpaper-scrim', '0')
 		expect(await wallpaperTextContrast(page, [0, 0, 0])).toBeCloseTo(originalContrast, 10)
@@ -410,9 +418,9 @@ for (const scheme of ['light', 'dark'] as const) {
 			await expect(page.locator('.home-page')).toHaveAttribute('data-wallpaper-status', 'ready')
 			await expect(page.locator('html')).toHaveAttribute('data-theme', scheme)
 			await expect(page.locator('html')).toHaveCSS('color-scheme', scheme)
-			const originalColors = await page.locator(mainText).evaluateAll((elements) =>
-				elements.map((element) => getComputedStyle(element).color),
-			)
+			const originalColors = await page
+				.locator(mainText)
+				.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).color))
 			const originalContrast = await wallpaperTextContrast(page, [0, 0, 0])
 			panel.wallpaperAutoContrast = true
 			await page.reload()
@@ -420,9 +428,9 @@ for (const scheme of ['light', 'dark'] as const) {
 			await expect(page.locator('.home-page')).toHaveCSS('--wallpaper-scrim', '0')
 			expect(await wallpaperTextContrast(page, [0, 0, 0])).toBeCloseTo(originalContrast, 10)
 			expect(
-				await page.locator(mainText).evaluateAll((elements) =>
-					elements.map((element) => getComputedStyle(element).color),
-				),
+				await page
+					.locator(mainText)
+					.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).color)),
 			).toEqual(originalColors)
 			if (color === 'CanvasText')
 				await expectColor(page.locator(mainText), scheme === 'dark' ? white : 'rgb(0, 0, 0)')

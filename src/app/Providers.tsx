@@ -3,19 +3,11 @@ import { Component, useEffect, useState } from 'react'
 import type { CSSProperties, ErrorInfo, ReactNode } from 'react'
 import { App as AntApp, Button, ConfigProvider, Result, theme } from 'antd'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import zhCN from 'antd/locale/zh_CN'
-import zhTW from 'antd/locale/zh_TW'
-import enUS from 'antd/locale/en_US'
-import deDE from 'antd/locale/de_DE'
-import esES from 'antd/locale/es_ES'
-import frFR from 'antd/locale/fr_FR'
-import itIT from 'antd/locale/it_IT'
-import jaJP from 'antd/locale/ja_JP'
-import koKR from 'antd/locale/ko_KR'
-import ptBR from 'antd/locale/pt_BR'
-import ruRU from 'antd/locale/ru_RU'
+import type { Locale } from 'antd/es/locale'
+import { cachedAntdLocale, loadAntdLocale } from './antdLocale'
 import { usePreferences } from './store'
 import i18n, { setLanguage } from '@/locales'
+import { stopHomeCache } from '@/lib/homeCache'
 
 // Root theme variables also reach surfaces portaled outside .app-root.
 const popupSurface: CSSProperties = {
@@ -26,20 +18,6 @@ const popupSurface: CSSProperties = {
 	backdropFilter: 'var(--glass-popup-blur)',
 	WebkitBackdropFilter: 'var(--glass-popup-blur)',
 }
-const locales = {
-	'zh-CN': zhCN,
-	'zh-TW': zhTW,
-	'en-US': enUS,
-	'de-DE': deDE,
-	'es-ES': esES,
-	'fr-FR': frFR,
-	'it-IT': itIT,
-	'ja-JP': jaJP,
-	'ko-KR': koKR,
-	'pt-BR': ptBR,
-	'ru-RU': ruRU,
-}
-
 // A new client per session prevents previous-account data and in-flight reads from leaking.
 function SessionQueries({ children }: { children: ReactNode }) {
 	const [client] = useState(
@@ -53,6 +31,7 @@ function SessionQueries({ children }: { children: ReactNode }) {
 	)
 	useEffect(
 		() => () => {
+			stopHomeCache(client)
 			void client.cancelQueries()
 			client.clear()
 		},
@@ -84,6 +63,8 @@ function ThemeBridge({ children }: { children: ReactNode }) {
 }
 export function Providers({ children }: { children: ReactNode }) {
 	const { theme: preference, language, token } = usePreferences()
+	const [loadedLocale, setLoadedLocale] = useState<{ language: string; locale: Locale }>()
+	const locale = loadedLocale?.language === language ? loadedLocale.locale : cachedAntdLocale(language)
 	const [osDark, setOsDark] = useState(() => matchMedia('(prefers-color-scheme: dark)').matches)
 	useEffect(() => {
 		const media = matchMedia('(prefers-color-scheme: dark)')
@@ -93,9 +74,10 @@ export function Providers({ children }: { children: ReactNode }) {
 	}, [])
 	useEffect(() => {
 		let active = true
-		void setLanguage(language).catch(() => {
-			if (active) void i18n.changeLanguage('en-US')
+		void loadAntdLocale(language).then((locale) => {
+			if (active) setLoadedLocale({ language, locale })
 		})
+		void setLanguage(language).catch(() => undefined)
 		document.documentElement.lang = language
 		return () => {
 			active = false
@@ -152,7 +134,7 @@ export function Providers({ children }: { children: ReactNode }) {
 				classNames: { root: 'glass-notification' },
 				styles: { root: { ...popupSurface, borderRadius: 16 } },
 			}}
-			locale={locales[language as keyof typeof locales] || enUS}
+			locale={locale}
 			theme={{
 				algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
 				token: {

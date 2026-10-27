@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { clearHomeSnapshot } from '@/lib/homeCacheStorage'
 
 export interface Account {
 	token: string
@@ -30,16 +31,25 @@ export const usePreferences = create<Preferences>()(
 			homeEditHintDismissed: false,
 			setPreference: (patch) => set(patch),
 			signIn: (account) =>
-				set((s) => ({
-					token: account.token,
-					accounts: [...s.accounts.filter((a) => a.user.id !== account.user.id), account],
-				})),
-			selectAccount: (token) => set({ token }),
+				set((s) => {
+					if (s.token !== account.token) clearHomeSnapshot()
+					return {
+						token: account.token,
+						accounts: [...s.accounts.filter((a) => a.user.id !== account.user.id), account],
+					}
+				}),
+			selectAccount: (token) => {
+				if (token !== usePreferences.getState().token) clearHomeSnapshot()
+				set({ token })
+			},
 			forgetAccount: (token) =>
-				set((s) => ({
-					accounts: s.accounts.filter((a) => a.token !== token),
-					token: s.token === token ? null : s.token,
-				})),
+				set((s) => {
+					if (s.token === token) clearHomeSnapshot()
+					return {
+						accounts: s.accounts.filter((a) => a.token !== token),
+						token: s.token === token ? null : s.token,
+					}
+				}),
 		}),
 		{ name: 'zpanel-preferences', version: 1 },
 	),

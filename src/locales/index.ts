@@ -12,14 +12,26 @@ void i18n.use(initReactI18next).init({
 	fallbackLng: 'en-US',
 	interpolation: { escapeValue: false, prefix: '{', suffix: '}' },
 })
-let requestedLanguage = usePreferences.getState().language
+let languageRequest = 0
 export async function setLanguage(language: string) {
-	requestedLanguage = language
-	if (!i18n.hasResourceBundle(language, 'translation')) {
-		const load = messages[`./${language}.json`]
-		if (load) i18n.addResourceBundle(language, 'translation', await load())
+	const request = ++languageRequest
+	let target = language
+	try {
+		if (!i18n.hasResourceBundle(language, 'translation')) {
+			const load = messages[`./${language}.json`]
+			if (load) i18n.addResourceBundle(language, 'translation', await load())
+		}
+	} catch {
+		target = 'en-US'
 	}
-	if (requestedLanguage === language) await i18n.changeLanguage(language)
+	if (request !== languageRequest) return
+	try {
+		await i18n.changeLanguage(target)
+	} catch (error) {
+		if (request !== languageRequest) return
+		if (target === 'en-US') throw error
+		await i18n.changeLanguage('en-US')
+	}
 }
 export default i18n
 export const languageOptions = [

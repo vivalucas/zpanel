@@ -4,6 +4,24 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.2.12 - 2026-10-27
+
+### Homepage Loading and Recovery
+
+- Show the basic homepage layout and a live local clock while authentication, page code and appearance load. Keep personal navigation behind fresh authentication. Retain the clock and offer a page refresh if homepage code cannot download.
+- Load route code alongside authentication, defer editors, menus, sorting and optional languages, and display homepage sections as their data becomes ready. Isolate optional feature failures so working navigation remains available, with close/cancel and refresh recovery.
+- Restore a limited same-account, same-role display snapshot after authentication and revalidate it in the background. Keep editing and settings away from unverified cached data; bound read-request waits without automatically retrying writes.
+- Generate gzip/Brotli assets and cache fingerprinted static resources. Preserve PWA entry routing, original upload URLs and wallpaper behavior. Use bounded PNG/JPEG thumbnails for local icons and the gallery; serve WebP originals without server-side thumbnail decoding.
+
+### Uploads
+
+- Reuse identical active local images within the same account after checking file size, SHA256 and stored contents. Share the mutation guard with deletion and reference changes, clean up failed new uploads and preserve existing records and cross-account boundaries without a schema migration.
+
+### Verification
+
+- Passed the final full 301-check Chromium suite, 117 frontend unit tests, type checking, zero-warning lint, language/configuration review, 16 container-entrypoint checks, the Go race suite/vet/release build and standard/PWA builds. Actual Go HTTP checks covered 279 static encoding representations; Chromium activated the worker and cached all 92 precache entries.
+- Inspected desktop and narrow light/dark screens, startup and local failure recovery, focus restoration and readable inline errors. This was a same-round collaborative self-check. Real devices, Safari/Firefox, production weak networks, complete restore and PWA installation/upgrades remain outside the verified scope.
+
 ## 1.2.11 - 2026-10-27
 
 ### Settings and Wallpaper Preview

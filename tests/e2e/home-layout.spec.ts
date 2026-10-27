@@ -110,9 +110,14 @@ async function home(page: Page, fixture: Fixture = {}) {
 		route.fulfill({ json: { code: 0, data: { usages: [12, 18], coreCount: 2 } } }),
 	)
 	await page.goto(`/?layoutFixture=${++fixtureId}#/`)
-	if (fixture.navigation === 'loading') await expect(page.locator('.loading-state')).toBeVisible()
-	else if (fixture.navigation === 'error') await expect(page.locator('.error-page')).toBeVisible()
-	else await expect(page.locator('.home-page')).toBeVisible()
+	if (fixture.navigation === 'loading')
+		await expect(page.locator('.home-navigation-state .loading-state')).toBeVisible()
+	else if (fixture.navigation === 'error')
+		await expect(page.locator('.home-navigation-state .status-state')).toBeVisible()
+	else {
+		await expect(page.locator('.home-page')).toBeVisible()
+		await expect(page.locator('.home-navigation-state')).toHaveCount(0)
+	}
 }
 
 async function box(locator: Locator) {
@@ -640,17 +645,18 @@ test('initial loading and failures avoid false empty content, then retry restore
 	await page.setViewportSize({ width: 320, height: 640 })
 	const fixture: Fixture = { navigation: 'loading', empty: true }
 	await home(page, fixture)
-	await expect(page.locator('.home-page')).toHaveCount(0)
+	await expect(page.locator('.home-page')).toBeVisible()
+	await expect(page.locator('.home-logo-text')).toHaveText('Hi!')
 	await expect(page.locator('.empty-collection')).toHaveCount(0)
 	fixture.navigation = 'error'
 	fixture.release!()
-	await expect(page.locator('.error-page .status-state')).toBeVisible()
+	await expect(page.locator('.home-navigation-state .status-state')).toBeVisible()
 	await expect(page.locator('.empty-collection')).toHaveCount(0)
 	await noHorizontalOverflow(page)
 	fixture.navigation = 'ready'
 	await page.getByRole('button', { name: '重试', exact: true }).click()
 	await expect(page.locator('.empty-collection')).toBeVisible()
-	await expect(page.locator('.error-page')).toHaveCount(0)
+	await expect(page.locator('.home-navigation-state')).toHaveCount(0)
 	await follows(page.locator('.home-hero'), page.locator('.empty-collection'))
 	await expect(page.getByRole('button', { name: '添加分组', exact: true })).toBeVisible()
 	await noHorizontalOverflow(page)

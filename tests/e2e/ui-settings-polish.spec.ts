@@ -244,6 +244,7 @@ for (const kind of ['search', 'monitors'] as const) {
 		await expect(section.locator('.auto-save-status')).toHaveAttribute('data-save-status', 'saved')
 		await page.clock.fastForward(31_000)
 		await page.getByRole('menuitem', { name: '关于', exact: true }).click()
+		await expect(page.getByRole('heading', { name: 'ZPanel', exact: true })).toBeVisible()
 		await page.getByRole('menuitem', { name: '搜索与监控', exact: true }).click()
 		await expect(section.getByRole('alert')).toContainText('刷新失败')
 		await expect(field).toBeEnabled()
@@ -325,6 +326,7 @@ for (const kind of ['search', 'monitors', 'mountpoints'] as const) {
 		failure = 'temporary'
 		await page.clock.fastForward(31_000)
 		await page.getByRole('menuitem', { name: '关于', exact: true }).click()
+		await expect(page.getByRole('heading', { name: 'ZPanel', exact: true })).toBeVisible()
 		await page.getByRole('menuitem', { name: '搜索与监控', exact: true }).click()
 		await expect(section.getByRole('alert')).toBeVisible()
 		await expect(field).toHaveValue(expected)

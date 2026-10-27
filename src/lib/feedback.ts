@@ -1,6 +1,6 @@
 import { App } from 'antd'
 import { useTranslation } from 'react-i18next'
-import { ApiError } from './api'
+import { ApiError, RequestTimeoutError } from './api'
 import { useEffect, useMemo, useRef } from 'react'
 
 export function useFeedback() {
@@ -39,7 +39,14 @@ export function useFeedback() {
 		if (!activeRef.current) return
 		if (err instanceof DOMException && err.name === 'AbortError') return
 		const key = err instanceof ApiError ? `apiErrorCode.${err.code}` : ''
-		const content = key && t(key) !== key ? t(key) : err instanceof Error ? err.message : t('common.failed')
+		const content =
+			err instanceof RequestTimeoutError
+				? t('ui.requestTimedOut')
+				: key && t(key) !== key
+					? t(key)
+					: err instanceof Error
+						? err.message
+						: t('common.failed')
 		void message.error(messageKey ? { key: messageKey, content, duration } : content)
 	}
 	return { message, modal: scopedModal, error, t }

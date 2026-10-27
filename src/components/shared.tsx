@@ -1,14 +1,15 @@
 import { Button, Spin } from 'antd'
 import { InfoOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
-import { ApiError } from '@/lib/api'
+import { ApiError, RequestTimeoutError } from '@/lib/api'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 
-export function Loading() {
+export function Loading({ label }: { label?: string }) {
 	return (
-		<div className="loading-state">
-			<Spin size="large" />
+		<div className="loading-state" role="status">
+			<Spin size="large" aria-hidden={label ? true : undefined} />
+			{label && <span>{label}</span>}
 		</div>
 	)
 }
@@ -75,7 +76,11 @@ export function QueryError({
 			error
 			compact={compact}
 			title={title || t('ui.contentUnavailable')}
-			description={known || description || t('ui.loadFailedHint')}
+			description={
+				error instanceof RequestTimeoutError
+					? t('ui.requestTimedOut')
+					: known || description || t('ui.loadFailedHint')
+			}
 			detail={diagnostic ? raw : undefined}
 			action={
 				retry && (

@@ -2,6 +2,7 @@ declare namespace File {
 
 	interface Info extends Common.InfoBase {
 		src: string
+		thumbnailSrc?: string
 		userId: number
 		ownerId: number
 		fileName: string

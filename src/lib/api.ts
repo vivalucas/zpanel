@@ -15,6 +15,13 @@ export class ApiError extends Error {
 		this.name = 'ApiError'
 	}
 }
+export const READ_REQUEST_TIMEOUT_MS = 15_000
+export class RequestTimeoutError extends Error {
+	constructor(public readonly timeoutMs: number) {
+		super('The request timed out. Please try again.')
+		this.name = 'TimeoutError'
+	}
+}
 export const apiBase = (import.meta.env.VITE_GLOB_API_URL || '/api').replace(/\/$/, '')
 export async function request<T>(
 	path: string,
@@ -24,6 +31,7 @@ export async function request<T>(
 		method?: 'GET' | 'POST'
 		token?: string | null
 		sessionToken?: string | null
+		timeoutMs?: number
 	} = {},
 ): Promise<T> {
 	const state = usePreferences.getState()
@@ -31,35 +39,68 @@ export async function request<T>(
 	const token = options.token === undefined ? state.token : options.token
 	if (options.sessionToken !== undefined && state.token !== options.sessionToken)
 		throw new DOMException('Session changed', 'AbortError')
-	const form = data instanceof FormData
-	const response = await fetch(`${apiBase}${path}`, {
-		method: options.method || 'POST',
-		signal: options.signal,
-		headers: {
-			...(form ? {} : { 'Content-Type': 'application/json' }),
-			...(token ? { token, Authorization: `Bearer ${token}` } : {}),
-			lang: state.language.toLowerCase(),
-		},
-		body: options.method === 'GET' ? undefined : form ? data : JSON.stringify(data ?? {}),
-	})
-	if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError')
-	if (options.sessionToken !== undefined && usePreferences.getState().token !== options.sessionToken)
-		throw new DOMException('Session changed', 'AbortError')
-	if (options.token === undefined && usePreferences.getState().token !== token)
-		throw new DOMException('Session changed', 'AbortError')
-	if (!response.ok) throw new ApiError(response.status, `HTTP ${response.status}`)
-	const result: ApiResponse<T> = await response.json()
-	if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError')
-	if (options.sessionToken !== undefined && usePreferences.getState().token !== options.sessionToken)
-		throw new DOMException('Session changed', 'AbortError')
-	if (options.token === undefined && usePreferences.getState().token !== token)
-		throw new DOMException('Session changed', 'AbortError')
-	if (result.code !== 0) {
-		if ([1000, 1001].includes(result.code) && token && usePreferences.getState().token === token)
-			usePreferences.getState().forgetAccount(token)
-		throw new ApiError(result.code, result.msg || 'Request failed')
+	const timeoutMs = options.timeoutMs
+	if (
+		timeoutMs !== undefined &&
+		(!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647)
+	)
+		throw new RangeError('timeoutMs must be a positive finite timer duration')
+	// Only explicit read callers opt in. Uploads and other writes have no automatic deadline.
+	const controller = timeoutMs === undefined ? undefined : new AbortController()
+	let timeoutError: RequestTimeoutError | undefined
+	const forwardAbort = () => controller?.abort(options.signal?.reason)
+	if (controller) options.signal?.addEventListener('abort', forwardAbort, { once: true })
+	const timer =
+		timeoutMs === undefined
+			? undefined
+			: setTimeout(() => {
+					if (controller!.signal.aborted) return
+					timeoutError = new RequestTimeoutError(timeoutMs)
+					// Aborting fetch also stops a response body that is still streaming.
+					controller!.abort(timeoutError)
+				}, timeoutMs)
+	const ensureActive = () => {
+		if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError')
+		if (options.sessionToken !== undefined && usePreferences.getState().token !== options.sessionToken)
+			throw new DOMException('Session changed', 'AbortError')
+		if (options.token === undefined && usePreferences.getState().token !== token)
+			throw new DOMException('Session changed', 'AbortError')
 	}
-	return result.data
+	try {
+		const form = data instanceof FormData
+		const response = await fetch(`${apiBase}${path}`, {
+			method: options.method || 'POST',
+			signal: controller?.signal || options.signal,
+			headers: {
+				...(form ? {} : { 'Content-Type': 'application/json' }),
+				...(token ? { token, Authorization: `Bearer ${token}` } : {}),
+				lang: state.language.toLowerCase(),
+			},
+			body: options.method === 'GET' ? undefined : form ? data : JSON.stringify(data ?? {}),
+		})
+		ensureActive()
+		if (timeoutError) throw timeoutError
+		if (!response.ok) throw new ApiError(response.status, `HTTP ${response.status}`)
+		const result: ApiResponse<T> = await response.json()
+		ensureActive()
+		if (timeoutError) throw timeoutError
+		if (result.code !== 0) {
+			if ([1000, 1001].includes(result.code) && token && usePreferences.getState().token === token)
+				usePreferences.getState().forgetAccount(token)
+			throw new ApiError(result.code, result.msg || 'Request failed')
+		}
+		return result.data
+	} catch (error) {
+		if (timeoutError) {
+			ensureActive()
+			throw timeoutError
+		}
+		if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError')
+		throw error
+	} finally {
+		clearTimeout(timer)
+		if (controller) options.signal?.removeEventListener('abort', forwardAbort)
+	}
 }
 export interface AuthInfo {
 	user: User.Info
@@ -102,7 +143,10 @@ export const defaultPanel: Panel.panelConfig = {
 }
 export async function fetchPanel(signal?: AbortSignal, sessionRequest = request) {
 	try {
-		const data = await sessionRequest<Panel.userConfig>('/panel/userConfig/get', {}, { signal })
+		const data = await sessionRequest<Panel.userConfig>('/panel/userConfig/get', {}, {
+			signal,
+			timeoutMs: READ_REQUEST_TIMEOUT_MS,
+		})
 		const clean = sanitizePanelConfig(data.panel)
 		return {
 			...data,
@@ -116,7 +160,10 @@ export async function fetchPanel(signal?: AbortSignal, sessionRequest = request)
 	}
 }
 export async function fetchGroups(signal?: AbortSignal, sessionRequest = request): Promise<Group[]> {
-	return sessionRequest<Group[]>('/panel/itemIconGroup/getNavigation', {}, { signal })
+	return sessionRequest<Group[]>('/panel/itemIconGroup/getNavigation', {}, {
+		signal,
+		timeoutMs: READ_REQUEST_TIMEOUT_MS,
+	})
 }
 export async function uploadImage(file: Blob, sessionRequest = request) {
 	const form = new FormData()
@@ -124,7 +171,11 @@ export async function uploadImage(file: Blob, sessionRequest = request) {
 	return sessionRequest<{ imageUrl: string; fileId: number }>('/file/uploadImg', form)
 }
 export function getModule<T>(name: string, signal?: AbortSignal) {
-	return request<T | null>('/system/moduleConfig/getByName', { name: `module-${name}` }, { signal })
+	return request<T | null>(
+		'/system/moduleConfig/getByName',
+		{ name: `module-${name}` },
+		{ signal, timeoutMs: READ_REQUEST_TIMEOUT_MS },
+	)
 }
 export function saveModule(name: string, value: unknown) {
 	return request('/system/moduleConfig/save', { name: `module-${name}`, value })

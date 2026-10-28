@@ -33,6 +33,7 @@ import { resolveHomeText } from '@/lib/homeText'
 import { useUnverifiedHomeData } from '@/lib/useHomeCache'
 import { HomeClock } from '@/components/HomeClock'
 import { HomeStartupShell } from '@/components/HomeStartupShell'
+import { rememberStartupTone } from '@/lib/homeStartup'
 import {
 	OptionalModuleBoundary,
 	OptionalModuleDialog,
@@ -59,6 +60,12 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		text.tone,
 		text.ink,
 	)
+	const [hasPresentedHome, setHasPresentedHome] = useState(false)
+	useEffect(() => {
+		if (!panel.data || isAccessError(panel.error)) return
+		if (wallpaperAppearance.status === 'loading') return
+		rememberStartupTone(wallpaperAppearance.backgroundTone ?? 'dark')
+	}, [panel.data, panel.error, wallpaperAppearance.status, wallpaperAppearance.backgroundTone])
 	const searchConfig = useSearchConfig()
 	const navigate = useNavigate()
 	const client = useQueryClient()
@@ -161,6 +168,11 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 				<QueryError error={panel.error} retry={() => panel.refetch()} compact />
 			</HomeStartupShell>
 		)
+	// First presentation keeps a readable public palette until the wallpaper is safe
+	// to show. Later revalidation must not unmount editors or other active interactions.
+	if (!hasPresentedHome && wallpaperAppearance.status === 'loading' && !wallpaperAppearance.displayReady)
+		return <HomeStartupShell label={t('ui.loadingHome')} />
+	if (!hasPresentedHome) setHasPresentedHome(true)
 	const config = panel.data.panel
 	const searchData = isAccessError(searchConfig.error) ? undefined : searchConfig.data
 	const engineIndex = searchData

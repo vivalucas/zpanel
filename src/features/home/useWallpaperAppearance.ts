@@ -4,12 +4,15 @@ import {
 	getFallbackWallpaperAppearance,
 	isAnalyzableWallpaperInk,
 	wallpaperBaseColors,
+	wallpaperBackgroundTone,
 } from '@/lib/wallpaper'
 import type { WallpaperAppearance } from '@/lib/wallpaper'
 import { useWallpaperViewport } from './useWallpaperViewport'
 
 export interface WallpaperState extends WallpaperAppearance {
 	status: 'none' | 'loading' | 'ready' | 'unreadable' | 'error'
+	backgroundTone?: WallpaperAppearance['tone']
+	displayReady?: boolean
 }
 type Sample = WallpaperState & { key: string; context: string; protection: string; src: string }
 
@@ -37,6 +40,7 @@ export function useWallpaperAppearance(
 	const theme = useSyncExternalStore(subscribeTheme, currentTheme, currentTheme)
 	const viewport = useWallpaperViewport()
 	const [sample, setSample] = useState<Sample>()
+	const [decodedSrc, setDecodedSrc] = useState<string>()
 	const imageRef = useRef<{ src: string; image: HTMLImageElement } | undefined>(undefined)
 	const protection = JSON.stringify([src, autoContrast, preferredTone, preferredInk])
 	const context = JSON.stringify([
@@ -62,21 +66,36 @@ export function useWallpaperAppearance(
 	useEffect(() => {
 		if (!src || !viewport) return
 		let disposed = false
+		let displayFailed = false
 		let timer = 0
+		let displayTimer = 0
+		let analysisTimer = 0
 		let samplingImage: HTMLImageElement | undefined
 		let displayImage: HTMLImageElement | undefined
-		const commit = (appearance: WallpaperAppearance, status: WallpaperState['status']) => {
+		const commit = (
+			appearance: WallpaperAppearance & Pick<WallpaperState, 'backgroundTone'>,
+			status: WallpaperState['status'],
+		) => {
+			clearTimeout(displayTimer)
+			clearTimeout(analysisTimer)
 			if (!disposed) setSample({ src, key, context, protection, ...appearance, status })
 		}
 		const unreadable = () =>
 			commit(
-				getFallbackWallpaperAppearance(autoContrast && !preferredInk, theme, preferredTone),
+				{
+					...getFallbackWallpaperAppearance(autoContrast && !preferredInk, theme, preferredTone),
+					backgroundTone: 'dark',
+				},
 				'unreadable',
 			)
+		const failDisplay = () => {
+			displayFailed = true
+			commit({ tone: preferredTone ?? theme, mixed: false, scrim: 0, backgroundTone: theme }, 'error')
+		}
 		const analyze = () => {
 			if (disposed || !samplingImage?.naturalWidth || !samplingImage.naturalHeight) return
 			if (preferredInk && !isAnalyzableWallpaperInk(preferredInk)) {
-				commit({ tone: preferredTone ?? theme, mixed: true, scrim: 0 }, 'ready')
+				commit({ tone: preferredTone ?? theme, mixed: true, scrim: 0, backgroundTone: 'dark' }, 'ready')
 				return
 			}
 			const { width: viewportWidth, height: viewportHeight } = viewport
@@ -151,15 +170,20 @@ export function useWallpaperAppearance(
 						canvas.height,
 					)
 				}
+				const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
+				const appearance = classifyWallpaper(
+					pixels,
+					shade,
+					autoContrast,
+					wallpaperBaseColors[theme],
+					preferredTone,
+					preferredInk,
+				)
 				commit(
-					classifyWallpaper(
-						context.getImageData(0, 0, canvas.width, canvas.height).data,
-						shade,
-						autoContrast,
-						wallpaperBaseColors[theme],
-						preferredTone,
-						preferredInk,
-					),
+					{
+						...appearance,
+						backgroundTone: wallpaperBackgroundTone(pixels, shade, wallpaperBaseColors[theme], appearance),
+					},
 					'ready',
 				)
 			} catch {
@@ -168,6 +192,7 @@ export function useWallpaperAppearance(
 		}
 		const load = () => {
 			if (imageRef.current?.src === src) {
+				setDecodedSrc(src)
 				samplingImage = imageRef.current.image
 				analyze()
 				return
@@ -176,12 +201,24 @@ export function useWallpaperAppearance(
 			// Check ordinary display first so CORS rejection is not reported as a broken image.
 			displayImage = new Image()
 			displayImage.decoding = 'async'
-			displayImage.onload = () => {
-				if (disposed) return
+			displayImage.onload = async () => {
+				if (disposed || displayFailed) return
 				if (!displayImage?.naturalWidth || !displayImage.naturalHeight) {
-					commit({ tone: preferredTone ?? theme, mixed: false, scrim: 0 }, 'error')
+					failDisplay()
 					return
 				}
+				// Keep the startup surface until the ordinary display image is decoded.
+				try {
+					await displayImage.decode()
+				} catch {
+					// A displayable image can still reject decode(); keep normal load/error handling.
+				}
+				if (disposed || displayFailed) return
+				clearTimeout(displayTimer)
+				setDecodedSrc(src)
+				// First-use automatic contrast must not briefly reveal the bright, unmasked
+				// original. A stalled CORS analysis falls back without blocking display forever.
+				analysisTimer = window.setTimeout(unreadable, 1500)
 				samplingImage = new Image()
 				samplingImage.crossOrigin = 'anonymous'
 				samplingImage.decoding = 'async'
@@ -196,7 +233,10 @@ export function useWallpaperAppearance(
 				samplingImage.onerror = unreadable
 				samplingImage.src = src
 			}
-			displayImage.onerror = () => commit({ tone: preferredTone ?? theme, mixed: false, scrim: 0 }, 'error')
+			displayImage.onerror = failDisplay
+			// Loading and decode share a finite budget so an unavailable wallpaper cannot
+			// keep navigation/settings behind the first-presentation shell indefinitely.
+			displayTimer = window.setTimeout(failDisplay, 15_000)
 			displayImage.src = src
 		}
 		// Preview layers update immediately; defer image analysis until the slider settles.
@@ -205,6 +245,8 @@ export function useWallpaperAppearance(
 		return () => {
 			disposed = true
 			clearTimeout(timer)
+			clearTimeout(displayTimer)
+			clearTimeout(analysisTimer)
 			if (displayImage) {
 				displayImage.onload = null
 				displayImage.onerror = null
@@ -228,12 +270,16 @@ export function useWallpaperAppearance(
 		preferredTone,
 		preferredInk,
 	])
-	if (!src) return { tone: preferredTone ?? theme, mixed: false, scrim: 0, status: 'none' }
-	if (sample?.key === key) return sample
+	// Previously displayed images stay visible during reanalysis. Only the first
+	// automatic-contrast presentation waits for its mask (or the bounded fallback).
+	const displayReady = decodedSrc === src && (!autoContrast || sample?.src === src)
+	if (!src)
+		return { tone: preferredTone ?? theme, mixed: false, scrim: 0, status: 'none', backgroundTone: theme }
+	if (sample?.key === key) return { ...sample, displayReady }
 	if (sample?.context === context) {
 		// Keep the last preview colors and status stable while dragging. Home still exposes
 		// pending analysis, retaining its existing protection instead of flashing unmasked.
-		return analysisDelay > 0 ? sample : { ...sample, status: 'loading' }
+		return { ...sample, displayReady, status: analysisDelay > 0 ? sample.status : 'loading' }
 	}
 	if (
 		autoContrast &&
@@ -242,12 +288,13 @@ export function useWallpaperAppearance(
 	) {
 		// A viewport/theme change invalidates the analysis, not the protection already
 		// shown for this image and ink. Replace it only when the new result is ready.
-		return { ...sample, status: 'loading' }
+		return { ...sample, displayReady, status: 'loading' }
 	}
 	return {
 		tone: preferredTone ?? (sample?.src === src ? sample.tone : theme),
 		mixed: false,
 		scrim: 0,
 		status: 'loading',
+		displayReady,
 	}
 }

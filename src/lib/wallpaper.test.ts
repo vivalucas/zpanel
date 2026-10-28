@@ -4,6 +4,7 @@ import {
 	fallbackWallpaperAppearance,
 	getFallbackWallpaperAppearance,
 	wallpaperBaseColors,
+	wallpaperBackgroundTone,
 	wallpaperShadeColor,
 	wallpaperVeilColors,
 } from './wallpaper'
@@ -11,6 +12,31 @@ import {
 function pixels(...colors: number[]) {
 	return colors.flatMap((value) => [value, value, value, 255])
 }
+
+describe('startup background brightness', () => {
+	it('measures the background independently of manual text tone', () => {
+		for (const tone of ['light', 'dark'] as const) {
+			expect(
+				wallpaperBackgroundTone(pixels(15, 30, 45), 0, wallpaperBaseColors.light, { tone, scrim: 0 }),
+			).toBe('dark')
+			expect(
+				wallpaperBackgroundTone(pixels(240, 250, 255), 0, wallpaperBaseColors.dark, { tone, scrim: 0 }),
+			).toBe('light')
+		}
+	})
+	it('includes transparency, saved darkness and the final contrast veil', () => {
+		const unmasked = { tone: 'dark', scrim: 0 } as const
+		expect(wallpaperBackgroundTone([255, 255, 255, 0], 0, wallpaperBaseColors.dark, unmasked)).toBe('dark')
+		expect(wallpaperBackgroundTone([0, 0, 0, 0], 0, wallpaperBaseColors.light, unmasked)).toBe('light')
+		expect(wallpaperBackgroundTone(pixels(255), 0.8, wallpaperBaseColors.light, unmasked)).toBe('dark')
+		expect(
+			wallpaperBackgroundTone(pixels(255), 0, wallpaperBaseColors.light, { tone: 'dark', scrim: 0.8 }),
+		).toBe('dark')
+		expect(
+			wallpaperBackgroundTone(pixels(0), 0, wallpaperBaseColors.dark, { tone: 'light', scrim: 0.8 }),
+		).toBe('light')
+	})
+})
 function luminance(rgb: readonly number[]) {
 	return rgb.reduce((sum, value, i) => {
 		const s = value / 255

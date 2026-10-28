@@ -258,6 +258,11 @@ a {
 	background-size: cover;
 	background-position: center;
 }
+.home-startup-shell {
+	--home-text: var(--startup-ink);
+	--icon-surface: color-mix(in srgb, var(--startup-background) 94%, var(--startup-ink));
+	background: var(--startup-background);
+}
 .home-mask {
 	position: fixed;
 	inset: 0;
@@ -1536,11 +1541,14 @@ a {
 [data-theme='dark'] .login-art p {
 	color: #b0bdd7;
 }
-[data-theme='dark'] :is(.home-page, .home-startup-shell) {
+[data-theme='dark'] .home-page {
 	background:
 		radial-gradient(circle at 14% 12%, rgba(68, 92, 153, 0.34), transparent 34%),
 		radial-gradient(circle at 84% 10%, rgba(98, 71, 142, 0.29), transparent 30%),
 		linear-gradient(150deg, #101724, #171d2a 55%, #111827);
+}
+.home-page[data-wallpaper-status='loading'] {
+	background: var(--startup-background);
 }
 @media (prefers-reduced-motion: reduce) {
 	*,

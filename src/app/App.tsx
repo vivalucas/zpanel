@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useState } from 'react'
 import type { ComponentType } from 'react'
 import {
 	createHashRouter,
@@ -78,6 +78,11 @@ function Protected({ settings = false }: { settings?: boolean }) {
 	const client = useQueryClient()
 	const location = useLocation()
 	const { token, forgetAccount } = usePreferences()
+	useLayoutEffect(() => {
+		// The saved home brightness is independent of a direct login/settings entry.
+		// Restore its document surface before the first home shell can paint.
+		if (!settings) document.documentElement.style.removeProperty('--document-background')
+	}, [settings])
 	const [loadedRoute, setLoadedRoute] = useState<
 		{ settings: boolean } & ({ Page: ComponentType<{ auth: AuthInfo }> } | { error: unknown })
 	>()

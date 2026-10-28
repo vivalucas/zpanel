@@ -1,10 +1,12 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { HomeClock } from './HomeClock'
+import { useStartupTone } from '@/lib/homeStartup'
 
 // Public presentation only: never read account queries or the persisted home snapshot.
 export function HomeStartupShell({ label, children }: { label?: string; children?: ReactNode }) {
+	const tone = useStartupTone()
 	return (
-		<main className="home-startup-shell" data-home-text-tone="dark">
+		<main className="home-startup-shell" data-home-text-tone={tone}>
 			<div
 				className="home-content"
 				style={{ maxWidth: 1200, '--home-margin-top': 10, paddingInline: 15 } as CSSProperties}

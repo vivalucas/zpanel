@@ -48,6 +48,33 @@ function luminance(rgb: readonly number[]) {
 	return 0.2126 * linear(rgb[0]) + 0.7152 * linear(rgb[1]) + 0.0722 * linear(rgb[2])
 }
 
+// A coarse brightness hint for the next startup, independent of the chosen text color.
+// Reuse decoded pixels; bound this extra pass even when contrast sampled the full viewport.
+export function wallpaperBackgroundTone(
+	pixels: ArrayLike<number>,
+	shade: number,
+	backdrop: readonly number[],
+	appearance: Pick<WallpaperAppearance, 'tone' | 'scrim'>,
+): WallpaperAppearance['tone'] {
+	const darkness = darknessValue(shade)
+	const veil = wallpaperVeilColors[appearance.tone]
+	const stride = Math.max(1, Math.ceil(pixels.length / (4 * 1024))) * 4
+	let sum = 0
+	let count = 0
+	for (let index = 0; index + 3 < pixels.length; index += stride) {
+		const alpha = pixels[index + 3] / 255
+		const color = shadeColor.map((base, channel) => {
+			const raw = pixels[index + channel] * alpha + backdrop[channel] * (1 - alpha)
+			return (
+				(raw * (1 - darkness) + base * darkness) * (1 - appearance.scrim) + veil[channel] * appearance.scrim
+			)
+		})
+		sum += luminance(color)
+		count++
+	}
+	return count && sum / count >= 0.28 ? 'light' : 'dark'
+}
+
 export function isAnalyzableWallpaperInk(ink: readonly number[]) {
 	return ink.length === 4 && ink.every((value) => Number.isFinite(value) && value >= 0 && value <= 255)
 }

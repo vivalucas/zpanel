@@ -9,6 +9,7 @@
 | 修改主题 | 测试入口 |
 | --- | --- |
 | 公共壳/真实时钟、私有读取隔离、初始代码失败/刷新、路由竞态 | `home-startup.spec.ts` |
+| 首屏明暗、登录/设置返回、图片/解码期限、重验保留草稿、存储失败及迟到图像 | `home-startup-background.spec.ts` |
 | 并行/分区/按需加载、取消/迟到结果、资源预算、图库原图/派生 | `loading-performance.spec.ts` |
 | 菜单/编辑/排序/监控真实脚本失败、局部恢复/焦点/刷新 | `home-optional-modules.spec.ts` |
 | 新鉴权后的快照、账号/角色/公开隔离、同值重验、设置入口、15秒期限 | `home-cache.spec.ts`；`src/lib/homeCache.test.ts`、`api.test.ts` |

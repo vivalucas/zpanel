@@ -4,6 +4,15 @@ All notable changes to ZPanel will be documented in this file.
 
 ## Unreleased
 
+## 1.3.1 - 2026-10-28
+
+### Homepage Startup
+
+- Match the initial document and public loading shell to a browser-local light/dark background hint, using a dim surface when no hint exists. Keep wallpaper URLs and personal navigation behind fresh authentication.
+- Preserve that hint when entering the homepage from a directly opened login or settings page. Keep a readable loading shell until the first wallpaper can be displayed without changing the saved text color; later wallpaper revalidation preserves active homepage interactions.
+- Bound original wallpaper loading and decoding to 15 seconds, retain the configured URL on failure, and ignore results that arrive after that deadline. Let separately delayed color analysis fall back after 1.5 seconds while preserving decoded images and valid later analysis.
+- Cover return-to-home routes, black text during slow wallpaper loading, storage read/write failures, image/decode deadlines, visible late-image results and existing wallpaper reanalysis behavior with browser regressions.
+
 ## 1.3.0 - 2026-10-28
 
 ### Wallpaper Recovery

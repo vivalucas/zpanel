@@ -19,6 +19,7 @@ export function WallpaperBackground({
 	scale = 1,
 }: WallpaperBackgroundProps) {
 	const visible = !!src && appearance.status !== 'error' && appearance.status !== 'none'
+	const pending = !preview && appearance.status === 'loading' && !appearance.displayReady
 	const radius = Math.max(0, blur) * scale
 	return (
 		<>
@@ -28,8 +29,8 @@ export function WallpaperBackground({
 				style={
 					visible
 						? {
-								backgroundImage: `url(${JSON.stringify(src)})`,
-								backgroundColor: 'var(--wallpaper-base)',
+								backgroundImage: pending ? undefined : `url(${JSON.stringify(src)})`,
+								backgroundColor: pending ? 'var(--startup-background)' : 'var(--wallpaper-base)',
 								filter: `blur(${radius}px)`,
 								inset: `${-2 * radius}px`,
 							}

@@ -23,7 +23,7 @@
     "common:cleanup": "rimraf node_modules && rimraf pnpm-lock.yaml",
     "common:prepare": "husky install",
     "test:review": "node scripts/review-tests.mjs",
-    "test": "vitest run src",
+    "test": "vitest run --dir src",
     "test:e2e": "playwright test",
     "format": "prettier --write src/app src/lib src/components src/features src/main.tsx"
   },

@@ -135,7 +135,8 @@ async function backgroundPixels(page: Page) {
 		canvas.height = image.height
 		const context = canvas.getContext('2d')!
 		context.drawImage(image, 0, 0)
-		return [12, image.width - 12].map((x) =>
+		// The lower-right dock casts a shadow past its bounds; sample clear background.
+		return [12, Math.floor(image.width / 2)].map((x) =>
 			Array.from(context.getImageData(x, image.height - 12, 1, 1).data).slice(0, 3),
 		)
 	}, screenshot.toString('base64'))

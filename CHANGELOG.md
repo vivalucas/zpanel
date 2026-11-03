@@ -10,6 +10,7 @@ All notable changes to ZPanel will be documented in this file.
 
 - Move an app directly from its context menu through “Move to”, with hover, click, keyboard and touch submenu support. Hide the current group, append to the destination group and preserve the existing menu's light/dark glass appearance.
 - Keep long destination lists scrollable and within the viewport, prevent duplicate moves and retain the original position when a move fails. Apply the same append behavior when changing groups in the editor.
+- Serialize app sorting and moves so concurrent requests retain the destination's tail ordering.
 - Update only the app's group and order, preserving its other fields. Keep confirmed moves visible if navigation refresh fails and preserve focus when another editor is already in use.
 - Add browser and backend regressions for persistence, permissions, error recovery, focus, submenu styling and viewport edges; document the operation and API contract without changing the database schema or dependencies.
 

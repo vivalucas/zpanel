@@ -789,6 +789,21 @@ test('move persists only the destination, appends after the last item and restor
 			sort: 10000,
 			updateTime: expect.any(String),
 		})
+		const concurrent = await post('itemIcon/edit', {
+			...menuApp,
+			id: 0,
+			title: 'Concurrent move app',
+			itemIconGroupId: source.id,
+		})
+		await Promise.all([
+			post('itemIcon/move', { id: concurrent.id, itemIconGroupId: target.id }),
+			post('itemIcon/saveSort', {
+				itemIconGroupId: target.id,
+				sortItems: items.map((item, sort) => ({ id: item.id, sort })),
+			}),
+		])
+		const reordered = (await post('itemIconGroup/getNavigation', {})) as Group[]
+		expect(reordered.find((group) => group.id === target.id)!.items.at(-1)!.id).toBe(concurrent.id)
 		await page.reload()
 		await expect(
 			page

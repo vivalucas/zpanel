@@ -2,6 +2,7 @@ package panel
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gorm.io/gorm/clause"
 	"net/url"
@@ -22,6 +23,62 @@ import (
 )
 
 type ItemIcon struct {
+}
+
+var errInvalidItemIconGroup = errors.New("invalid group id")
+
+// Moving always appends; editing within the same group preserves its position.
+func itemIconDestinationSort(tx *gorm.DB, item models.ItemIcon, groupID int) (int, error) {
+	if item.ItemIconGroupId == groupID {
+		return item.Sort, nil
+	}
+	var next int
+	err := tx.Model(&models.ItemIcon{}).Where("user_id=? AND item_icon_group_id=?", item.UserId, groupID).
+		Select("COALESCE(MAX(sort), -1) + 1").Scan(&next).Error
+	return next, err
+}
+
+func (a *ItemIcon) Move(c *gin.Context) {
+	input := struct {
+		ID      uint `json:"id" binding:"required"`
+		GroupID int  `json:"itemIconGroupId" binding:"required,gt=0"`
+	}{}
+	if err := c.ShouldBindBodyWith(&input, binding.JSON); err != nil {
+		apiReturn.ErrorParamFomat(c, err.Error())
+		return
+	}
+	user, _ := base.GetCurrentUserInfo(c)
+	invalidTarget := false
+	var movedSort int
+	err := global.Db.Transaction(func(tx *gorm.DB) error {
+		var item models.ItemIcon
+		if err := tx.Where("id=? AND user_id=?", input.ID, user.ID).First(&item).Error; err != nil {
+			return err
+		}
+		if err := ensureItemIconGroupsBelongToUser(tx, user.ID, []int{input.GroupID}); err != nil {
+			invalidTarget = errors.Is(err, errInvalidItemIconGroup)
+			return err
+		}
+		if item.ItemIconGroupId == input.GroupID {
+			movedSort = item.Sort
+			return nil
+		}
+		sort, err := itemIconDestinationSort(tx, item, input.GroupID)
+		if err != nil {
+			return err
+		}
+		movedSort = sort
+		return tx.Model(&item).Updates(map[string]interface{}{"item_icon_group_id": input.GroupID, "sort": sort}).Error
+	})
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		apiReturn.ErrorNoAccess(c)
+	} else if invalidTarget {
+		apiReturn.ErrorParamFomat(c, err.Error())
+	} else if err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+	} else {
+		apiReturn.SuccessData(c, gin.H{"id": input.ID, "itemIconGroupId": input.GroupID, "sort": movedSort})
+	}
 }
 
 func validateItem(item models.ItemIcon) error {
@@ -45,7 +102,7 @@ func ensureItemIconGroupsBelongToUser(db *gorm.DB, userId uint, groupIds []int) 
 	seen := map[int]bool{}
 	for _, id := range groupIds {
 		if id <= 0 {
-			return fmt.Errorf("invalid group id")
+			return errInvalidItemIconGroup
 		}
 		if !seen[id] {
 			seen[id] = true
@@ -64,7 +121,7 @@ func ensureItemIconGroupsBelongToUser(db *gorm.DB, userId uint, groupIds []int) 
 		return err
 	}
 	if count != int64(len(uniqueIds)) {
-		return fmt.Errorf("invalid group id")
+		return errInvalidItemIconGroup
 	}
 	return nil
 }
@@ -114,20 +171,28 @@ func (a *ItemIcon) Edit(c *gin.Context) {
 		if req.Sort != 0 {
 			updateField = append(updateField, "Sort")
 		}
-		var count int64
-		if err := global.Db.Model(&models.ItemIcon{}).Where("id=? AND user_id=?", req.ID, userInfo.ID).Count(&count).Error; err != nil {
-			apiReturn.ErrorDatabase(c, err.Error())
-			return
-		}
-		if count == 0 {
+		err := global.Db.Transaction(func(tx *gorm.DB) error {
+			var current models.ItemIcon
+			if err := tx.Where("id=? AND user_id=?", req.ID, userInfo.ID).First(&current).Error; err != nil {
+				return err
+			}
+			if current.ItemIconGroupId != req.ItemIconGroupId {
+				var err error
+				req.Sort, err = itemIconDestinationSort(tx, current, req.ItemIconGroupId)
+				if err != nil {
+					return err
+				}
+				updateField = append(updateField, "Sort")
+			}
+			return tx.Model(&models.ItemIcon{}).Select(updateField).
+				Where("id=? AND user_id=?", req.ID, userInfo.ID).Updates(&req).Error
+		})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			apiReturn.ErrorNoAccess(c)
 			return
 		}
-		result := global.Db.Model(&models.ItemIcon{}).
-			Select(updateField).
-			Where("id=? AND user_id=?", req.ID, userInfo.ID).Updates(&req)
-		if result.Error != nil {
-			apiReturn.ErrorDatabase(c, result.Error.Error())
+		if err != nil {
+			apiReturn.ErrorDatabase(c, err.Error())
 			return
 		}
 	} else {

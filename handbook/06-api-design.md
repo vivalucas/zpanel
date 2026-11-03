@@ -40,6 +40,7 @@ Gin 接口统一挂载 `/api`。完整方法、路径和中间件以 [router](..
 | 路径 | 特殊契约 |
 | --- | --- |
 | `itemIcon/getListByGroupId` | 请求 `{itemIconGroupId}`，保留既有按组读取入口 |
+| `itemIcon/move` | `{id,itemIconGroupId}`，成功返回`{id,itemIconGroupId,sort}`；只修改本人应用的分组和排序，目标须为本人有效分组，同事务追加到目标组末尾；重复移至当前组不改位置。需登录，沿用导航写入锁，不接受名称/地址等整对象覆盖 |
 | `itemIconGroup/getNavigation` | 请求 `{}`，`data` 为含 `items` 的分组数组；归属/顺序与旧接口相同，旧接口保留；正常已有数据用两次业务查询，不随分组增加请求 |
 | `itemIconGroup/edit` | 只绑定 `id/icon/title/description/sort`，归属由服务端确定，不绑定 ORM 关联 |
 | `itemIconGroup/deletes` | `{ids,moveToGroupId?}`；迁移目标须为本人且不在删除范围。无目标时删除组内应用，有目标时同事务迁移；删除最后一组返回 1201 |
@@ -47,6 +48,8 @@ Gin 接口统一挂载 `/api`。完整方法、路径和中间件以 [router](..
 | `userConfig/get` | 旧配置损坏可返回 `panelWarnings`，读取不修复数据库；恢复行为见 [05](05-data-design.md) |
 
 项目/分组标题为 1–200 个 Unicode 字符；项目 `url/lanUrl` 至少一个有效，`openMethod` 为 1/2/3。编辑/批量新增拒绝脚本、data、file 等非 HTTP(S) 协议。
+
+`itemIcon/edit` 编辑时切换分组，与快捷移动共用末尾排序计算；不切换分组时保留既有排序处理。快捷移动不校验或改写存量地址、图标等无关字段，失败事务回滚；不新增表或迁移。
 
 `POST /api/panel/userConfig/import` 需登录：`requestId` 为 16–64 字符，重试复用；`mode=append/replace`，可选 `icons`（分组的 `title/sort/children`）和 `panel`，至少选一项。请求最多 5 MiB、500 分组、10000 图标，覆盖图标至少一组。忽略输入的实体 ID、归属和 ORM 关联，全部归当前账号；同 ID 不同内容拒绝。收据与导入同事务，失败无部分写入，见 [05](05-data-design.md)。
 

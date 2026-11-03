@@ -388,6 +388,8 @@
     "saved": "已儲存",
     "autoSaveFailed": "尚未儲存，請檢查連線後重試。",
     "autoSaveInvalid": "請完善標出的欄位後自動儲存。",
+    "itemMenuMoveTo": "移動至",
+    "itemMenuMoved": "已移至「{group}」",
     "itemMenuPrimaryAddress": "主要網址",
     "itemMenuNewTabShort": "新分頁",
     "itemMenuFrameShort": "嵌入",

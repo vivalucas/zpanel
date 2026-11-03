@@ -721,9 +721,12 @@ a {
 	font-size: 13px;
 	font-weight: 500;
 }
-.item-action-popup {
+.item-action-popup,
+.item-action-submenu {
 	--item-action-row-height: 34px;
 	--item-action-shortcut-height: 32px;
+}
+.item-action-popup {
 	position: fixed;
 	width: 272px;
 	max-width: calc(100vw - 16px);
@@ -731,6 +734,27 @@ a {
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	padding: 8px;
+}
+.item-action-submenu.ant-menu-submenu > .ant-menu {
+	width: 220px;
+	max-width: calc(100vw - 16px);
+	max-height: min(360px, calc(100dvh - 16px));
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 8px;
+	color: var(--glass-popup-text);
+	background: var(--glass-popup);
+	border: 1px solid var(--glass-popup-line);
+	border-radius: 14px;
+	box-shadow: var(--glass-popup-shadow);
+	-webkit-backdrop-filter: var(--glass-popup-blur);
+	backdrop-filter: var(--glass-popup-blur);
+}
+.item-action-popup .ant-menu-submenu-title {
+	padding-inline: 10px;
+}
+.item-action-submenu .ant-menu-item {
+	padding-inline: 10px !important;
 }
 .item-action-popup .ant-menu {
 	border: 0 !important;
@@ -781,12 +805,14 @@ a {
 	margin: 4px 2px;
 	border-color: var(--glass-popup-line);
 }
-.item-action-popup .item-action-menu [role='menuitem']:focus-visible {
+.item-action-popup .item-action-menu [role='menuitem']:focus-visible,
+.item-action-submenu [role='menuitem']:focus-visible {
 	outline: 2px solid var(--primary, #5266eb);
 	outline-offset: -2px;
 }
 @media (pointer: coarse) {
-	.item-action-popup {
+	.item-action-popup,
+	.item-action-submenu {
 		--item-action-row-height: 40px;
 		--item-action-shortcut-height: 44px;
 	}

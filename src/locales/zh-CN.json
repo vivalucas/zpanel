@@ -388,6 +388,8 @@
     "saved": "已保存",
     "autoSaveFailed": "尚未保存，请检查连接后重试。",
     "autoSaveInvalid": "请完善标出的字段后自动保存。",
+    "itemMenuMoveTo": "移动至",
+    "itemMenuMoved": "已移至「{group}」",
     "itemMenuPrimaryAddress": "主地址",
     "itemMenuNewTabShort": "新标签页",
     "itemMenuFrameShort": "内嵌",

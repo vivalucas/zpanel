@@ -388,6 +388,8 @@
     "saved": "Saved",
     "autoSaveFailed": "Not saved. Check your connection and retry.",
     "autoSaveInvalid": "Complete the highlighted fields to save.",
+    "itemMenuMoveTo": "이동 위치",
+    "itemMenuMoved": "“{group}”(으)로 이동했습니다",
     "itemMenuPrimaryAddress": "Primary address",
     "itemMenuNewTabShort": "New tab",
     "itemMenuFrameShort": "Embed",

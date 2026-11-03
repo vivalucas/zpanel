@@ -27,7 +27,7 @@
 | 首屏/边距/断点、固定工具/回顶/长页脚、键盘/命中 | `home-layout.spec.ts` |
 | 人工色兼容、描边字重、首页/预览、上下文色 | `home-text-style.spec.ts` |
 | 壁纸采样/裁切/模糊/遮罩与回退、首次提示/访客 | `home-appearance.spec.ts`、`wallpaper-rendering.spec.ts`；`src/lib/wallpaper.test.ts` |
-| 地址分区/原生链接/复制/焦点/权限、窄矮/触屏菜单 | `item-menu.spec.ts` |
+| 地址分区/原生链接/复制/焦点/权限、窄矮/触屏菜单；跨组二级菜单/成功持久化/刷新失败保留位置/草稿焦点/失败重试/长列表样式 | `item-menu.spec.ts` |
 | 名称真实溢出、图标端点/材质/旧底色/失败恢复 | `item-title.spec.ts`、`item-icons.spec.ts` |
 
 至少实查桌面/手机宽、浅深、默认/壁纸及两种导航样式。`toBeVisible()`和无溢出不能证明可达：结合完整视口、交叠、坐标、命中及生产computed style；浮层须等动画结束/边界稳定，真实长列表滚动不能force点击。链接快捷键用 `ControlOrMeta`，中键/修饰键/普通iframe分别查。

@@ -8,6 +8,7 @@
 | --- | --- |
 | 权限与安全 | `service/api/api_v1/{middleware,system,panel}/*test.go`、`service/lib/{cmn,navigation,safehttp,siteFavicon}/*test.go`：验证码尺寸/IP 限流/可信代理、账号状态/最后管理员/会话撤销、SSRF/上传/危险导航协议、图库引用权限、导入事务/持久幂等/导出错误、Docker 取消/超时/输出上限、favicon 相对重定向。 |
 | 上传去重 | [API 回归](../service/api/api_v1/system/file_upload_test.go)与[存储回归](../service/lib/storage/upload_test.go)：同图改名、单图/批量互通、12 请求并发、权限/状态、损坏/缺失候选、故障清理、引用保护与删除交错、实际大小边界和源文件变化。默认单进程锁不代表多副本协调或真实 MySQL 验收。 |
+| 图标跨组移动 | [API 回归](../service/api/api_v1/panel/item_icon_move_test.go)：本人项目/目标归属、无效目标与数据库故障区分、末尾追加、空组、重复移动、无关字段不覆盖、写失败回滚及编辑跨组一致性；浏览器二级菜单与实际持久化见前端验收。 |
 | 缩略图 | [storage](../service/lib/storage/thumbnail_test.go)、[router](../service/router/uploads_test.go)、[API](../service/api/api_v1/system/file_thumbnail_test.go)：方向、格式、资源上限与回退。WebP 不解码、不返回 `thumbnailSrc`；带缩略图参数仍返回原字节、不生成缓存，旧派生也不能复用。只看浏览器显示不足以验证服务端内存边界。 |
 | 静态资源/PWA | [构建压缩](../src/lib/staticCompression.test.ts)、[Go HTTP](../service/router/static_test.go)；最终构建按实际 Go HTTP 逐字节/解压检查原文和编码表示、缓存、HEAD/304/Range、sidecar 禁访，并检查 PWA 固定路径清单、worker 激活/控制/缓存。静态离线壳不能证明业务离线或系统安装升级。 |
 | Docker 入口 | 根目录运行 `python3 scripts/docker-entrypoint-test.py`，临时路径/OS 模拟覆盖大 GID、组复用/重名/幂等、未授权组、可选失败继续和基础失败退出，纳入 Ubuntu CI。发布前另用无网络独立 Linux 容器核对正式 BusyBox/su-exec、实际 UID/Groups、大 GID 及 socket 读取；不拿其他生产容器做动作试验。 |

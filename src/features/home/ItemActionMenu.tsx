@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ConfigProvider, Menu, Tooltip, theme } from 'antd'
 import type { MenuProps } from 'antd'
@@ -10,9 +10,11 @@ import {
 	ExportOutlined,
 	GlobalOutlined,
 	BlockOutlined,
+	FolderOpenOutlined,
 } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { isSafeNavigationUrl } from '@/utils/navigation'
+import type { Group } from '@/lib/api'
 
 export interface ItemMenuTarget {
 	id: number
@@ -25,22 +27,31 @@ export default function ItemActionMenu({
 	item,
 	target,
 	editable,
+	groups,
+	moving,
+	itemMoving,
 	onClose,
 	onOpen,
 	onCopy,
 	onEdit,
 	onDelete,
+	onMove,
 }: {
 	item: Panel.ItemInfo
 	target: ItemMenuTarget
 	editable: boolean
+	groups: Group[]
+	moving: boolean
+	itemMoving: boolean
 	onClose: (restoreFocus: boolean) => void
 	onOpen: (url: string, method?: number) => void
 	onCopy: (url: string) => void
 	onEdit: () => void
 	onDelete: () => void
+	onMove: (group: Group) => void
 }) {
 	const rootRef = useRef<HTMLDivElement>(null)
+	const [openKeys, setOpenKeys] = useState<string[]>([])
 	const { token } = theme.useToken()
 	const { t } = useTranslation()
 	const actions = new Map<string, () => void>()
@@ -115,21 +126,38 @@ export default function ItemActionMenu({
 	}
 	if (editable) {
 		if (items.length) items.push({ type: 'divider' })
-		items.push(
-			{
-				key: 'edit',
-				icon: <EditOutlined aria-hidden="true" />,
-				label: t('common.edit'),
+		items.push({
+			key: 'edit',
+			disabled: itemMoving,
+			icon: <EditOutlined aria-hidden="true" />,
+			label: t('common.edit'),
+			className: 'item-action-manage',
+		})
+		const destinations = groups.filter((group) => group.id !== item.itemIconGroupId)
+		if (destinations.length) {
+			items.push({
+				key: 'move',
+				icon: <FolderOpenOutlined aria-hidden="true" />,
+				label: t('ui.itemMenuMoveTo'),
 				className: 'item-action-manage',
-			},
-			{
-				key: 'delete',
-				icon: <DeleteOutlined aria-hidden="true" />,
-				label: t('common.delete'),
-				danger: true,
-				className: 'item-action-manage',
-			},
-		)
+				popupClassName: 'item-action-submenu',
+				onTitleClick: () => setOpenKeys(['move']),
+				disabled: moving,
+				children: destinations.map((group) => {
+					const key = `move-${group.id}`
+					actions.set(key, () => onMove(group))
+					return { key, label: group.title, title: group.title }
+				}),
+			})
+		}
+		items.push({
+			key: 'delete',
+			disabled: itemMoving,
+			icon: <DeleteOutlined aria-hidden="true" />,
+			label: t('common.delete'),
+			danger: true,
+			className: 'item-action-manage',
+		})
 		actions.set('edit', onEdit)
 		actions.set('delete', onDelete)
 	}
@@ -142,6 +170,7 @@ export default function ItemActionMenu({
 		const focusTarget = first || element.querySelector<HTMLElement>('[role="menu"]')
 		focusTarget?.focus({ preventScroll: true })
 		const outside = (event: Event) => {
+			if (event.target instanceof Element && event.target.closest('.item-action-submenu')) return
 			if (!(event.target instanceof Node) || !element.contains(event.target)) onClose(false)
 		}
 		const dismiss = () => onClose(false)
@@ -175,7 +204,11 @@ export default function ItemActionMenu({
 				zIndex: token.zIndexPopupBase + 50,
 			}}
 			onKeyDownCapture={(event) => {
-				if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+				if (
+					(event.key === 'ArrowLeft' || event.key === 'ArrowRight') &&
+					event.target instanceof Element &&
+					event.target.closest('.item-action-address')
+				) {
 					const choices = [
 						...event.currentTarget.querySelectorAll<HTMLElement>(
 							'[role="menuitem"]:not([aria-disabled="true"])',
@@ -210,6 +243,8 @@ export default function ItemActionMenu({
 							itemDisabledColor: 'color-mix(in srgb, var(--glass-popup-text) 34%, transparent)',
 							itemHoverBg: 'color-mix(in srgb, var(--glass-popup-text) 6%, transparent)',
 							itemActiveBg: 'color-mix(in srgb, var(--glass-popup-text) 9%, transparent)',
+							popupBg: 'var(--glass-popup)',
+							subMenuItemBg: 'transparent',
 						},
 					},
 				}}
@@ -218,6 +253,15 @@ export default function ItemActionMenu({
 					className="item-action-menu"
 					aria-label={`${t('ui.more')} ${item.title}`}
 					selectable={false}
+					openKeys={openKeys}
+					onOpenChange={setOpenKeys}
+					subMenuOpenDelay={0.1}
+					builtinPlacements={{
+						rightTop: {
+							points: ['tl', 'tr'],
+							overflow: { adjustX: true, adjustY: true, shiftX: 8, shiftY: 8 },
+						},
+					}}
 					items={items}
 					onClick={({ key }) => {
 						onClose(true)

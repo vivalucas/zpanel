@@ -1,5 +1,6 @@
 import { chromium, expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
+import type { Group } from '../../src/lib/api'
 
 let account: { token: string; id: number }
 let fixture = 0
@@ -12,7 +13,14 @@ const menuApp = {
 	itemIconGroupId: 980,
 	icon: null,
 }
-async function home(page: Page, app = {}, panel = {}, guest = false, language = 'zh-CN') {
+async function home(
+	page: Page,
+	app = {},
+	panel = {},
+	guest = false,
+	language = 'zh-CN',
+	navigation?: Group[],
+) {
 	await page.addInitScript(
 		({ user, language }) => {
 			localStorage.setItem(
@@ -55,7 +63,7 @@ async function home(page: Page, app = {}, panel = {}, guest = false, language = 
 		route.fulfill({
 			json: {
 				code: 0,
-				data: [
+				data: navigation ?? [
 					{
 						id: 980,
 						title: 'Menu group',
@@ -188,7 +196,7 @@ test('identical trimmed addresses share one section without changing the saved a
 		await link(page).click({ button: 'right' })
 		await expect(popup(page).locator('.item-action-address')).toHaveCount(1)
 		await expect(popup(page).locator('.item-action-primary')).toHaveCount(1)
-		await expect(page.getByRole('menuitem')).toHaveCount(6)
+		await expect(page.getByRole('menuitem')).toHaveCount(7)
 		await expect(action(page, '打开主地址')).toBeVisible()
 		await expect(action(page, '打开内网地址')).toHaveCount(0)
 		await action(page, '主地址：内嵌打开').click()
@@ -470,7 +478,7 @@ test('address sections keep readable shortcut labels and compact mouse targets i
 				expect(bounds.height).toBeGreaterThanOrEqual(24)
 			}
 			const bounds = (await menu.boundingBox())!
-			expect(bounds.height).toBeLessThanOrEqual(240)
+			expect(bounds.height).toBeLessThanOrEqual(280)
 			expect(bounds.x).toBeGreaterThanOrEqual(8)
 			expect(bounds.x + bounds.width).toBeLessThanOrEqual(width - 8)
 			expect(await menu.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
@@ -641,10 +649,274 @@ test('touch context menus open without an overlay button and allow editing witho
 		for (const item of await popup(page).locator('.item-action-shortcut').all())
 			expect((await item.boundingBox())!.height).toBeGreaterThanOrEqual(44)
 		await page.screenshot({ path: info.outputPath('compact-menu-touch-320.png'), animations: 'disabled' })
+		await action(page, '移动至').tap()
+		await expect(action(page, 'Empty group')).toBeVisible()
+		expect((await action(page, 'Empty group').boundingBox())!.height).toBeGreaterThanOrEqual(40)
+		await page.keyboard.press('Escape')
+		await link(page).dispatchEvent('contextmenu', { clientX: 60, clientY: 180 })
+		await expect(popup(page)).toBeVisible()
 		await action(page, '编辑').tap()
 		await expect(page.getByRole('dialog').getByLabel('标题', { exact: true })).toHaveValue('Menu app')
 		await expect(popup(page)).toHaveCount(0)
 	} finally {
 		await context.close()
 	}
+})
+
+test('move submenu supports hover, click and keyboard without closing the root menu', async ({ page }) => {
+	await home(page)
+	await link(page).click({ button: 'right' })
+	const move = action(page, '移动至')
+	await move.hover()
+	await expect(action(page, 'Empty group')).toBeVisible()
+	await expect(action(page, 'Menu group')).toHaveCount(0)
+	await action(page, 'Empty group').hover()
+	await expect(popup(page)).toBeVisible()
+	await page.keyboard.press('Escape')
+	await expect(popup(page)).toHaveCount(0)
+	await expect(link(page)).toBeFocused()
+	await link(page).click({ button: 'right' })
+	await move.focus()
+	await page.keyboard.press('ArrowRight')
+	await expect(action(page, 'Empty group')).toBeFocused()
+	await page.keyboard.press('ArrowLeft')
+	await expect(move).toBeFocused()
+	await move.click()
+	await expect(action(page, 'Empty group')).toBeVisible()
+	await page.keyboard.press('Tab')
+	await expect(popup(page)).toHaveCount(0)
+	await page.getByRole('textbox', { name: '搜索', exact: true }).fill('Menu app')
+	await link(page).click({ button: 'right' })
+	await action(page, '移动至').hover()
+	await expect(action(page, 'Empty group')).toBeVisible()
+	await page.keyboard.press('Escape')
+
+	await home(page, {}, {}, false, 'zh-CN', [{ id: 980, title: 'Only group', items: [menuApp] }])
+	await link(page).click({ button: 'right' })
+	await expect(action(page, '移动至')).toHaveCount(0)
+	await home(page, {}, {}, true)
+	await link(page).click({ button: 'right' })
+	await expect(action(page, '移动至')).toHaveCount(0)
+})
+
+test('failed and pending moves keep the source, block repeated moves and allow retry', async ({ page }) => {
+	let writes = 0
+	let release: (() => void) | undefined
+	await page.route('**/api/panel/itemIcon/move', async (route) => {
+		writes++
+		expect(route.request().postDataJSON()).toEqual({ id: menuApp.id, itemIconGroupId: 983 })
+		await new Promise<void>((resolve) => {
+			release = resolve
+		})
+		await route.fulfill({ json: { code: 1200, msg: 'test failure' } })
+	})
+	await home(page)
+	await link(page).click({ button: 'right' })
+	await action(page, '移动至').hover()
+	await action(page, 'Empty group').click()
+	await expect.poll(() => writes).toBe(1)
+	await expect(popup(page)).toHaveCount(0)
+	await link(page).click({ button: 'right' })
+	await expect(action(page, '移动至')).toHaveAttribute('aria-disabled', 'true')
+	await expect(action(page, '编辑')).toHaveAttribute('aria-disabled', 'true')
+	await expect(action(page, '删除')).toHaveAttribute('aria-disabled', 'true')
+	release!()
+	await expect(page.locator('.ant-message-error')).toBeVisible()
+	await expect(action(page, '移动至')).not.toHaveAttribute('aria-disabled', 'true')
+	await expect(action(page, '编辑')).not.toHaveAttribute('aria-disabled', 'true')
+	await expect(action(page, '删除')).not.toHaveAttribute('aria-disabled', 'true')
+	await expect(
+		page.locator('.navigation-group').first().getByRole('link', { name: 'Menu app', exact: true }),
+	).toBeVisible()
+	await expect(page.getByText('已移至「Empty group」', { exact: true })).toHaveCount(0)
+	await action(page, '移动至').hover()
+	await action(page, 'Empty group').click()
+	await expect.poll(() => writes).toBe(2)
+	release!()
+	await expect(page.locator('.ant-message-error')).toBeVisible()
+})
+
+test('move persists only the destination, appends after the last item and restores focus', async ({
+	page,
+	request,
+}, info) => {
+	const post = async (path: string, data: unknown) => {
+		const result = await (
+			await request.post(`/api/panel/${path}`, { headers: { token: account.token }, data })
+		).json()
+		expect(result.code).toBe(0)
+		return result.data
+	}
+	const source = await post('itemIconGroup/edit', { title: 'Move source' })
+	const target = await post('itemIconGroup/edit', { title: 'Move destination' })
+	const retained = await post('itemIconGroup/edit', { title: 'Retained group' })
+	try {
+		const app = await post('itemIcon/edit', {
+			...menuApp,
+			id: 0,
+			title: 'Persisted move app',
+			itemIconGroupId: source.id,
+			description: 'Keep all fields',
+			sort: 5,
+		})
+		await post('itemIcon/edit', {
+			...menuApp,
+			id: 0,
+			title: 'Already in target',
+			itemIconGroupId: target.id,
+			sort: 20000,
+		})
+		await home(page)
+		await page.unroute('**/api/panel/itemIconGroup/getNavigation')
+		await page.reload()
+		const appLink = page.getByRole('link', { name: 'Persisted move app', exact: true })
+		await appLink.click({ button: 'right' })
+		await action(page, '移动至').hover()
+		await expect(action(page, 'Move source')).toHaveCount(0)
+		await expect(action(page, 'Move destination')).toBeVisible()
+		await page.screenshot({ path: info.outputPath('move-menu-desktop.png'), animations: 'disabled' })
+		await action(page, 'Move destination').click()
+		await expect(page.getByText('已移至「Move destination」', { exact: true })).toBeVisible()
+		await expect(appLink).toBeFocused()
+		const groups = (await post('itemIconGroup/getNavigation', {})) as Group[]
+		expect(groups.find((group) => group.id === source.id)!.items).toHaveLength(0)
+		const items = groups.find((group) => group.id === target.id)!.items
+		expect(items.map((item) => item.title)).toEqual(['Already in target', 'Persisted move app'])
+		expect(items[1]).toMatchObject({
+			...app,
+			UpdatedAt: expect.any(String),
+			itemIconGroupId: target.id,
+			sort: 10000,
+			updateTime: expect.any(String),
+		})
+		await page.reload()
+		await expect(
+			page
+				.locator('.navigation-group')
+				.filter({ has: page.getByRole('heading', { name: 'Move destination', exact: true }) })
+				.getByRole('link', { name: 'Persisted move app', exact: true }),
+		).toBeVisible()
+		const denied = await (
+			await request.post('/api/panel/itemIcon/move', { data: { id: app.id, itemIconGroupId: source.id } })
+		).json()
+		expect(denied.code).toBe(1000)
+	} finally {
+		await post('itemIconGroup/deletes', { ids: [source.id, target.id] })
+		// Keep one real group for later tests, as required by the application.
+		expect(retained.id).toBeTruthy()
+	}
+})
+
+test('move submenu shares glass styles and remains usable at viewport edges with long group lists', async ({
+	page,
+}, info) => {
+	test.setTimeout(60_000)
+	const navigation = [
+		{ id: 980, title: 'Menu group', items: [menuApp] },
+		...Array.from({ length: 24 }, (_, index) => ({
+			id: 1000 + index,
+			title: `Group ${index + 1} — a long destination group name`,
+			items: [],
+		})),
+	]
+	await home(page, {}, {}, false, 'zh-CN', navigation)
+	for (const theme of ['light', 'dark'] as const) {
+		await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' })
+		for (const width of [320, 1440]) {
+			await page.setViewportSize({ width, height: 700 })
+			// Resize intentionally dismisses menus; finish that event before opening a new one.
+			await page.evaluate(
+				() =>
+					new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+			)
+			await link(page).evaluate(
+				(element, width) =>
+					element.dispatchEvent(
+						new MouseEvent('contextmenu', {
+							bubbles: true,
+							cancelable: true,
+							clientX: width - 1,
+							clientY: 699,
+						}),
+					),
+				width,
+			)
+			await action(page, '移动至').hover()
+			const submenu = page.locator('.item-action-submenu:visible > .ant-menu')
+			await expect(submenu).toBeVisible()
+			await expect.poll(async () => (await submenu.boundingBox())!.height).toBeLessThanOrEqual(360)
+			const bounds = (await submenu.boundingBox())!
+			expect(bounds.x).toBeGreaterThanOrEqual(0)
+			expect(bounds.y).toBeGreaterThanOrEqual(0)
+			expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
+			expect(bounds.y + bounds.height).toBeLessThanOrEqual(700)
+			const styles = (element: HTMLElement) => {
+				const style = getComputedStyle(element)
+				return {
+					color: style.color,
+					background: style.backgroundColor,
+					border: style.borderTopColor,
+					radius: style.borderTopLeftRadius,
+					shadow: style.boxShadow,
+					blur: style.backdropFilter,
+				}
+			}
+			expect(await submenu.evaluate(styles)).toEqual(await popup(page).evaluate(styles))
+			await submenu.evaluate((element) => {
+				element.scrollTop = element.scrollHeight
+			})
+			await expect(action(page, navigation.at(-1)!.title)).toBeInViewport()
+			await expect(popup(page)).toBeVisible()
+			await page.screenshot({
+				path: info.outputPath(`move-menu-${theme}-${width}.png`),
+				animations: 'disabled',
+			})
+			await page.keyboard.press('Escape')
+			await page.keyboard.press('Escape')
+		}
+	}
+})
+
+test('a confirmed move remains visible when navigation refresh fails', async ({ page }) => {
+	await home(page)
+	await page.route('**/api/panel/itemIcon/move', (route) =>
+		route.fulfill({ json: { code: 0, data: { id: menuApp.id, itemIconGroupId: 983, sort: 0 } } }),
+	)
+	await page.route('**/api/panel/itemIconGroup/getNavigation', (route) =>
+		route.fulfill({ json: { code: 1200, msg: 'refresh unavailable' } }),
+	)
+	await link(page).click({ button: 'right' })
+	await action(page, '移动至').hover()
+	await action(page, 'Empty group').click()
+	await expect(page.getByText('已移至「Empty group」', { exact: true })).toBeVisible()
+	const destination = page
+		.locator('.navigation-group')
+		.filter({ has: page.getByRole('heading', { name: 'Empty group', exact: true }) })
+	await expect(destination.getByRole('link', { name: 'Menu app', exact: true })).toBeVisible()
+	await expect(
+		page.locator('.navigation-group').first().getByRole('link', { name: 'Menu app', exact: true }),
+	).toHaveCount(0)
+})
+
+test('a pending move cannot take focus away from a subsequently opened editor', async ({ page }) => {
+	let release: (() => void) | undefined
+	await home(page)
+	await page.route('**/api/panel/itemIcon/move', async (route) => {
+		await new Promise<void>((resolve) => {
+			release = resolve
+		})
+		await route.fulfill({ json: { code: 0, data: { id: menuApp.id, itemIconGroupId: 983, sort: 0 } } })
+	})
+	await link(page).click({ button: 'right' })
+	await action(page, '移动至').hover()
+	await action(page, 'Empty group').click()
+	await expect.poll(() => !!release).toBe(true)
+	await page.getByRole('link', { name: 'Other app', exact: true }).click({ button: 'right' })
+	await action(page, '编辑').click()
+	const input = page.getByRole('dialog').getByLabel('标题', { exact: true })
+	await input.fill('Keep this draft')
+	release!()
+	await expect(page.getByText('已移至「Empty group」', { exact: true })).toBeVisible()
+	await expect(input).toBeFocused()
+	await expect(input).toHaveValue('Keep this draft')
 })

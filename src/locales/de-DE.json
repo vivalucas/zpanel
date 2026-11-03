@@ -388,6 +388,8 @@
     "saved": "Saved",
     "autoSaveFailed": "Not saved. Check your connection and retry.",
     "autoSaveInvalid": "Complete the highlighted fields to save.",
+    "itemMenuMoveTo": "Verschieben nach",
+    "itemMenuMoved": "Nach „{group}“ verschoben",
     "itemMenuPrimaryAddress": "Primary address",
     "itemMenuNewTabShort": "New tab",
     "itemMenuFrameShort": "Embed",

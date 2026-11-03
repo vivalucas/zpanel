@@ -86,6 +86,15 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 	const [itemMenu, setItemMenu] = useState<ItemMenuTarget | null>(null)
 	const activeRef = useRef(true)
 	const copySequenceRef = useRef(0)
+	const movingRef = useRef<number | null>(null)
+	const [moving, setMoving] = useState(false)
+	const movedItemIdRef = useRef<number | null>(null)
+	useEffect(() => {
+		const id = movedItemIdRef.current
+		if (id === null) return
+		movedItemIdRef.current = null
+		itemTriggersRef.current.get(id)?.focus({ preventScroll: true })
+	}, [moving, groups.data])
 	useEffect(() => {
 		activeRef.current = true
 		return () => {
@@ -109,7 +118,8 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 		// Dismiss even while the menu chunk is still loading.
 		const outside = (event: Event) => {
 			if (document.querySelector('.optional-module-dialog')) return
-			if (event.target instanceof Element && event.target.closest('.item-action-popup')) return
+			if (event.target instanceof Element && event.target.closest('.item-action-popup, .item-action-submenu'))
+				return
 			closeItemMenu(false)
 		}
 		const dismiss = () => closeItemMenu(false)
@@ -250,6 +260,40 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 				}
 			},
 		})
+	}
+	const moveItem = async (item: Panel.ItemInfo, group: Group) => {
+		if (!editable || navigationUnverified || movingRef.current || item.itemIconGroupId === group.id) return
+		movingRef.current = item.id!
+		setMoving(true)
+		try {
+			const moved = await request<{ sort: number }>('/panel/itemIcon/move', {
+				id: item.id,
+				itemIconGroupId: group.id,
+			})
+			await client.cancelQueries({ queryKey: ['groups'] })
+			if (!activeRef.current || usePreferences.getState().token !== preferences.token) return
+			if (document.activeElement === itemTriggersRef.current.get(item.id!)) movedItemIdRef.current = item.id!
+			// Preserve the confirmed write even when the following read is unavailable.
+			client.setQueryData<Group[]>(['groups'], (current) => {
+				const saved = current?.flatMap((entry) => entry.items).find((entry) => entry.id === item.id)
+				if (!saved || !current?.some((entry) => entry.id === group.id)) return current
+				return current.map((entry) => ({
+					...entry,
+					items: [
+						...entry.items.filter((entryItem) => entryItem.id !== item.id),
+						...(entry.id === group.id ? [{ ...saved, itemIconGroupId: group.id, sort: moved.sort }] : []),
+					],
+				}))
+			})
+			await client.invalidateQueries({ queryKey: ['groups'] })
+			if (!activeRef.current || usePreferences.getState().token !== preferences.token) return
+			void message.success(t('ui.itemMenuMoved', { group: group.title }))
+		} catch (err) {
+			error(err)
+		} finally {
+			movingRef.current = null
+			if (activeRef.current) setMoving(false)
+		}
 	}
 	const activeMenuItem = filtered
 		.filter((group) => group.id !== sortingGroupId)
@@ -657,20 +701,26 @@ export default function Home({ auth }: { auth: AuthInfo }) {
 				>
 					<Suspense fallback={null}>
 						<ItemActionMenu
+							key={itemMenu.id}
 							item={activeMenuItem}
 							target={itemMenu}
 							editable={editable && !navigationUnverified}
+							groups={navigationGroups}
+							moving={moving}
+							itemMoving={movingRef.current === activeMenuItem.id}
 							onClose={closeItemMenu}
 							onOpen={(url, method) => open(activeMenuItem, url, method)}
 							onCopy={(url) => void copyAddress(url)}
 							onEdit={() => {
-								if (!editable || navigationUnverified) return
+								if (!editable || navigationUnverified || movingRef.current === activeMenuItem.id) return
 								editorTriggerRef.current = activeMenuItem.id!
 								setEditor({ item: activeMenuItem })
 							}}
 							onDelete={() => {
-								if (editable && !navigationUnverified) deleteItem(activeMenuItem)
+								if (editable && !navigationUnverified && movingRef.current !== activeMenuItem.id)
+									deleteItem(activeMenuItem)
 							}}
+							onMove={(group) => void moveItem(activeMenuItem, group)}
 						/>
 					</Suspense>
 				</OptionalModuleBoundary>

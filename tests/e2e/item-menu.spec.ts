@@ -651,7 +651,9 @@ test('touch context menus open without an overlay button and allow editing witho
 		await page.screenshot({ path: info.outputPath('compact-menu-touch-320.png'), animations: 'disabled' })
 		await action(page, '移动至').tap()
 		await expect(action(page, 'Empty group')).toBeVisible()
-		expect((await action(page, 'Empty group').boundingBox())!.height).toBeGreaterThanOrEqual(40)
+		await expect
+			.poll(async () => (await action(page, 'Empty group').boundingBox())?.height ?? 0)
+			.toBeGreaterThanOrEqual(40)
 		await page.keyboard.press('Escape')
 		await link(page).dispatchEvent('contextmenu', { clientX: 60, clientY: 180 })
 		await expect(popup(page)).toBeVisible()
